@@ -3,7 +3,6 @@ import http from 'node:http';
 import os from 'node:os';
 import path from 'node:path';
 import crypto from 'node:crypto';
-import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { buildDrafts, buildOllamaPrompt, parseOllamaDraft } from './src/processing.mjs';
 import { openStore } from './src/storage.mjs';
@@ -11,6 +10,7 @@ import { getCapabilities, whisperConfiguration } from './src/capabilities.mjs';
 import { buildDocumentDraft, documentTemplates } from './src/documents.mjs';
 import { documentToDocx, documentToHtml, documentToMarkdown } from './src/document-export.mjs';
 import { analyzeTemplate, isUploadedTemplateId, renderTemplate, uploadedTemplateId } from './src/template-engine.mjs';
+import { transcribeAudio } from './src/transcription.mjs';
 
 const root = path.dirname(fileURLToPath(import.meta.url));
 const defaultPort = Number(process.env.PORT || 4387);
@@ -64,32 +64,11 @@ function sendFile(response, filePath) {
   fs.createReadStream(filePath).pipe(response);
 }
 
-function runWhisper(inputPath, outputBase, config) {
-  return new Promise((resolve, reject) => {
-    const child = spawn(config.binary, ['-m', config.model, '-f', inputPath, '-otxt', '-of', outputBase, '-l', 'ko', '-np', '-nt'], { stdio: ['ignore', 'ignore', 'pipe'] });
-    let error = '';
-    child.stderr.on('data', (chunk) => { error += chunk.toString(); });
-    child.once('error', reject);
-    child.once('close', (code) => code === 0 ? resolve(`${outputBase}.txt`) : reject(new Error(`whisper_exit_${code}:${error.slice(-500)}`)));
-  });
-}
-
 async function transcribe(payload, store) {
   const config = whisperConfiguration(store);
-  if (!config.binary || !config.model || !fs.existsSync(config.model)) throw new Error('whisper_model_not_configured');
-  const name = String(payload.fileName || 'audio').replace(/[^a-zA-Z0-9._-]/g, '_');
+  const name = String(payload.fileName || 'audio.wav');
   const bytes = Buffer.from(String(payload.dataBase64 || ''), 'base64');
-  if (!bytes.length || bytes.length > 50 * 1024 * 1024) throw new Error('audio_size_invalid');
-  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'dawith-welfare-'));
-  const inputPath = path.join(tempDir, `${crypto.randomUUID()}-${name}`);
-  const outputBase = path.join(tempDir, crypto.randomUUID());
-  fs.writeFileSync(inputPath, bytes, { mode: 0o600 });
-  try {
-    const outputPath = await runWhisper(inputPath, outputBase, config);
-    return { text: fs.readFileSync(outputPath, 'utf8').trim(), sourceName: name };
-  } finally {
-    fs.rmSync(tempDir, { recursive: true, force: true });
-  }
+  return transcribeAudio({ fileName: name, data: bytes, binary: config.binary, model: config.model });
 }
 
 export function createServer({ dataDir = defaultDataDir } = {}) {
@@ -114,6 +93,7 @@ export function createServer({ dataDir = defaultDataDir } = {}) {
         return json(response, 200, { settings });
       }
       if (url.pathname === '/api/cases' && request.method === 'GET') return json(response, 200, { cases: store.listCases() });
+      if (url.pathname === '/api/audit' && request.method === 'GET') return json(response, 200, { events: store.listAuditEvents({ limit: url.searchParams.get('limit') || 100 }) });
       if (url.pathname === '/api/records' && request.method === 'GET') return json(response, 200, { records: store.listRecords({ query: url.searchParams.get('q') || '', kind: url.searchParams.get('kind') || '' }) });
       if (url.pathname === '/api/document-templates' && request.method === 'GET') return json(response, 200, { templates: documentTemplates, uploadedTemplates: store.listDocumentTemplates() });
       if (url.pathname === '/api/document-templates' && request.method === 'POST') {
@@ -247,7 +227,7 @@ export function createServer({ dataDir = defaultDataDir } = {}) {
       if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) return sendFile(response, filePath);
       return response.writeHead(404).end('Not found');
     } catch (error) {
-      const status = error.message === 'payload_too_large' ? 413 : error.message === 'whisper_model_not_configured' ? 409 : ['case_label_required', 'case_not_found', 'document_payload_invalid', 'document_template_invalid', 'template_size_invalid', 'template_format_unsupported'].includes(error.message) ? 400 : 500;
+      const status = error.message === 'payload_too_large' ? 413 : error.message === 'whisper_model_not_configured' ? 409 : ['case_label_required', 'case_not_found', 'document_payload_invalid', 'document_template_invalid', 'template_size_invalid', 'template_format_unsupported', 'audio_size_invalid', 'audio_format_unsupported'].includes(error.message) ? 400 : 500;
       return json(response, status, { error: error.message || 'internal_error' });
     }
   });

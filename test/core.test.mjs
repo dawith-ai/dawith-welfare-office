@@ -3,9 +3,11 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
+import { DatabaseSync } from 'node:sqlite';
 import JSZip from 'jszip';
 import { Document, Paragraph, Packer } from 'docx';
 import { buildDrafts, parseOllamaDraft } from '../src/processing.mjs';
+import { parseWhisperJson, sha256 } from '../src/transcription.mjs';
 import { buildDocumentDraft } from '../src/documents.mjs';
 import { documentToDocx } from '../src/document-export.mjs';
 import { openStore } from '../src/storage.mjs';
@@ -95,6 +97,36 @@ test('uploaded DOCX and HWPX templates are analyzed and filled locally', async (
   assert.match(splitHwpxAnalysis.warnings[0], /XML 텍스트 노드로 분리/);
 });
 
+test('local transcription runs through the configured whisper CLI and preserves evidence metadata', async () => {
+  const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'dawith-welfare-whisper-'));
+  const runtimeDir = fs.mkdtempSync(path.join(os.tmpdir(), 'dawith-welfare-whisper-bin-'));
+  const modelPath = path.join(runtimeDir, 'ggml-test.bin');
+  fs.writeFileSync(modelPath, 'synthetic model');
+  const fakeScript = path.join(runtimeDir, 'fake-whisper.mjs');
+  fs.writeFileSync(fakeScript, `#!/usr/bin/env node\nimport fs from 'node:fs';\nconst args = process.argv.slice(2);\nconst output = args[args.indexOf('-of') + 1];\nfs.writeFileSync(output + '.txt', '친모가 다음 주에 주거 지원을 신청하기로 함.');\nfs.writeFileSync(output + '.json', JSON.stringify({ transcription: [{ timestamps: { from: '00:00:00,000', to: '00:00:02,000' }, text: '친모가 다음 주에 주거 지원을 신청하기로 함.' }] }));\n`);
+  const binaryPath = process.platform === 'win32' ? path.join(runtimeDir, 'fake-whisper.cmd') : fakeScript;
+  if (process.platform === 'win32') fs.writeFileSync(binaryPath, `@echo off\r\n"${process.execPath}" "%~dp0fake-whisper.mjs" %*\r\n`);
+  else fs.chmodSync(fakeScript, 0o755);
+  const runtime = await startServer({ port: 0, dataDir });
+  try {
+    await fetch(`${runtime.url}/api/settings`, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ whisperBinaryPath: binaryPath, whisperModelPath: modelPath }) });
+    const audio = Buffer.from('synthetic wav bytes');
+    const response = await fetch(`${runtime.url}/api/transcribe`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ fileName: '상담녹취.wav', dataBase64: audio.toString('base64') }) });
+    const payload = await response.json();
+    assert.equal(response.status, 200);
+    assert.match(payload.text, /주거 지원/);
+    assert.equal(payload.segments.length, 1);
+    assert.equal(payload.sourceHash, sha256(audio));
+    assert.deepEqual(parseWhisperJson('{"transcription":[{"text":"합성 전사"}]}').text, '합성 전사');
+    const audit = await fetch(`${runtime.url}/api/audit`).then((result) => result.json());
+    assert.ok(audit.events.some((event) => event.eventType === 'settings_updated'));
+  } finally {
+    await new Promise((resolve) => runtime.server.close(resolve));
+    fs.rmSync(dataDir, { recursive: true, force: true });
+    fs.rmSync(runtimeDir, { recursive: true, force: true });
+  }
+});
+
 test('records persist in a local SQLite file and can be exported', () => {
   const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'dawith-welfare-test-'));
   const store = openStore(dataDir);
@@ -106,6 +138,23 @@ test('records persist in a local SQLite file and can be exported', () => {
   const rawDatabase = fs.readFileSync(path.join(dataDir, 'welfare-office.sqlite'), 'utf8');
   assert.equal(rawDatabase.includes('합성 회의 메모'), false);
   store.close();
+  fs.rmSync(dataDir, { recursive: true, force: true });
+});
+
+test('retention policy purges expired local content and leaves metadata-only audit evidence', () => {
+  const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'dawith-welfare-retention-'));
+  const store = openStore(dataDir);
+  const caseId = store.ensureDefaultCase();
+  store.saveRecord({ caseId, kind: 'counseling', provider: 'rules', rawText: '합성 보관기간 테스트', contextText: '', draft: buildDrafts({ rawText: '합성 보관기간 테스트' }) });
+  store.updateSettings({ retentionDays: 1 });
+  store.close();
+  const db = new DatabaseSync(path.join(dataDir, 'welfare-office.sqlite'));
+  db.prepare("UPDATE records SET created_at = '2020-01-01T00:00:00.000Z'").run();
+  db.close();
+  const reopened = openStore(dataDir);
+  assert.equal(reopened.listRecords().length, 0);
+  assert.ok(reopened.listAuditEvents().some((event) => event.eventType === 'retention_purge'));
+  reopened.close();
   fs.rmSync(dataDir, { recursive: true, force: true });
 });
 

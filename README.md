@@ -24,6 +24,8 @@
 - 기관 양식 업로드: `{{항목명}}` 태그가 있는 DOCX/HWPX를 로컬 분석하고 원본 서식에 값을 주입
 - 업로드한 기관 양식과 입력 항목을 암호화된 로컬 SQLite에 저장
 - `WHISPER_MODEL_PATH`가 설정된 경우 whisper.cpp CLI로 로컬 음성 전사
+- 전사 결과의 구간 타임라인·SHA-256 원본 해시를 기록하고, 기록 저장 시 원문·초안 해시를 함께 보관
+- 메타데이터만 담은 로컬 감사 이벤트(`/api/audit`)와 보관기간 자동 삭제
 - 외부 provider 요청 차단
 - 기관 이름·Whisper 경로 등 로컬 설정
 
@@ -48,8 +50,8 @@ npm run dist:win
 
 생성물:
 
-- `dist/Dawith-Welfare-Office-0.2.3-x64-Setup.exe` — 일반 설치형
-- `dist/Dawith-Welfare-Office-0.2.3-x64-Portable.exe` — 설치 없이 실행하는 portable 형식
+- `dist/Dawith-Welfare-Office-0.2.4-x64-Setup.exe` — 일반 설치형
+- `dist/Dawith-Welfare-Office-0.2.4-x64-Portable.exe` — 설치 없이 실행하는 portable 형식
 
 GitHub Actions의 `Build Dawith Welfare Office for Windows` workflow도 같은 Windows runner에서 검사·브라우저 테스트·빌드를 수행합니다.
 
@@ -65,7 +67,7 @@ WHISPER_MODEL_PATH=/기관이승인한경로/ggml-small.bin npm start
 
 ## 배포 전 확인할 한계
 
-상담 원문·맥락·초안·사례명은 현재 AES-256-GCM으로 필드 암호화되어 SQLite에 저장됩니다. 개발 환경의 키는 `.data/.local-key`에 생성되며, 실제 기관 배포 전에는 OS 키체인/TPM 기반 키 관리, 사용자별 권한과 감사로그, 자동 삭제 정책, EXE 코드 서명, 모델 출처 검증을 기관별로 추가 검토해야 합니다. 생성 결과는 자동 확정 기록이 아니라 담당자 검토 전 초안입니다.
+상담 원문·맥락·초안·사례명은 현재 AES-256-GCM으로 필드 암호화되어 SQLite에 저장됩니다. 기록과 전사에는 무결성 검증용 SHA-256이 붙고, 원문을 담지 않는 감사 이벤트와 보관기간 자동 삭제가 동작합니다. 개발 환경의 키는 `.data/.local-key`에 생성되며, 실제 기관 배포 전에는 OS 키체인/TPM 기반 키 관리, 사용자별 권한, EXE 코드 서명, 모델 출처 검증을 기관별로 추가 검토해야 합니다. 생성 결과는 자동 확정 기록이 아니라 담당자 검토 전 초안입니다.
 
 현재 버전은 기관용 업무 보조 제품의 기반입니다. 문서 스튜디오의 결과도 담당자 검토 전 초안입니다. 기관 양식은 DOCX/HWPX 파일의 입력 위치에 `{{기관명}}`처럼 태그를 넣으면 원본 서식과 표를 유지한 채 채울 수 있습니다. `.hwp`, PDF, 스캔 이미지, 태그가 여러 XML 텍스트 노드로 쪼개진 파일은 아직 자동 주입하지 않습니다. 기관 계정·역할별 권한, 중앙 감사로그, 실제 Windows 장비별 Whisper 성능 검증은 배포 전 단계입니다. 따라서 “모든 기관에서 검증 완료” 또는 “개인정보 위험이 절대 없음”으로 홍보하면 안 됩니다.
 

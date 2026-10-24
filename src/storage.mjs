@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { createFieldCipher } from './crypto.mjs';
+import { sha256 } from './transcription.mjs';
 
 export function openStore(dataDir) {
   fs.mkdirSync(dataDir, { recursive: true, mode: 0o700 });
@@ -24,6 +25,8 @@ export function openStore(dataDir) {
       raw_text TEXT NOT NULL,
       context_text TEXT,
       draft_json TEXT NOT NULL,
+      source_hash TEXT,
+      draft_hash TEXT,
       created_at TEXT NOT NULL,
       FOREIGN KEY(case_id) REFERENCES cases(id)
     );
@@ -49,10 +52,34 @@ export function openStore(dataDir) {
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL
     );
+    CREATE TABLE IF NOT EXISTS audit_events (
+      id TEXT PRIMARY KEY,
+      event_type TEXT NOT NULL,
+      entity_type TEXT NOT NULL,
+      entity_id TEXT,
+      metadata_json TEXT NOT NULL,
+      created_at TEXT NOT NULL
+    );
   `);
+  try { db.exec('ALTER TABLE records ADD COLUMN source_hash TEXT'); } catch { /* Existing database already migrated. */ }
+  try { db.exec('ALTER TABLE records ADD COLUMN draft_hash TEXT'); } catch { /* Existing database already migrated. */ }
 
   const now = () => new Date().toISOString();
   const id = (prefix) => `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+  const audit = (eventType, entityType, entityId = '', metadata = {}) => {
+    db.prepare('INSERT INTO audit_events (id, event_type, entity_type, entity_id, metadata_json, created_at) VALUES (?, ?, ?, ?, ?, ?)').run(id('audit'), eventType, entityType, entityId, cipher.seal(JSON.stringify(metadata)), now());
+  };
+  const purgeExpired = () => {
+    const row = db.prepare('SELECT value FROM settings WHERE key = ?').get('retentionDays');
+    const retentionDays = row ? Number(cipher.open(row.value)) || 0 : 0;
+    if (!retentionDays) return { records: 0, documents: 0, templates: 0 };
+    const cutoff = new Date(Date.now() - retentionDays * 86400000).toISOString();
+    const records = db.prepare('DELETE FROM records WHERE created_at < ?').run(cutoff).changes;
+    const documents = db.prepare('DELETE FROM documents WHERE updated_at < ?').run(cutoff).changes;
+    const templates = db.prepare('DELETE FROM document_templates WHERE updated_at < ?').run(cutoff).changes;
+    if (records || documents || templates) audit('retention_purge', 'maintenance', '', { retentionDays, records, documents, templates });
+    return { records, documents, templates };
+  };
   const ensureDefaultCase = () => {
     const row = db.prepare('SELECT id FROM cases ORDER BY created_at LIMIT 1').get();
     if (row) return row.id;
@@ -74,6 +101,7 @@ export function openStore(dataDir) {
     },
     ensureDefaultCase,
     listRecords({ query = '', kind = '' } = {}) {
+      purgeExpired();
       const rows = db.prepare('SELECT records.id, records.case_id AS caseId, cases.label AS caseLabel, records.kind, records.provider, records.source_name AS sourceName, records.raw_text AS rawText, records.context_text AS contextText, records.draft_json AS draftJson, records.created_at AS createdAt FROM records LEFT JOIN cases ON cases.id = records.case_id ORDER BY records.created_at DESC').all().map((row) => ({ ...row, caseLabel: cipher.open(row.caseLabel || ''), sourceName: cipher.open(row.sourceName || ''), rawText: cipher.open(row.rawText), contextText: cipher.open(row.contextText || ''), draft: JSON.parse(cipher.open(row.draftJson)), draftJson: undefined }));
       const normalizedQuery = String(query).trim().toLowerCase();
       return rows.filter((row) => (!kind || row.kind === kind) && (!normalizedQuery || [row.sourceName, row.rawText, row.draft?.typeLabel, row.draft?.counselingLog, row.draft?.assessment, row.draft?.servicePlan].join(' ').toLowerCase().includes(normalizedQuery))).map((row) => ({ ...row, rawText: undefined, contextText: undefined }));
@@ -85,7 +113,9 @@ export function openStore(dataDir) {
       const recordId = id('record');
       const selectedCase = caseId || ensureDefaultCase();
       if (!db.prepare('SELECT id FROM cases WHERE id = ?').get(selectedCase)) throw new Error('case_not_found');
-      db.prepare('INSERT INTO records (id, case_id, kind, provider, source_name, raw_text, context_text, draft_json, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)').run(recordId, selectedCase, kind, provider, cipher.seal(sourceName), cipher.seal(rawText), cipher.seal(contextText), cipher.seal(JSON.stringify(draft)), now());
+      const draftJson = JSON.stringify(draft);
+      db.prepare('INSERT INTO records (id, case_id, kind, provider, source_name, raw_text, context_text, draft_json, source_hash, draft_hash, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)').run(recordId, selectedCase, kind, provider, cipher.seal(sourceName), cipher.seal(rawText), cipher.seal(contextText), cipher.seal(draftJson), sha256(rawText), sha256(draftJson), now());
+      audit('record_created', 'record', recordId, { kind, provider, sourceName: String(sourceName).slice(0, 240) });
       return { id: recordId, caseId: selectedCase, createdAt: now() };
     },
     updateRecord(recordId, input) {
@@ -95,7 +125,9 @@ export function openStore(dataDir) {
       const contextText = String(input.contextText ?? existing.contextText ?? '').trim();
       const draft = input.draft && typeof input.draft === 'object' ? input.draft : existing.draft;
       if (!rawText || !draft) throw new Error('record_payload_invalid');
-      db.prepare('UPDATE records SET raw_text = ?, context_text = ?, draft_json = ? WHERE id = ?').run(cipher.seal(rawText), cipher.seal(contextText), cipher.seal(JSON.stringify(draft)), recordId);
+      const draftJson = JSON.stringify(draft);
+      db.prepare('UPDATE records SET raw_text = ?, context_text = ?, draft_json = ?, source_hash = ?, draft_hash = ? WHERE id = ?').run(cipher.seal(rawText), cipher.seal(contextText), cipher.seal(draftJson), sha256(rawText), sha256(draftJson), recordId);
+      audit('record_updated', 'record', recordId, {});
       return this.exportRecord(recordId);
     },
     getSettings() {
@@ -112,14 +144,26 @@ export function openStore(dataDir) {
         db.prepare('INSERT INTO settings (key, value, updated_at) VALUES (?, ?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at').run(key, cipher.seal(value), now());
         current[key] = key === 'retentionDays' ? Number(value) : value;
       }
+      purgeExpired();
+      audit('settings_updated', 'settings', '', { keys: Object.keys(input).filter((key) => allowed.includes(key)) });
       return current;
     },
     exportRecord(recordId) {
-      const row = db.prepare('SELECT records.id, records.case_id AS caseId, cases.label AS caseLabel, records.kind, records.provider, records.source_name AS sourceName, records.raw_text AS rawText, records.context_text AS contextText, records.draft_json AS draftJson, records.created_at AS createdAt FROM records LEFT JOIN cases ON cases.id = records.case_id WHERE records.id = ?').get(recordId);
+      const row = db.prepare('SELECT records.id, records.case_id AS caseId, cases.label AS caseLabel, records.kind, records.provider, records.source_name AS sourceName, records.raw_text AS rawText, records.context_text AS contextText, records.draft_json AS draftJson, records.source_hash AS sourceHash, records.draft_hash AS draftHash, records.created_at AS createdAt FROM records LEFT JOIN cases ON cases.id = records.case_id WHERE records.id = ?').get(recordId);
       if (!row) return null;
-      return { ...row, caseLabel: cipher.open(row.caseLabel || ''), sourceName: cipher.open(row.sourceName || ''), rawText: cipher.open(row.rawText), contextText: cipher.open(row.contextText), draft: JSON.parse(cipher.open(row.draftJson)), draftJson: undefined };
+      const rawText = cipher.open(row.rawText);
+      const draft = JSON.parse(cipher.open(row.draftJson));
+      const draftJson = JSON.stringify(draft);
+      const sourceHash = row.sourceHash || sha256(rawText);
+      const draftHash = row.draftHash || sha256(draftJson);
+      return { ...row, caseLabel: cipher.open(row.caseLabel || ''), sourceName: cipher.open(row.sourceName || ''), rawText, contextText: cipher.open(row.contextText), draft, sourceHash, draftHash, integrity: { sourceHash, draftHash, verified: sourceHash === sha256(rawText) && draftHash === sha256(draftJson) }, draftJson: undefined };
     },
+    listAuditEvents({ limit = 100 } = {}) {
+      return db.prepare('SELECT id, event_type AS eventType, entity_type AS entityType, entity_id AS entityId, metadata_json AS metadataJson, created_at AS createdAt FROM audit_events ORDER BY created_at DESC LIMIT ?').all(Math.max(1, Math.min(500, Number(limit) || 100))).map((row) => ({ ...row, metadata: JSON.parse(cipher.open(row.metadataJson)), metadataJson: undefined }));
+    },
+    purgeExpired,
     listDocuments() {
+      purgeExpired();
       return db.prepare('SELECT id, template_id AS templateId, title, payload_json AS payloadJson, created_at AS createdAt, updated_at AS updatedAt FROM documents ORDER BY updated_at DESC').all().map((row) => ({
         id: row.id,
         templateId: row.templateId,
@@ -133,6 +177,7 @@ export function openStore(dataDir) {
       const documentId = id('document');
       const timestamp = now();
       db.prepare('INSERT INTO documents (id, template_id, title, payload_json, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)').run(documentId, String(templateId), cipher.seal(String(title || '복지 문서')), cipher.seal(JSON.stringify(payload || {})), timestamp, timestamp);
+      audit('document_created', 'document', documentId, { templateId: String(templateId) });
       return { id: documentId, templateId, title: String(title || '복지 문서'), payload, createdAt: timestamp, updatedAt: timestamp };
     },
     getDocument(documentId) {
@@ -145,9 +190,11 @@ export function openStore(dataDir) {
       if (!existing) return null;
       const timestamp = now();
       db.prepare('UPDATE documents SET template_id = ?, title = ?, payload_json = ?, updated_at = ? WHERE id = ?').run(String(templateId || existing.templateId), cipher.seal(String(title || existing.title)), cipher.seal(JSON.stringify(payload || existing.payload)), timestamp, documentId);
+      audit('document_updated', 'document', documentId, { templateId: String(templateId || existing.templateId) });
       return this.getDocument(documentId);
     },
     listDocumentTemplates() {
+      purgeExpired();
       return db.prepare('SELECT id, file_name AS fileName, format, fields_json AS fieldsJson, created_at AS createdAt, updated_at AS updatedAt FROM document_templates ORDER BY updated_at DESC').all().map((row) => ({
         ...(() => {
           const parsed = JSON.parse(cipher.open(row.fieldsJson));
@@ -164,6 +211,7 @@ export function openStore(dataDir) {
       const timestamp = now();
       const encoded = Buffer.from(data).toString('base64');
       db.prepare('INSERT INTO document_templates (id, file_name, format, file_data, fields_json, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET file_name = excluded.file_name, format = excluded.format, file_data = excluded.file_data, fields_json = excluded.fields_json, updated_at = excluded.updated_at').run(String(templateId), cipher.seal(String(fileName)), String(format), cipher.seal(encoded), cipher.seal(JSON.stringify({ fields: fields || [], ready, warnings })), timestamp, timestamp);
+      audit('template_saved', 'document_template', String(templateId), { fileName: String(fileName).slice(0, 240), format: String(format) });
       return this.getDocumentTemplate(templateId);
     },
     getDocumentTemplate(templateId) {

@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: Dawith Welfare Office Local API
-  version: 0.2.3
+  version: 0.2.4
   description: Local-only API used by the Dawith browser workspace and Electron app.
 servers:
   - url: http://127.0.0.1:4387
@@ -37,6 +37,15 @@ paths:
                 label: { type: string, maxLength: 160 }
       responses:
         '201': { description: Created local case }
+  /api/audit:
+    get:
+      summary: Read local metadata-only audit events
+      parameters:
+        - in: query
+          name: limit
+          schema: { type: integer, minimum: 1, maximum: 500, default: 100 }
+      responses:
+        '200': { description: Audit events contain no record content }
   /api/process:
     post:
       summary: Create a counseling, meeting, or audio draft
@@ -182,9 +191,20 @@ paths:
   /api/transcribe:
     post:
       summary: Transcribe with an institution-approved local whisper.cpp model
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [fileName, dataBase64]
+              properties:
+                fileName: { type: string, description: WAV, MP3, M4A, OGG, FLAC, AAC, or WEBM }
+                dataBase64: { type: string, description: Base64 audio bytes, maximum raw size 50 MB }
       responses:
-        '200': { description: Local transcript }
+        '200': { description: Local transcript with segments and SHA-256 source hash }
         '409': { description: Whisper model is not configured }
+        '400': { description: Invalid size or unsupported audio format }
   /api/settings:
     get:
       summary: Read local settings
