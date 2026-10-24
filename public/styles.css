@@ -155,6 +155,79 @@ dialog::backdrop { background: #19312766; }
 .boundary-row.safe strong { color: #2b8b5d; }
 .boundary-row.blocked strong { color: #bd6b52; }
 .dialog-note { padding: 12px; border-radius: 10px; background: #fff7e5; color: #887044; font-size: 11px; line-height: 1.65; }
+
+/* Each workbench has its own visual language: case file, decision board, and transcription desk. */
+.workspace-view { --task-accent: #237456; --task-soft: #eaf6ed; --task-line: #d3e8d8; --task-ink: #193f31; }
+.workspace-meeting { --task-accent: #315985; --task-soft: #edf3fb; --task-line: #d5e1f1; --task-ink: #203a5d; }
+.workspace-audio { --task-accent: #a45d2b; --task-soft: #fff1e4; --task-line: #f0d8bd; --task-ink: #5f351d; }
+.workspace-view .workspace-head { position: relative; min-height: 152px; align-items: center; gap: 22px; padding: 26px 28px; margin-bottom: 28px; border: 1px solid var(--task-line); border-radius: 24px; overflow: hidden; background: var(--task-soft); }
+.workspace-counseling .workspace-head { background: linear-gradient(108deg, #eef9f0 0%, #f8fcf7 62%, #e3f1e7 100%); }
+.workspace-meeting .workspace-head { background: linear-gradient(108deg, #edf3fb 0%, #f8fbff 60%, #e2ebf7 100%); }
+.workspace-audio .workspace-head { background: linear-gradient(108deg, #fff1e5 0%, #fffaf5 60%, #f8e5d0 100%); }
+.workspace-view .workspace-head::after { position: absolute; right: -36px; bottom: -62px; width: 190px; height: 190px; border: 1px solid color-mix(in srgb, var(--task-accent) 24%, transparent); border-radius: 50%; content: ''; }
+.workspace-view .workspace-heading { position: relative; z-index: 1; flex: 1; }
+.workspace-view .workspace-head .back-button { color: var(--task-accent); font-weight: 800; }
+.workspace-view .workspace-head .eyebrow { color: var(--task-accent); }
+.workspace-view .workspace-head h1 { color: var(--task-ink); }
+.workspace-view .workspace-head p:not(.eyebrow) { max-width: 600px; }
+.task-brief { position: relative; z-index: 1; display: none; align-items: center; gap: 10px; min-width: 150px; padding: 12px 14px; border: 1px solid color-mix(in srgb, var(--task-accent) 20%, white); border-radius: 15px; background: #ffffffb8; box-shadow: 0 8px 22px color-mix(in srgb, var(--task-accent) 10%, transparent); }
+.workspace-counseling .task-brief-counseling, .workspace-meeting .task-brief-meeting, .workspace-audio .task-brief-audio { display: flex; }
+.brief-icon { display: grid; width: 30px; height: 30px; place-items: center; border-radius: 9px; background: var(--task-accent); color: #fff; font-size: 17px; }
+.task-brief b, .task-brief small { display: block; }
+.task-brief b { color: var(--task-ink); font-size: 11px; }
+.task-brief small { margin-top: 3px; color: color-mix(in srgb, var(--task-ink) 62%, white); font-size: 10px; }
+.workspace-view .step-label { color: color-mix(in srgb, var(--task-ink) 44%, white); }
+.workspace-view .step-label strong { color: var(--task-accent); }
+.workspace-view .panel, .workspace-view .output-panel { border-color: var(--task-line); border-radius: 20px; }
+.workspace-view .step-badge { background: var(--task-soft); color: var(--task-accent); }
+.workspace-view .panel h2 { color: var(--task-ink); }
+.workspace-view textarea:focus { border-color: color-mix(in srgb, var(--task-accent) 55%, white); box-shadow: 0 0 0 3px color-mix(in srgb, var(--task-soft) 80%, transparent); }
+.workspace-view .sample-button { color: var(--task-accent); border-bottom-color: color-mix(in srgb, var(--task-accent) 50%, white); }
+.workspace-view .engine-option:has(input:checked) { border-color: color-mix(in srgb, var(--task-accent) 55%, white); background: var(--task-soft); }
+.workspace-view .engine-option input { accent-color: var(--task-accent); }
+.workspace-view .engine-option i { color: var(--task-accent); }
+.workspace-view .primary-button, .workspace-view .primary-small { background: var(--task-accent); }
+.workspace-view .primary-button:hover, .workspace-view .primary-small:hover { background: color-mix(in srgb, var(--task-accent) 85%, black); }
+.workspace-view .transfer-notice { background: var(--task-soft); color: var(--task-accent); }
+.workspace-view .output-tabs button.active { border-bottom-color: var(--task-accent); color: var(--task-accent); }
+.workspace-view .output-empty .empty-icon { color: var(--task-accent); }
+.workspace-view .output-head .eyebrow { color: var(--task-accent); }
+
+/* Counseling is a calm, vertical case-file flow. */
+.workspace-counseling .input-column { gap: 12px; }
+.workspace-counseling #rawPanel { border-left: 4px solid #6bae83; }
+.workspace-counseling #contextPanel { background: #fbfefb; }
+.workspace-counseling .output-panel { box-shadow: 0 18px 45px #23745612; }
+
+/* Meeting notes behave like a compact decision board, not a long form. */
+.workspace-meeting .workspace-grid { grid-template-columns: 1.08fr .92fr; }
+.workspace-meeting .input-column { grid-template-columns: 1fr 1fr; grid-template-areas: 'raw context' 'process process'; align-items: start; }
+.workspace-meeting #rawPanel { grid-area: raw; border-top: 4px solid #5a82b2; }
+.workspace-meeting #contextPanel { grid-area: context; background: #fbfdff; }
+.workspace-meeting #processPanel { grid-area: process; display: grid; grid-template-columns: 1fr 1.4fr; gap: 16px; align-items: end; }
+.workspace-meeting #processPanel .panel-title { grid-row: span 2; }
+.workspace-meeting #processPanel .engine-options { margin-top: 0; }
+.workspace-meeting #processPanel .primary-button { margin-top: 0; }
+.workspace-meeting #rawText { min-height: 305px; }
+.workspace-meeting #contextText { min-height: 168px; }
+.workspace-meeting .output-panel { box-shadow: 0 18px 45px #31598514; }
+.workspace-meeting .output-tabs { background: #f4f7fc; padding: 4px 6px 0; border-radius: 10px 10px 0 0; }
+.workspace-meeting .draft-badge { background: #e8f0fb; color: #42658e; }
+
+/* Audio is an upload-first desk: file intake comes before transcript editing. */
+.workspace-audio .workspace-grid { grid-template-columns: .84fr 1.16fr; }
+.workspace-audio #rawPanel { display: flex; flex-direction: column; border-top: 4px solid #d18a4c; }
+.workspace-audio #rawPanel .audio-input { order: -1; margin: 2px 0 16px; }
+.workspace-audio #rawPanel .audio-input.hidden { display: none !important; }
+.workspace-audio .file-drop { min-height: 116px; justify-content: center; align-items: center; border-color: #e2b685; background: #fff8f0; text-align: center; }
+.workspace-audio .file-drop span { color: var(--task-accent); font-size: 14px; font-weight: 800; }
+.workspace-audio .file-drop small { max-width: 230px; }
+.workspace-audio #rawText { min-height: 250px; }
+.workspace-audio #contextPanel { background: #fffaf5; }
+.workspace-audio .output-panel { box-shadow: 0 18px 45px #a45d2b14; }
+.workspace-audio .output-empty { background: linear-gradient(145deg, #fff 0%, #fffaf5 100%); }
+.workspace-audio .draft-badge { background: #fff0df; color: #a45d2b; }
+
 @media (max-width: 820px) {
   .topbar { padding: 0 20px; }
   .ghost-button { display: none; }
@@ -165,6 +238,8 @@ dialog::backdrop { background: #19312766; }
   .task-grid { grid-template-columns: 1fr; }
   .task-card { min-height: 165px; }
   .workspace-head { display: block; }
+  .workspace-view .workspace-head { padding: 20px; }
+  .task-brief { margin-top: 18px; width: fit-content; }
   .step-label { display: block; margin-top: 15px; }
   .output-column { position: static; }
   .output-panel { min-height: 400px; }
@@ -174,4 +249,8 @@ dialog::backdrop { background: #19312766; }
   .security-pill { font-size: 10px; }
   .records-toolbar { flex-wrap: wrap; }
   .records-toolbar input { flex-basis: 100%; }
+  .workspace-meeting .input-column { grid-template-columns: 1fr; grid-template-areas: 'raw' 'context' 'process'; }
+  .workspace-meeting #processPanel { display: block; }
+  .workspace-meeting #processPanel .engine-options { margin-top: 17px; }
+  .workspace-meeting #processPanel .primary-button { margin-top: 15px; }
 }
