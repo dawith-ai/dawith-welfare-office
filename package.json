@@ -15,8 +15,8 @@
     "test:e2e": "playwright test",
     "desktop": "electron desktop/main.mjs",
     "dist:win": "npm run dist:win:setup && npm run dist:win:portable",
-    "dist:win:setup": "electron-builder --win nsis --x64",
-    "dist:win:portable": "electron-builder --win portable --x64 --config.compression=store",
+    "dist:win:setup": "electron-builder --win nsis --x64 --publish never",
+    "dist:win:portable": "electron-builder --win portable --x64 --config.compression=store --publish never",
     "dist:dir": "electron-builder --dir"
   },
   "main": "desktop/main.mjs",
