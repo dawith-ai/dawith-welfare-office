@@ -1,0 +1,12 @@
+dist
+node_modules
+.data
+.data-e2e-*
+test-results
+playwright-report
+.playwright
+.git
+.github
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
