@@ -35,7 +35,8 @@ export function parseWhisperJson(value) {
 function runWhisper({ binary, model, inputPath, outputBase }) {
   return new Promise((resolve, reject) => {
     const args = ['-m', model, '-f', inputPath, '-l', 'ko', '-nt', '-otxt', '-oj', '-of', outputBase];
-    const child = spawn(binary, args, { stdio: ['ignore', 'ignore', 'pipe'], windowsHide: true });
+    const usesWindowsScript = process.platform === 'win32' && /\.(?:cmd|bat)$/i.test(binary);
+    const child = spawn(binary, args, { stdio: ['ignore', 'ignore', 'pipe'], windowsHide: true, shell: usesWindowsScript });
     let error = '';
     child.stderr.on('data', (chunk) => { error += chunk.toString(); });
     child.once('error', reject);
