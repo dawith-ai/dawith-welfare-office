@@ -50,8 +50,8 @@ npm run dist:win
 
 생성물:
 
-- `dist/Dawith-Welfare-Office-0.2.6-x64-Setup.exe` — 일반 설치형
-- `dist/Dawith-Welfare-Office-0.2.6-x64-Portable.exe` — 설치 없이 실행하는 portable 형식
+- `dist/Dawith-Welfare-Office-0.2.7-x64-Setup.exe` — 일반 설치형
+- `dist/Dawith-Welfare-Office-0.2.7-x64-Portable.exe` — 설치 없이 실행하는 portable 형식
 
 GitHub Actions의 `Build Dawith Welfare Office for Windows` workflow도 같은 Windows runner에서 검사·브라우저 테스트·빌드를 수행합니다.
 
@@ -79,5 +79,7 @@ WHISPER_MODEL_PATH=/기관이승인한경로/ggml-small.bin npm start
 4. 초안을 만들고 담당자가 결과를 검토한 뒤 `Word 다운로드`를 선택합니다. HWPX 양식은 `.hwpx`로 내려받습니다.
 
 업로드된 파일·태그·문서 값은 로컬 서버의 암호화 SQLite에만 저장됩니다. 공개 데모에서는 실제 파일 업로드를 막고 있으므로 기관용 Windows EXE 또는 `127.0.0.1` 로컬 서버에서 사용해야 합니다.
+
+로컬 서버는 요청 Origin이 현재 접속한 `127.0.0.1` 또는 `localhost` 주소와 정확히 일치할 때만 브라우저 요청을 허용합니다. 다른 로컬 포트나 외부 웹사이트에서 API를 호출할 수 없으며, CSP·프레임 삽입 차단·MIME 보호 헤더도 적용됩니다.
 
 오픈소스 기반과 라이선스는 [`UPSTREAM.md`](./UPSTREAM.md), 제품 요구사항은 [`PRD.md`](./PRD.md), 시스템 경계는 [`ARCHITECTURE.md`](./ARCHITECTURE.md)에 기록했습니다.

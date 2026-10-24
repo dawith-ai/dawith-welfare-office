@@ -15,6 +15,12 @@ import { transcribeAudio } from './src/transcription.mjs';
 const root = path.dirname(fileURLToPath(import.meta.url));
 const defaultPort = Number(process.env.PORT || 4387);
 const defaultDataDir = process.env.WELFARE_DATA_DIR || path.join(root, '.data');
+const localSecurityHeaders = {
+  'X-Content-Type-Options': 'nosniff',
+  'X-Frame-Options': 'DENY',
+  'Referrer-Policy': 'no-referrer',
+  'Content-Security-Policy': "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'",
+};
 
 const json = (response, status, body, extraHeaders = {}) => {
   response.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store', ...extraHeaders });
@@ -75,10 +81,22 @@ export function createServer({ dataDir = defaultDataDir } = {}) {
   const store = openStore(dataDir);
   store.ensureDefaultCase();
   const server = http.createServer(async (request, response) => {
+    for (const [header, value] of Object.entries(localSecurityHeaders)) response.setHeader(header, value);
     try {
       const url = new URL(request.url, 'http://127.0.0.1');
       const origin = request.headers.origin;
-      if (origin && origin !== 'null' && !/^https?:\/\/127\.0\.0\.1(?::\d+)?$/.test(origin)) return json(response, 403, { error: 'origin_not_allowed' });
+      if (origin) {
+        let sameLocalOrigin = false;
+        try {
+          const parsedOrigin = new URL(origin);
+          sameLocalOrigin = parsedOrigin.protocol === 'http:'
+            && (parsedOrigin.hostname === '127.0.0.1' || parsedOrigin.hostname === 'localhost')
+            && parsedOrigin.host === String(request.headers.host || '').toLowerCase();
+        } catch {
+          sameLocalOrigin = false;
+        }
+        if (!sameLocalOrigin) return json(response, 403, { error: 'origin_not_allowed' });
+      }
       if (url.pathname === '/api/health') return json(response, 200, { ok: true, mode: 'local-only', host: '127.0.0.1', externalProviders: 'blocked' });
       if (url.pathname === '/api/capabilities' && request.method === 'GET') return json(response, 200, await getCapabilities(store));
       if (url.pathname === '/api/cases' && request.method === 'POST') {

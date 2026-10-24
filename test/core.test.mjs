@@ -167,6 +167,11 @@ test('local API supports the full review, search, edit, export flow and blocks c
     assert.equal(health.mode, 'local-only');
     const crossOrigin = await fetch(`${runtime.url}/api/health`, { headers: { Origin: 'https://example.invalid' } });
     assert.equal(crossOrigin.status, 403);
+    const alternateLoopbackOrigin = await fetch(`${runtime.url}/api/health`, { headers: { Origin: `http://localhost:${new URL(runtime.url).port}` } });
+    assert.equal(alternateLoopbackOrigin.status, 403);
+    const sameOrigin = await fetch(`${runtime.url}/api/health`, { headers: { Origin: runtime.url } });
+    assert.equal(sameOrigin.status, 200);
+    assert.equal(sameOrigin.headers.get('content-security-policy').includes("frame-ancestors 'none'"), true);
     const cases = await fetch(`${runtime.url}/api/cases`).then((response) => response.json());
     assert.equal(cases.cases.length, 1);
     const createdCase = await fetch(`${runtime.url}/api/cases`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ label: '합성 사례 A' }) }).then((response) => response.json());
