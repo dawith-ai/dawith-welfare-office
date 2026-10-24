@@ -25,6 +25,7 @@ test('buildDrafts extracts welfare-record facts without a model', () => {
   assert.deepEqual(draft.facts.relations, ['친모']);
   assert.deepEqual(draft.facts.dates, ['7월']);
   assert.ok(draft.servicePlan.includes('신청'));
+  assert.equal(draft.counselingLog.includes('와 내담자와의'), false);
   assert.equal(draft.servicePlan.includes('논의을'), false);
   assert.equal(draft.reviewRequired, true);
 });

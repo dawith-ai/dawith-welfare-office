@@ -73,7 +73,7 @@ export function buildDrafts({ kind = 'counseling', rawText = '', contextText = '
   const source = cleanText(rawText);
   const context = cleanText(contextText);
   const facts = extractFacts(source, context);
-  const subject = phrase(facts.relations, '내담자');
+  const subject = facts.relations.includes('내담자') ? '내담자' : phrase(facts.relations, '내담자');
   const date = phrase(facts.dates, '기록일 기준');
   const topic = phrase(facts.topics, '상담 내용');
   const concern = facts.concerns[0] ?? '추가 확인이 필요한 내용은 담당자 검토가 필요함';
