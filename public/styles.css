@@ -228,6 +228,49 @@ dialog::backdrop { background: #19312766; }
 .workspace-audio .output-empty { background: linear-gradient(145deg, #fff 0%, #fffaf5 100%); }
 .workspace-audio .draft-badge { background: #fff0df; color: #a45d2b; }
 
+/* Clarity pass: one reading order, fewer containers, no decorative task card. */
+.workspace-view .workspace-head { min-height: 0; align-items: flex-start; padding: 12px 0 22px; margin-bottom: 24px; border: 0; border-bottom: 1px solid var(--task-line); border-radius: 0; overflow: visible; background: transparent !important; }
+.workspace-view .workspace-head::after, .workspace-view .task-brief { display: none !important; }
+.workspace-view .workspace-heading { padding-top: 2px; }
+.workspace-view .workspace-head h1 { font-size: clamp(28px, 3vw, 42px); }
+.workspace-view .workspace-head p:not(.eyebrow) { max-width: 680px; }
+.workspace-view .workspace-grid { grid-template-columns: minmax(0, .94fr) minmax(0, 1.06fr); gap: 24px; }
+.workspace-view .input-column { grid-template-columns: 1fr; grid-template-areas: none; gap: 0; border: 1px solid var(--task-line); border-radius: 16px; overflow: hidden; background: #fff; }
+.workspace-view .input-column > #rawPanel, .workspace-view .input-column > #contextPanel, .workspace-view .input-column > #processPanel { grid-area: auto !important; }
+.workspace-view .panel { border: 0; border-bottom: 1px solid #e8eeea; border-radius: 0; box-shadow: none; }
+.workspace-view .panel:last-child { border-bottom: 0; }
+.workspace-view .panel-title { gap: 10px; }
+.workspace-view .step-badge { width: 22px; height: 22px; border-radius: 50%; }
+.workspace-view .panel h2 { font-size: 15px; }
+.workspace-view .panel-title p { max-width: 520px; }
+.workspace-view #rawPanel { border-top: 3px solid var(--task-accent); }
+.workspace-view #rawText { min-height: 220px; margin-top: 15px; }
+.workspace-view #contextPanel { background: #fcfdfc; }
+.workspace-view #contextText { min-height: 88px; margin-top: 15px; }
+.workspace-view #processPanel { background: #f8faf8; padding-top: 20px; padding-bottom: 20px; }
+.workspace-view .engine-options { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 14px; }
+.workspace-view .engine-option { min-height: 66px; padding: 10px; }
+.workspace-view .engine-option select { max-width: 100%; }
+.workspace-view .primary-button { margin-top: 12px; }
+.workspace-view .output-panel { min-height: 0; padding: 0; border-radius: 16px; overflow: hidden; box-shadow: 0 12px 28px color-mix(in srgb, var(--task-accent) 8%, transparent); }
+.workspace-view .output-empty { min-height: 520px; padding: 32px; }
+.workspace-view #outputContent { padding: 24px; }
+.workspace-view .output-tabs { margin-top: 18px; }
+.workspace-view .output-actions { gap: 6px; }
+
+/* Purposeful differences remain in the working surface, not in extra chrome. */
+.workspace-meeting .workspace-grid, .workspace-audio .workspace-grid { grid-template-columns: minmax(0, .94fr) minmax(0, 1.06fr); }
+.workspace-meeting #rawPanel { border-top-color: #5a82b2; }
+.workspace-meeting #rawText { min-height: 270px; }
+.workspace-meeting #contextPanel { background: #fbfdff; }
+.workspace-meeting #processPanel { display: block; grid-template-columns: none; background: #f7f9fc; }
+.workspace-audio #rawPanel { border-top-color: #d18a4c; }
+.workspace-audio #rawText { min-height: 205px; }
+.workspace-audio #contextPanel { background: #fffaf5; }
+.workspace-audio #processPanel { background: #fffaf6; }
+.workspace-audio .audio-input { display: grid; grid-template-columns: minmax(0, 1fr) auto; }
+.workspace-audio .file-drop { min-height: 92px; }
+
 @media (max-width: 820px) {
   .topbar { padding: 0 20px; }
   .ghost-button { display: none; }
