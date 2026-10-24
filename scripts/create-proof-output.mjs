@@ -8,7 +8,9 @@ import { Document, Paragraph, Packer } from 'docx';
 import { startServer } from '../server.mjs';
 
 const root = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
-const outputDir = path.join(root, 'dist', 'proof-v0.2.5');
+const packageJson = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
+const proofVersion = process.env.PROOF_VERSION || packageJson.version;
+const outputDir = path.join(root, 'dist', `proof-v${proofVersion}`);
 const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'dawith-welfare-proof-'));
 const synthetic = {
   counseling: '합성 내담자는 2026년 11월 이사를 앞두고 있으며 주거비 부담과 자녀의 학교 적응을 걱정함. 담당자는 임대주택 신청 자격과 지역 아동 지원 서비스를 확인하기로 함.',
@@ -81,7 +83,7 @@ try {
   checks.push({ check: 'metadata-only audit', pass: audit.events.some((event) => event.eventType === 'record_created') && !JSON.stringify(audit).includes(synthetic.counseling) });
   const manifest = { generatedAt: new Date().toISOString(), mode: 'synthetic-local-proof', runtime: base, files, checks, allPassed: checks.every((item) => item.pass) };
   files.push(write('manifest.json', JSON.stringify(manifest, null, 2)));
-  write('README.md', `# Dawith Welfare Office v0.2.5 실제 결과 검증\n\n합성 데이터만 사용한 로컬 API 결과물입니다.\n\n- 상담기록: 01-counseling-record.*\n- 회의록: 02-meeting-minutes.md\n- 사업기획서: 03-business-plan.docx\n- 기관 양식 작성본: 04-institution-template-filled.docx\n- 감사 메타데이터: 05-audit-metadata.json\n- 검증 매니페스트: manifest.json\n\n전체 검증: ${manifest.allPassed ? 'PASS' : 'FAIL'}\n`);
+  write('README.md', `# Dawith Welfare Office v${proofVersion} 실제 결과 검증\n\n합성 데이터만 사용한 로컬 API 결과물입니다.\n\n- 상담기록: 01-counseling-record.*\n- 회의록: 02-meeting-minutes.md\n- 사업기획서: 03-business-plan.docx\n- 기관 양식 작성본: 04-institution-template-filled.docx\n- 감사 메타데이터: 05-audit-metadata.json\n- 검증 매니페스트: manifest.json\n\n전체 검증: ${manifest.allPassed ? 'PASS' : 'FAIL'}\n`);
   console.log(JSON.stringify({ outputDir, files, checks, allPassed: manifest.allPassed }, null, 2));
 } finally {
   await new Promise((resolve) => runtime.server.close(resolve));
