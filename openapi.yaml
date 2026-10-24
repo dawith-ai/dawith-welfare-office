@@ -1,0 +1,107 @@
+openapi: 3.0.3
+info:
+  title: Dawith Welfare Office Local API
+  version: 0.1.0
+  description: Local-only API used by the Dawith browser workspace and Electron app.
+servers:
+  - url: http://127.0.0.1:4387
+    description: Institution device only
+paths:
+  /api/health:
+    get:
+      summary: Check the local boundary
+      responses:
+        '200':
+          description: Local-only status
+  /api/capabilities:
+    get:
+      summary: Detect local engines and storage
+      responses:
+        '200':
+          description: Capability map
+  /api/process:
+    post:
+      summary: Create a counseling, meeting, or audio draft
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProcessRequest'
+      responses:
+        '200':
+          description: Draft generated locally
+        '400':
+          description: Invalid input or blocked external provider
+  /api/records:
+    get:
+      summary: Search local records
+      parameters:
+        - in: query
+          name: q
+          schema: { type: string }
+        - in: query
+          name: kind
+          schema: { type: string, enum: [counseling, meeting, audio] }
+      responses:
+        '200':
+          description: Local record list
+    post:
+      summary: Save a reviewed record to encrypted SQLite
+      responses:
+        '201':
+          description: Saved record
+  /api/records/{id}:
+    get:
+      summary: Open one local record
+      parameters: [{ $ref: '#/components/parameters/RecordId' }]
+      responses:
+        '200': { description: Record detail }
+        '404': { description: Record not found }
+    patch:
+      summary: Update a reviewed local record
+      parameters: [{ $ref: '#/components/parameters/RecordId' }]
+      responses:
+        '200': { description: Updated record }
+  /api/records/{id}/export:
+    get:
+      summary: Export a local record
+      parameters:
+        - $ref: '#/components/parameters/RecordId'
+        - in: query
+          name: format
+          schema: { type: string, enum: [json, markdown, html] }
+      responses:
+        '200': { description: Local file content }
+  /api/transcribe:
+    post:
+      summary: Transcribe with an institution-approved local whisper.cpp model
+      responses:
+        '200': { description: Local transcript }
+        '409': { description: Whisper model is not configured }
+  /api/settings:
+    get:
+      summary: Read local settings
+      responses:
+        '200': { description: Local settings }
+    patch:
+      summary: Update local settings
+      responses:
+        '200': { description: Updated settings }
+components:
+  parameters:
+    RecordId:
+      name: id
+      in: path
+      required: true
+      schema: { type: string }
+  schemas:
+    ProcessRequest:
+      type: object
+      required: [kind, rawText]
+      properties:
+        kind: { type: string, enum: [counseling, meeting, audio] }
+        provider: { type: string, enum: [rules, ollama-local] }
+        model: { type: string }
+        rawText: { type: string }
+        contextText: { type: string }

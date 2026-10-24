@@ -1,0 +1,42 @@
+name: Build Dawith Welfare Office for Windows
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: welfare-office
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: welfare-office/package-lock.json
+      - name: Install dependencies
+        run: npm ci
+      - name: Check and test
+        run: |
+          npm run check
+          npm test
+      - name: Install Playwright browser
+        run: npx playwright install chromium
+      - name: Browser regression test
+        run: npm run test:e2e
+      - name: Build Windows installers
+        run: npm run dist:win
+      - name: Upload installers
+        uses: actions/upload-artifact@v4
+        with:
+          name: dawith-welfare-office-windows
+          path: welfare-office/dist/*

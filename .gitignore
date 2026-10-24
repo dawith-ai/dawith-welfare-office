@@ -1,0 +1,13 @@
+.data/
+.data-e2e/
+.data-e2e-*/
+node_modules/
+.local-key
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+test-results/
+playwright-report/
+.playwright/
+dist/
+.DS_Store
