@@ -10,6 +10,7 @@ import { openStore } from './src/storage.mjs';
 import { getCapabilities, whisperConfiguration } from './src/capabilities.mjs';
 import { buildDocumentDraft, documentTemplates } from './src/documents.mjs';
 import { documentToDocx, documentToHtml, documentToMarkdown } from './src/document-export.mjs';
+import { analyzeTemplate, isUploadedTemplateId, renderTemplate, uploadedTemplateId } from './src/template-engine.mjs';
 
 const root = path.dirname(fileURLToPath(import.meta.url));
 const defaultPort = Number(process.env.PORT || 4387);
@@ -32,6 +33,9 @@ const body = async (request, limit = 8 * 1024 * 1024) => {
 };
 
 const safeJson = (value) => (typeof value === 'object' && value !== null ? value : {});
+const routeParam = (value) => {
+  try { return decodeURIComponent(value); } catch { return value; }
+};
 
 async function ollamaDraft(input) {
   const response = await fetch('http://127.0.0.1:11434/api/chat', {
@@ -111,7 +115,30 @@ export function createServer({ dataDir = defaultDataDir } = {}) {
       }
       if (url.pathname === '/api/cases' && request.method === 'GET') return json(response, 200, { cases: store.listCases() });
       if (url.pathname === '/api/records' && request.method === 'GET') return json(response, 200, { records: store.listRecords({ query: url.searchParams.get('q') || '', kind: url.searchParams.get('kind') || '' }) });
-      if (url.pathname === '/api/document-templates' && request.method === 'GET') return json(response, 200, { templates: documentTemplates });
+      if (url.pathname === '/api/document-templates' && request.method === 'GET') return json(response, 200, { templates: documentTemplates, uploadedTemplates: store.listDocumentTemplates() });
+      if (url.pathname === '/api/document-templates' && request.method === 'POST') {
+        const input = safeJson(await body(request, 40 * 1024 * 1024));
+        const data = Buffer.from(String(input.dataBase64 || ''), 'base64');
+        const analysis = await analyzeTemplate({ fileName: input.fileName, data });
+        const templateId = uploadedTemplateId(`template_${crypto.randomUUID()}`);
+        const saved = store.saveDocumentTemplate({ templateId, fileName: analysis.fileName, format: analysis.format, data, fields: analysis.fields, ready: analysis.ready, warnings: analysis.warnings });
+        return json(response, 201, { template: { ...saved, data: undefined }, analysis });
+      }
+      const templateRenderMatch = url.pathname.match(/^\/api\/document-templates\/([^/]+)\/render$/);
+      if (templateRenderMatch && request.method === 'POST') {
+        const template = store.getDocumentTemplate(routeParam(templateRenderMatch[1]));
+        if (!template) return json(response, 404, { error: 'document_template_not_found' });
+        const input = safeJson(await body(request, 40 * 1024 * 1024));
+        const output = await renderTemplate({ fileName: template.fileName, data: template.data, fields: input.fields || {} });
+        const extension = template.format === 'hwpx' ? 'hwpx' : 'docx';
+        response.writeHead(200, { 'Content-Type': template.format === 'hwpx' ? 'application/zip' : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'Content-Disposition': `attachment; filename="dawith-filled-template-${template.id}.${extension}"` });
+        return response.end(output);
+      }
+      const templateMatch = url.pathname.match(/^\/api\/document-templates\/([^/]+)$/);
+      if (templateMatch && request.method === 'GET') {
+        const template = store.getDocumentTemplate(routeParam(templateMatch[1]));
+        return template ? json(response, 200, { template: { ...template, data: undefined } }) : json(response, 404, { error: 'document_template_not_found' });
+      }
       if (url.pathname === '/api/documents/preview' && request.method === 'POST') {
         const input = safeJson(await body(request));
         if (!documentTemplates.some((template) => template.id === input.templateId)) return json(response, 400, { error: 'document_template_invalid' });
@@ -120,7 +147,7 @@ export function createServer({ dataDir = defaultDataDir } = {}) {
       if (url.pathname === '/api/documents' && request.method === 'GET') return json(response, 200, { documents: store.listDocuments() });
       if (url.pathname === '/api/documents' && request.method === 'POST') {
         const input = safeJson(await body(request));
-        if (!documentTemplates.some((template) => template.id === input.templateId) || !input.payload) return json(response, 400, { error: 'document_payload_invalid' });
+        if ((!documentTemplates.some((template) => template.id === input.templateId) && !store.getDocumentTemplate(input.templateId)) || !input.payload) return json(response, 400, { error: 'document_payload_invalid' });
         const saved = store.saveDocument({ templateId: input.templateId, title: input.title, payload: input.payload });
         return json(response, 201, { document: saved });
       }
@@ -160,7 +187,7 @@ export function createServer({ dataDir = defaultDataDir } = {}) {
       }
       if (documentMatch && request.method === 'PATCH') {
         const input = safeJson(await body(request));
-        if (input.templateId && !documentTemplates.some((template) => template.id === input.templateId)) return json(response, 400, { error: 'document_template_invalid' });
+        if (input.templateId && !documentTemplates.some((template) => template.id === input.templateId) && !store.getDocumentTemplate(input.templateId)) return json(response, 400, { error: 'document_template_invalid' });
         const document = store.updateDocument(documentMatch[1], input);
         return document ? json(response, 200, { document }) : json(response, 404, { error: 'document_not_found' });
       }
@@ -178,6 +205,14 @@ export function createServer({ dataDir = defaultDataDir } = {}) {
           return response.end(documentToHtml(document));
         }
         if (format === 'docx') {
+          if (isUploadedTemplateId(document.templateId)) {
+            const template = store.getDocumentTemplate(document.templateId);
+            if (!template) return json(response, 404, { error: 'document_template_not_found' });
+            const output = await renderTemplate({ fileName: template.fileName, data: template.data, fields: document.payload?.fields || {} });
+            const extension = template.format === 'hwpx' ? 'hwpx' : 'docx';
+            response.writeHead(200, { 'Content-Type': template.format === 'hwpx' ? 'application/zip' : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'Content-Disposition': `attachment; filename="dawith-document-${document.id}.${extension}"` });
+            return response.end(output);
+          }
           const buffer = await documentToDocx(document);
           response.writeHead(200, { 'Content-Type': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'Content-Disposition': `attachment; filename="dawith-document-${document.id}.docx"` });
           return response.end(buffer);
@@ -212,7 +247,7 @@ export function createServer({ dataDir = defaultDataDir } = {}) {
       if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) return sendFile(response, filePath);
       return response.writeHead(404).end('Not found');
     } catch (error) {
-      const status = error.message === 'payload_too_large' ? 413 : error.message === 'whisper_model_not_configured' ? 409 : ['case_label_required', 'case_not_found', 'document_payload_invalid', 'document_template_invalid'].includes(error.message) ? 400 : 500;
+      const status = error.message === 'payload_too_large' ? 413 : error.message === 'whisper_model_not_configured' ? 409 : ['case_label_required', 'case_not_found', 'document_payload_invalid', 'document_template_invalid', 'template_size_invalid', 'template_format_unsupported'].includes(error.message) ? 400 : 500;
       return json(response, status, { error: error.message || 'internal_error' });
     }
   });

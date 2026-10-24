@@ -40,6 +40,15 @@ export function openStore(dataDir) {
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL
     );
+    CREATE TABLE IF NOT EXISTS document_templates (
+      id TEXT PRIMARY KEY,
+      file_name TEXT NOT NULL,
+      format TEXT NOT NULL,
+      file_data TEXT NOT NULL,
+      fields_json TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
   `);
 
   const now = () => new Date().toISOString();
@@ -137,6 +146,31 @@ export function openStore(dataDir) {
       const timestamp = now();
       db.prepare('UPDATE documents SET template_id = ?, title = ?, payload_json = ?, updated_at = ? WHERE id = ?').run(String(templateId || existing.templateId), cipher.seal(String(title || existing.title)), cipher.seal(JSON.stringify(payload || existing.payload)), timestamp, documentId);
       return this.getDocument(documentId);
+    },
+    listDocumentTemplates() {
+      return db.prepare('SELECT id, file_name AS fileName, format, fields_json AS fieldsJson, created_at AS createdAt, updated_at AS updatedAt FROM document_templates ORDER BY updated_at DESC').all().map((row) => ({
+        ...(() => {
+          const parsed = JSON.parse(cipher.open(row.fieldsJson));
+          return { fields: Array.isArray(parsed) ? parsed : parsed.fields || [], ready: Array.isArray(parsed) ? true : parsed.ready !== false, warnings: Array.isArray(parsed) ? [] : parsed.warnings || [] };
+        })(),
+        id: row.id,
+        fileName: cipher.open(row.fileName),
+        format: row.format,
+        createdAt: row.createdAt,
+        updatedAt: row.updatedAt,
+      }));
+    },
+    saveDocumentTemplate({ templateId, fileName, format, data, fields, ready = true, warnings = [] }) {
+      const timestamp = now();
+      const encoded = Buffer.from(data).toString('base64');
+      db.prepare('INSERT INTO document_templates (id, file_name, format, file_data, fields_json, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET file_name = excluded.file_name, format = excluded.format, file_data = excluded.file_data, fields_json = excluded.fields_json, updated_at = excluded.updated_at').run(String(templateId), cipher.seal(String(fileName)), String(format), cipher.seal(encoded), cipher.seal(JSON.stringify({ fields: fields || [], ready, warnings })), timestamp, timestamp);
+      return this.getDocumentTemplate(templateId);
+    },
+    getDocumentTemplate(templateId) {
+      const row = db.prepare('SELECT id, file_name AS fileName, format, file_data AS fileData, fields_json AS fieldsJson, created_at AS createdAt, updated_at AS updatedAt FROM document_templates WHERE id = ?').get(templateId);
+      if (!row) return null;
+      const parsed = JSON.parse(cipher.open(row.fieldsJson));
+      return { id: row.id, fileName: cipher.open(row.fileName), format: row.format, data: Buffer.from(cipher.open(row.fileData), 'base64'), fields: Array.isArray(parsed) ? parsed : parsed.fields || [], ready: Array.isArray(parsed) ? true : parsed.ready !== false, warnings: Array.isArray(parsed) ? [] : parsed.warnings || [], createdAt: row.createdAt, updatedAt: row.updatedAt };
     },
     close() {
       db.close();

@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: Dawith Welfare Office Local API
-  version: 0.1.5
+  version: 0.2.0
   description: Local-only API used by the Dawith browser workspace and Electron app.
 servers:
   - url: http://127.0.0.1:4387
@@ -95,7 +95,41 @@ paths:
     get:
       summary: List institution document templates
       responses:
-        '200': { description: Business plan, business report, and meeting minutes templates }
+        '200': { description: Built-in and locally uploaded institution templates }
+    post:
+      summary: Analyze and save a DOCX or HWPX template locally
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DocumentTemplateUploadRequest'
+      responses:
+        '201': { description: Template metadata and detected fields }
+        '400': { description: Unsupported format, size, or invalid archive }
+  /api/document-templates/{id}:
+    get:
+      summary: Read one locally uploaded template
+      parameters: [{ $ref: '#/components/parameters/DocumentTemplateId' }]
+      responses:
+        '200': { description: Template metadata and detected fields }
+        '404': { description: Template not found }
+  /api/document-templates/{id}/render:
+    post:
+      summary: Fill a locally stored template without external processing
+      parameters: [{ $ref: '#/components/parameters/DocumentTemplateId' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [fields]
+              properties:
+                fields: { type: object, additionalProperties: { type: string } }
+      responses:
+        '200': { description: Filled DOCX or HWPX binary }
+        '404': { description: Template not found }
   /api/documents/preview:
     post:
       summary: Build a reviewed document draft without saving it
@@ -172,6 +206,11 @@ components:
       in: path
       required: true
       schema: { type: string }
+    DocumentTemplateId:
+      name: id
+      in: path
+      required: true
+      schema: { type: string }
   schemas:
     ProcessRequest:
       type: object
@@ -187,13 +226,19 @@ components:
       type: object
       required: [templateId]
       properties:
-        templateId: { type: string, enum: [business-plan, business-report, meeting-minutes] }
+        templateId: { type: string, description: Built-in ID or uploaded:<id> }
         fields: { type: object, additionalProperties: { type: string } }
         source: { type: object, additionalProperties: true }
     DocumentSaveRequest:
       type: object
       required: [templateId, payload]
       properties:
-        templateId: { type: string, enum: [business-plan, business-report, meeting-minutes] }
+        templateId: { type: string, description: Built-in ID or uploaded:<id> }
         title: { type: string }
         payload: { type: object, additionalProperties: true }
+    DocumentTemplateUploadRequest:
+      type: object
+      required: [fileName, dataBase64]
+      properties:
+        fileName: { type: string, description: DOCX or HWPX file name }
+        dataBase64: { type: string, description: Base64-encoded local template, maximum raw size 25 MB }

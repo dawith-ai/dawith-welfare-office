@@ -3,10 +3,13 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
+import JSZip from 'jszip';
+import { Document, Paragraph, Packer } from 'docx';
 import { buildDrafts, parseOllamaDraft } from '../src/processing.mjs';
 import { buildDocumentDraft } from '../src/documents.mjs';
 import { documentToDocx } from '../src/document-export.mjs';
 import { openStore } from '../src/storage.mjs';
+import { analyzeTemplate, renderTemplate } from '../src/template-engine.mjs';
 import { startServer } from '../server.mjs';
 
 test('buildDrafts extracts welfare-record facts without a model', () => {
@@ -63,6 +66,35 @@ test('document studio builds welfare templates and a valid Word document locally
   assert.equal(buffer.subarray(0, 2).toString(), 'PK');
 });
 
+test('uploaded DOCX and HWPX templates are analyzed and filled locally', async () => {
+  const docx = await Packer.toBuffer(new Document({ sections: [{ children: [new Paragraph('기관: {{기관명}}'), new Paragraph('내용: {{내용}}')] }] }));
+  const docxAnalysis = await analyzeTemplate({ fileName: '기관양식.docx', data: docx });
+  assert.deepEqual(docxAnalysis.fields.map((field) => field.key), ['기관명', '내용']);
+  const filledDocx = await renderTemplate({ fileName: '기관양식.docx', data: docx, fields: { 기관명: '합성 기관', 내용: '첫 줄\n둘째 줄' } });
+  const docxZip = await JSZip.loadAsync(filledDocx);
+  const documentXml = await docxZip.file('word/document.xml').async('text');
+  assert.match(documentXml, /합성 기관/);
+  assert.match(documentXml, /첫 줄/);
+  assert.match(documentXml, /둘째 줄/);
+
+  const hwpxZip = new JSZip();
+  hwpxZip.file('Contents/section0.xml', '<section><p>기관: {{기관명}}</p><p>내용: {{내용}}</p></section>');
+  const hwpx = await hwpxZip.generateAsync({ type: 'nodebuffer' });
+  const hwpxAnalysis = await analyzeTemplate({ fileName: '기관양식.hwpx', data: hwpx });
+  assert.equal(hwpxAnalysis.ready, true);
+  const filledHwpx = await renderTemplate({ fileName: '기관양식.hwpx', data: hwpx, fields: { 기관명: '합성 기관', 내용: '합성 내용' } });
+  const filledHwpxZip = await JSZip.loadAsync(filledHwpx);
+  const sectionXml = await filledHwpxZip.file('Contents/section0.xml').async('text');
+  assert.match(sectionXml, /합성 기관/);
+  assert.match(sectionXml, /합성 내용/);
+
+  const splitHwpxZip = new JSZip();
+  splitHwpxZip.file('Contents/section0.xml', '<section><p>{{기</p><p>관명}}</p></section>');
+  const splitHwpxAnalysis = await analyzeTemplate({ fileName: '분리양식.hwpx', data: await splitHwpxZip.generateAsync({ type: 'nodebuffer' }) });
+  assert.equal(splitHwpxAnalysis.ready, false);
+  assert.match(splitHwpxAnalysis.warnings[0], /XML 텍스트 노드로 분리/);
+});
+
 test('records persist in a local SQLite file and can be exported', () => {
   const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'dawith-welfare-test-'));
   const store = openStore(dataDir);
@@ -108,12 +140,32 @@ test('local API supports the full review, search, edit, export flow and blocks c
     assert.equal(settings.settings.retentionDays, 30);
     const templates = await fetch(`${runtime.url}/api/document-templates`).then((response) => response.json());
     assert.equal(templates.templates.length, 3);
+    const templateData = Buffer.from('not-a-real-template').toString('base64');
+    const invalidTemplate = await fetch(`${runtime.url}/api/document-templates`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ fileName: '기관양식.pdf', dataBase64: templateData }) });
+    assert.equal(invalidTemplate.status, 400);
+    const uploadedTemplate = await fetch(`${runtime.url}/api/document-templates`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ fileName: '기관양식.docx', dataBase64: (await (async () => {
+      const uploadedDocx = await Packer.toBuffer(new Document({ sections: [{ children: [new Paragraph('기관: {{기관명}}')] }] }));
+      return uploadedDocx.toString('base64');
+    })()) }) }).then((response) => response.json());
+    assert.equal(uploadedTemplate.analysis.ready, true);
+    assert.equal(uploadedTemplate.analysis.fields[0].key, '기관명');
+    assert.equal(uploadedTemplate.template.ready, true);
+    const uploadedTemplates = await fetch(`${runtime.url}/api/document-templates`).then((response) => response.json());
+    assert.equal(uploadedTemplates.uploadedTemplates[0].ready, true);
+    const filledTemplate = await fetch(`${runtime.url}/api/document-templates/${encodeURIComponent(uploadedTemplate.template.id)}/render`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ fields: { 기관명: '합성 기관' } }) });
+    assert.equal(filledTemplate.status, 200);
+    assert.equal((await filledTemplate.arrayBuffer()).byteLength > 5000, true);
+    const customDraft = { templateId: uploadedTemplate.template.id, title: '기관 양식 결과', fields: { 기관명: '합성 기관' }, sections: [{ id: '기관명', heading: '기관명', content: '합성 기관' }], missing: [], sourceType: '직접 입력', generatedAt: new Date().toISOString(), templateLabel: '기관양식.docx' };
+    const customDocument = await fetch(`${runtime.url}/api/documents`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ templateId: customDraft.templateId, title: customDraft.title, payload: customDraft }) }).then((response) => response.json());
+    const customExport = await fetch(`${runtime.url}/api/documents/${customDocument.document.id}/export?format=docx`);
+    assert.equal(customExport.status, 200);
+    assert.equal((await customExport.arrayBuffer()).byteLength > 5000, true);
     const preview = await fetch(`${runtime.url}/api/documents/preview`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ templateId: 'business-plan', fields: { organizationName: '합성 기관', businessName: '주거지원', period: '2026년', target: '합성 가구', necessity: '합성 필요성', goals: '목표', activities: '활동', indicators: '지표' } }) }).then((response) => response.json());
     assert.equal(preview.draft.title, '주거지원 사업기획서');
     const savedDocument = await fetch(`${runtime.url}/api/documents`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ templateId: preview.draft.templateId, title: preview.draft.title, payload: preview.draft }) }).then((response) => response.json());
     assert.ok(savedDocument.document.id);
     const documents = await fetch(`${runtime.url}/api/documents`).then((response) => response.json());
-    assert.equal(documents.documents.length, 1);
+    assert.equal(documents.documents.length, 2);
     const docx = await fetch(`${runtime.url}/api/documents/${savedDocument.document.id}/export?format=docx`);
     assert.equal(docx.status, 200);
     assert.equal(docx.headers.get('content-type'), 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');

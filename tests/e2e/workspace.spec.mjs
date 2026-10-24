@@ -1,3 +1,7 @@
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { Document, Paragraph, Packer } from 'docx';
 import { test, expect } from '@playwright/test';
 
 test('social-work meeting workflow can be completed locally', async ({ page }) => {
@@ -80,4 +84,30 @@ test('document studio creates, edits, saves, and exports a business plan', async
   await page.getByRole('button', { name: '예시 채우기' }).click();
   await page.getByRole('button', { name: /문서 초안 만들기/ }).click();
   await expect(page.locator('#documentPreview .paper-header h1')).toContainText('회의록');
+});
+
+test('document studio uploads a tagged institution template and exports the filled original format', async ({ page }) => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'dawith-welfare-e2e-template-'));
+  const templatePath = path.join(tempDir, '기관양식.docx');
+  const template = await Packer.toBuffer(new Document({ sections: [{ children: [new Paragraph('기관: {{기관명}}'), new Paragraph('사업명: {{사업명}}')] }] }));
+  fs.writeFileSync(templatePath, template);
+  try {
+    await page.goto('/');
+    await page.getByRole('button', { name: /기관 문서 만들기/ }).click();
+    await page.locator('#documentTemplateFile').setInputFiles(templatePath);
+    await expect(page.locator('#documentFormTitle')).toHaveText('기관양식.docx');
+    await expect(page.locator('#documentTemplateStatus')).toContainText('로컬 템플릿');
+    await page.locator('[data-doc-field="기관명"]').fill('합성 사회복지관');
+    await page.locator('[data-doc-field="사업명"]').fill('주거안정 지원사업');
+    await page.getByRole('button', { name: /문서 초안 만들기/ }).click();
+    await expect(page.locator('#documentPreview .paper-header h1')).toHaveText('기관양식 작성본');
+    await expect(page.locator('#documentReviewStatus')).toHaveClass(/ready/);
+    await page.getByRole('button', { name: '검토한 문서 저장' }).click();
+    const downloadPromise = page.waitForEvent('download');
+    await page.getByRole('button', { name: 'Word 다운로드' }).click();
+    const download = await downloadPromise;
+    expect(download.suggestedFilename()).toMatch(/\.docx$/);
+  } finally {
+    fs.rmSync(tempDir, { recursive: true, force: true });
+  }
 });

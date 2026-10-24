@@ -512,6 +512,20 @@ main { max-width: none; margin-left: 232px; padding: 48px clamp(34px, 5vw, 82px)
 .saved-document-item b, .saved-document-item small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .saved-document-item b { font-size: 10px; }
 .saved-document-item small { margin-top: 3px; color: #97a19a; font-size: 9px; }
+.template-upload-panel { padding: 14px; border: 1px solid var(--document-line); border-radius: 14px; background: var(--document-soft); }
+.template-upload-drop { display: flex; min-height: 70px; flex-direction: column; justify-content: center; align-items: center; gap: 3px; border: 1px dashed color-mix(in srgb, var(--document-accent) 45%, white); border-radius: 9px; background: #ffffffb8; color: var(--document-accent); cursor: pointer; text-align: center; }
+.template-upload-drop input { display: none; }
+.template-upload-drop span { font-size: 11px; font-weight: 800; }
+.template-upload-drop small { color: #849089; font-size: 9px; }
+.template-upload-status { margin: 8px 0 0; color: #728078; font-size: 9px; line-height: 1.45; }
+.uploaded-templates { display: grid; gap: 5px; margin-top: 9px; }
+.uploaded-template-item { display: block; width: 100%; padding: 8px; border: 1px solid transparent; border-radius: 7px; background: #ffffff99; color: var(--document-ink); text-align: left; }
+.uploaded-template-item:hover, .uploaded-template-item.active { border-color: var(--document-line); background: #fff; }
+.uploaded-template-item b, .uploaded-template-item small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.uploaded-template-item b { font-size: 10px; }
+.uploaded-template-item small { margin-top: 3px; color: #849089; font-size: 9px; }
+.upload-empty { display: block; color: #8e9a93; font-size: 9px; }
+.document-field > span code { display: block; margin-top: 3px; color: var(--document-accent); font: 9px ui-monospace; font-weight: 500; }
 .document-form-panel { padding: 18px; }
 .document-form-head { display: flex; justify-content: space-between; gap: 14px; align-items: flex-start; padding-bottom: 15px; border-bottom: 1px solid #edf0ed; }
 .document-form-head h2 { margin: 0; color: var(--document-ink); font-size: 22px; letter-spacing: -.04em; }
