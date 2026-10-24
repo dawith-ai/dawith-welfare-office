@@ -2,6 +2,11 @@
 
 사회복지기관의 상담 메모·회의 메모·녹취를 기관 PC 안에서 정리하는 Dawith Welfare Office입니다. 웹 데모와 Windows 설치형 EXE가 같은 로컬 API와 SQLite 저장소를 사용합니다.
 
+- 공개 데모: https://dawith-welfare-office-demo.vercel.app
+- 소스 저장소: https://github.com/dawith-ai/dawith-welfare-office
+
+공개 데모는 개인정보 보호를 위해 서버 API를 호출하지 않고 브라우저 규칙 엔진과 `localStorage`만 사용합니다. 실제 상담 원문은 공개 데모에 입력하지 말고 기관용 Windows EXE를 사용하세요.
+
 ## 현재 실제로 되는 것
 
 - 상담 내용 / 회의록 / 녹취 정리 업무 선택
