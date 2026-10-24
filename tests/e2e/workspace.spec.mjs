@@ -49,3 +49,35 @@ for (const [taskName, expectedText] of [['상담 내용 정리', '상담일지']
     if (taskName === '녹취 파일 정리') await expect(page.locator('#audioResultMeta')).toBeVisible();
   });
 }
+
+test('document studio creates, edits, saves, and exports a business plan', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: /기관 문서 만들기/ }).click();
+  await expect(page.locator('#documentsView')).toHaveClass(/active/);
+  await expect(page.locator('#documentFormTitle')).toHaveText('사업기획서');
+  await page.getByRole('button', { name: '예시 채우기' }).click();
+  await page.getByRole('button', { name: /문서 초안 만들기/ }).click();
+  await expect(page.locator('#documentPreview .paper-header h1')).toContainText('주거취약가구 주거안정 지원사업');
+  await expect(page.locator('#documentReviewStatus')).toHaveClass(/ready/);
+  await page.locator('[data-doc-section="necessity"]').fill('담당자가 검토한 합성 필요성입니다.');
+  await page.getByRole('button', { name: '검토한 문서 저장' }).click();
+  await expect(page.locator('#savedDocuments .saved-document-item')).toHaveCount(1);
+  const downloadPromise = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Word 다운로드' }).click();
+  const download = await downloadPromise;
+  expect(download.suggestedFilename()).toMatch(/\.docx$/);
+  await page.getByRole('button', { name: '회의록' }).click();
+  await expect(page.locator('#documentFormTitle')).toHaveText('회의록');
+  await page.locator('#documentTemplates [data-doc-template="business-plan"]').click();
+  await page.locator('#savedDocuments .saved-document-item').click();
+  await expect(page.locator('#documentPreview .paper-header h1')).toContainText('주거취약가구 주거안정 지원사업');
+  await expect(page.locator('[data-doc-section="necessity"]')).toHaveValue('담당자가 검토한 합성 필요성입니다.');
+  await page.locator('#documentTemplates [data-doc-template="business-report"]').click();
+  await page.getByRole('button', { name: '예시 채우기' }).click();
+  await page.getByRole('button', { name: /문서 초안 만들기/ }).click();
+  await expect(page.locator('#documentPreview .paper-header h1')).toContainText('사업보고서');
+  await page.locator('#documentTemplates [data-doc-template="meeting-minutes"]').click();
+  await page.getByRole('button', { name: '예시 채우기' }).click();
+  await page.getByRole('button', { name: /문서 초안 만들기/ }).click();
+  await expect(page.locator('#documentPreview .paper-header h1')).toContainText('회의록');
+});

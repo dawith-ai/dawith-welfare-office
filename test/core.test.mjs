@@ -4,6 +4,8 @@ import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 import { buildDrafts, parseOllamaDraft } from '../src/processing.mjs';
+import { buildDocumentDraft } from '../src/documents.mjs';
+import { documentToDocx } from '../src/document-export.mjs';
 import { openStore } from '../src/storage.mjs';
 import { startServer } from '../server.mjs';
 
@@ -38,6 +40,27 @@ test('invalid local-model output never bypasses deterministic fallback', () => {
   const fallback = buildDrafts({ kind: 'meeting', rawText: '회의에서 주거 지원을 논의함.' });
   assert.equal(parseOllamaDraft('not-json', fallback), fallback);
   assert.equal(parseOllamaDraft(JSON.stringify({ counselingLog: 'only one field' }), fallback), fallback);
+});
+
+test('document studio builds welfare templates and a valid Word document locally', async () => {
+  const draft = buildDocumentDraft({
+    templateId: 'meeting-minutes',
+    fields: {
+      organizationName: '합성 기관',
+      meetingTitle: '합성 사례회의',
+      date: '2026년 10월 24일 14:00',
+      attendees: '김○○, 이○○',
+      agenda: '주거 지원 방향\n신청 서류 점검',
+      discussion: '신청 절차와 상담 일정을 논의함.',
+      decisions: '신청 자격을 확인한다.',
+      actionItems: '김○○ — 10월 30일까지 자격 확인',
+    },
+  });
+  assert.equal(draft.title, '합성 사례회의 회의록');
+  assert.deepEqual(draft.missing, []);
+  const buffer = await documentToDocx({ id: 'document_test', templateId: draft.templateId, title: draft.title, payload: draft });
+  assert.ok(buffer.length > 5000);
+  assert.equal(buffer.subarray(0, 2).toString(), 'PK');
 });
 
 test('records persist in a local SQLite file and can be exported', () => {
@@ -83,6 +106,18 @@ test('local API supports the full review, search, edit, export flow and blocks c
     assert.match(markdown, /검토자가 수정한 회의 요약/);
     const settings = await fetch(`${runtime.url}/api/settings`, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ organizationName: '합성 기관', retentionDays: 30 }) }).then((response) => response.json());
     assert.equal(settings.settings.retentionDays, 30);
+    const templates = await fetch(`${runtime.url}/api/document-templates`).then((response) => response.json());
+    assert.equal(templates.templates.length, 3);
+    const preview = await fetch(`${runtime.url}/api/documents/preview`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ templateId: 'business-plan', fields: { organizationName: '합성 기관', businessName: '주거지원', period: '2026년', target: '합성 가구', necessity: '합성 필요성', goals: '목표', activities: '활동', indicators: '지표' } }) }).then((response) => response.json());
+    assert.equal(preview.draft.title, '주거지원 사업기획서');
+    const savedDocument = await fetch(`${runtime.url}/api/documents`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ templateId: preview.draft.templateId, title: preview.draft.title, payload: preview.draft }) }).then((response) => response.json());
+    assert.ok(savedDocument.document.id);
+    const documents = await fetch(`${runtime.url}/api/documents`).then((response) => response.json());
+    assert.equal(documents.documents.length, 1);
+    const docx = await fetch(`${runtime.url}/api/documents/${savedDocument.document.id}/export?format=docx`);
+    assert.equal(docx.status, 200);
+    assert.equal(docx.headers.get('content-type'), 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+    assert.equal((await docx.arrayBuffer()).byteLength > 5000, true);
   } finally {
     await new Promise((resolve) => runtime.server.close(resolve));
     fs.rmSync(dataDir, { recursive: true, force: true });

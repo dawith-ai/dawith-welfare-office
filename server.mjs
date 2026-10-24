@@ -8,6 +8,8 @@ import { fileURLToPath } from 'node:url';
 import { buildDrafts, buildOllamaPrompt, parseOllamaDraft } from './src/processing.mjs';
 import { openStore } from './src/storage.mjs';
 import { getCapabilities, whisperConfiguration } from './src/capabilities.mjs';
+import { buildDocumentDraft, documentTemplates } from './src/documents.mjs';
+import { documentToDocx, documentToHtml, documentToMarkdown } from './src/document-export.mjs';
 
 const root = path.dirname(fileURLToPath(import.meta.url));
 const defaultPort = Number(process.env.PORT || 4387);
@@ -109,6 +111,19 @@ export function createServer({ dataDir = defaultDataDir } = {}) {
       }
       if (url.pathname === '/api/cases' && request.method === 'GET') return json(response, 200, { cases: store.listCases() });
       if (url.pathname === '/api/records' && request.method === 'GET') return json(response, 200, { records: store.listRecords({ query: url.searchParams.get('q') || '', kind: url.searchParams.get('kind') || '' }) });
+      if (url.pathname === '/api/document-templates' && request.method === 'GET') return json(response, 200, { templates: documentTemplates });
+      if (url.pathname === '/api/documents/preview' && request.method === 'POST') {
+        const input = safeJson(await body(request));
+        if (!documentTemplates.some((template) => template.id === input.templateId)) return json(response, 400, { error: 'document_template_invalid' });
+        return json(response, 200, { draft: buildDocumentDraft({ templateId: input.templateId, fields: input.fields, source: input.source }) });
+      }
+      if (url.pathname === '/api/documents' && request.method === 'GET') return json(response, 200, { documents: store.listDocuments() });
+      if (url.pathname === '/api/documents' && request.method === 'POST') {
+        const input = safeJson(await body(request));
+        if (!documentTemplates.some((template) => template.id === input.templateId) || !input.payload) return json(response, 400, { error: 'document_payload_invalid' });
+        const saved = store.saveDocument({ templateId: input.templateId, title: input.title, payload: input.payload });
+        return json(response, 201, { document: saved });
+      }
       if (url.pathname === '/api/process' && request.method === 'POST') {
         const input = safeJson(await body(request));
         const rawText = String(input.rawText || '').trim();
@@ -138,6 +153,37 @@ export function createServer({ dataDir = defaultDataDir } = {}) {
         const record = store.updateRecord(recordMatch[1], input);
         return record ? json(response, 200, { record }) : json(response, 404, { error: 'record_not_found' });
       }
+      const documentMatch = url.pathname.match(/^\/api\/documents\/([^/]+)$/);
+      if (documentMatch && request.method === 'GET') {
+        const document = store.getDocument(documentMatch[1]);
+        return document ? json(response, 200, { document }) : json(response, 404, { error: 'document_not_found' });
+      }
+      if (documentMatch && request.method === 'PATCH') {
+        const input = safeJson(await body(request));
+        if (input.templateId && !documentTemplates.some((template) => template.id === input.templateId)) return json(response, 400, { error: 'document_template_invalid' });
+        const document = store.updateDocument(documentMatch[1], input);
+        return document ? json(response, 200, { document }) : json(response, 404, { error: 'document_not_found' });
+      }
+      const documentExportMatch = url.pathname.match(/^\/api\/documents\/([^/]+)\/export$/);
+      if (documentExportMatch && request.method === 'GET') {
+        const document = store.getDocument(documentExportMatch[1]);
+        if (!document) return json(response, 404, { error: 'document_not_found' });
+        const format = url.searchParams.get('format') || 'docx';
+        if (format === 'markdown') {
+          response.writeHead(200, { 'Content-Type': 'text/markdown; charset=utf-8', 'Content-Disposition': `attachment; filename="dawith-document-${document.id}.md"` });
+          return response.end(documentToMarkdown(document));
+        }
+        if (format === 'html' || format === 'pdf') {
+          response.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Content-Disposition': `inline; filename="dawith-document-${document.id}.html"` });
+          return response.end(documentToHtml(document));
+        }
+        if (format === 'docx') {
+          const buffer = await documentToDocx(document);
+          response.writeHead(200, { 'Content-Type': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'Content-Disposition': `attachment; filename="dawith-document-${document.id}.docx"` });
+          return response.end(buffer);
+        }
+        return json(response, 400, { error: 'document_export_format_invalid' });
+      }
       if (url.pathname === '/api/transcribe' && request.method === 'POST') {
         const result = await transcribe(safeJson(await body(request, 70 * 1024 * 1024)), store);
         return json(response, 200, result);
@@ -166,7 +212,7 @@ export function createServer({ dataDir = defaultDataDir } = {}) {
       if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) return sendFile(response, filePath);
       return response.writeHead(404).end('Not found');
     } catch (error) {
-      const status = error.message === 'payload_too_large' ? 413 : error.message === 'whisper_model_not_configured' ? 409 : ['case_label_required', 'case_not_found'].includes(error.message) ? 400 : 500;
+      const status = error.message === 'payload_too_large' ? 413 : error.message === 'whisper_model_not_configured' ? 409 : ['case_label_required', 'case_not_found', 'document_payload_invalid', 'document_template_invalid'].includes(error.message) ? 400 : 500;
       return json(response, status, { error: error.message || 'internal_error' });
     }
   });

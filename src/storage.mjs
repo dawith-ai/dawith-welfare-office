@@ -32,6 +32,14 @@ export function openStore(dataDir) {
       value TEXT NOT NULL,
       updated_at TEXT NOT NULL
     );
+    CREATE TABLE IF NOT EXISTS documents (
+      id TEXT PRIMARY KEY,
+      template_id TEXT NOT NULL,
+      title TEXT NOT NULL,
+      payload_json TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
   `);
 
   const now = () => new Date().toISOString();
@@ -101,6 +109,34 @@ export function openStore(dataDir) {
       const row = db.prepare('SELECT records.id, records.case_id AS caseId, cases.label AS caseLabel, records.kind, records.provider, records.source_name AS sourceName, records.raw_text AS rawText, records.context_text AS contextText, records.draft_json AS draftJson, records.created_at AS createdAt FROM records LEFT JOIN cases ON cases.id = records.case_id WHERE records.id = ?').get(recordId);
       if (!row) return null;
       return { ...row, caseLabel: cipher.open(row.caseLabel || ''), sourceName: cipher.open(row.sourceName || ''), rawText: cipher.open(row.rawText), contextText: cipher.open(row.contextText), draft: JSON.parse(cipher.open(row.draftJson)), draftJson: undefined };
+    },
+    listDocuments() {
+      return db.prepare('SELECT id, template_id AS templateId, title, payload_json AS payloadJson, created_at AS createdAt, updated_at AS updatedAt FROM documents ORDER BY updated_at DESC').all().map((row) => ({
+        id: row.id,
+        templateId: row.templateId,
+        title: cipher.open(row.title),
+        payload: JSON.parse(cipher.open(row.payloadJson)),
+        createdAt: row.createdAt,
+        updatedAt: row.updatedAt,
+      }));
+    },
+    saveDocument({ templateId, title, payload }) {
+      const documentId = id('document');
+      const timestamp = now();
+      db.prepare('INSERT INTO documents (id, template_id, title, payload_json, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)').run(documentId, String(templateId), cipher.seal(String(title || '복지 문서')), cipher.seal(JSON.stringify(payload || {})), timestamp, timestamp);
+      return { id: documentId, templateId, title: String(title || '복지 문서'), payload, createdAt: timestamp, updatedAt: timestamp };
+    },
+    getDocument(documentId) {
+      const row = db.prepare('SELECT id, template_id AS templateId, title, payload_json AS payloadJson, created_at AS createdAt, updated_at AS updatedAt FROM documents WHERE id = ?').get(documentId);
+      if (!row) return null;
+      return { id: row.id, templateId: row.templateId, title: cipher.open(row.title), payload: JSON.parse(cipher.open(row.payloadJson)), createdAt: row.createdAt, updatedAt: row.updatedAt };
+    },
+    updateDocument(documentId, { title, payload, templateId } = {}) {
+      const existing = this.getDocument(documentId);
+      if (!existing) return null;
+      const timestamp = now();
+      db.prepare('UPDATE documents SET template_id = ?, title = ?, payload_json = ?, updated_at = ? WHERE id = ?').run(String(templateId || existing.templateId), cipher.seal(String(title || existing.title)), cipher.seal(JSON.stringify(payload || existing.payload)), timestamp, documentId);
+      return this.getDocument(documentId);
     },
     close() {
       db.close();

@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: Dawith Welfare Office Local API
-  version: 0.1.4
+  version: 0.1.5
   description: Local-only API used by the Dawith browser workspace and Electron app.
 servers:
   - url: http://127.0.0.1:4387
@@ -91,6 +91,60 @@ paths:
           schema: { type: string, enum: [json, markdown, html] }
       responses:
         '200': { description: Local file content }
+  /api/document-templates:
+    get:
+      summary: List institution document templates
+      responses:
+        '200': { description: Business plan, business report, and meeting minutes templates }
+  /api/documents/preview:
+    post:
+      summary: Build a reviewed document draft without saving it
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DocumentPreviewRequest'
+      responses:
+        '200': { description: Local document draft }
+        '400': { description: Invalid template }
+  /api/documents:
+    get:
+      summary: List encrypted local documents
+      responses:
+        '200': { description: Local document list }
+    post:
+      summary: Save a reviewed document draft to encrypted SQLite
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DocumentSaveRequest'
+      responses:
+        '201': { description: Saved local document }
+  /api/documents/{id}:
+    get:
+      summary: Open one local document
+      parameters: [{ $ref: '#/components/parameters/DocumentId' }]
+      responses:
+        '200': { description: Local document detail }
+        '404': { description: Document not found }
+    patch:
+      summary: Update a reviewed local document
+      parameters: [{ $ref: '#/components/parameters/DocumentId' }]
+      responses:
+        '200': { description: Updated local document }
+  /api/documents/{id}/export:
+    get:
+      summary: Export a local document
+      parameters:
+        - $ref: '#/components/parameters/DocumentId'
+        - in: query
+          name: format
+          schema: { type: string, enum: [docx, markdown, html, pdf] }
+      responses:
+        '200': { description: DOCX, Markdown, or print-ready HTML content }
   /api/transcribe:
     post:
       summary: Transcribe with an institution-approved local whisper.cpp model
@@ -113,6 +167,11 @@ components:
       in: path
       required: true
       schema: { type: string }
+    DocumentId:
+      name: id
+      in: path
+      required: true
+      schema: { type: string }
   schemas:
     ProcessRequest:
       type: object
@@ -124,3 +183,17 @@ components:
         caseId: { type: string }
         rawText: { type: string }
         contextText: { type: string }
+    DocumentPreviewRequest:
+      type: object
+      required: [templateId]
+      properties:
+        templateId: { type: string, enum: [business-plan, business-report, meeting-minutes] }
+        fields: { type: object, additionalProperties: { type: string } }
+        source: { type: object, additionalProperties: true }
+    DocumentSaveRequest:
+      type: object
+      required: [templateId, payload]
+      properties:
+        templateId: { type: string, enum: [business-plan, business-report, meeting-minutes] }
+        title: { type: string }
+        payload: { type: object, additionalProperties: true }

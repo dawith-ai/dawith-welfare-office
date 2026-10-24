@@ -18,6 +18,9 @@
 - 로컬 사례 생성·선택 및 기록별 사례 구분
 - 초안 생성 뒤 추출된 관계·주제·일정·후속 단서 확인
 - JSON·Markdown·HTML 로컬 내보내기 및 인쇄용 문서 생성
+- 기관 문서 스튜디오: 사업기획서·사업보고서·회의록 템플릿
+- 저장된 상담·회의 기록을 문서 초안 입력값으로 연결
+- 담당자 검토 후 문서 초안 저장 및 DOCX·Markdown·인쇄용 HTML 내보내기
 - `WHISPER_MODEL_PATH`가 설정된 경우 whisper.cpp CLI로 로컬 음성 전사
 - 외부 provider 요청 차단
 - 기관 이름·Whisper 경로 등 로컬 설정
@@ -43,8 +46,8 @@ npm run dist:win
 
 생성물:
 
-- `dist/Dawith-Welfare-Office-0.1.4-x64-Setup.exe` — 일반 설치형
-- `dist/Dawith-Welfare-Office-0.1.4-x64-Portable.exe` — 설치 없이 실행하는 portable 형식
+- `dist/Dawith-Welfare-Office-0.1.5-x64-Setup.exe` — 일반 설치형
+- `dist/Dawith-Welfare-Office-0.1.5-x64-Portable.exe` — 설치 없이 실행하는 portable 형식
 
 GitHub Actions의 `Build Dawith Welfare Office for Windows` workflow도 같은 Windows runner에서 검사·브라우저 테스트·빌드를 수행합니다.
 
@@ -62,6 +65,6 @@ WHISPER_MODEL_PATH=/기관이승인한경로/ggml-small.bin npm start
 
 상담 원문·맥락·초안·사례명은 현재 AES-256-GCM으로 필드 암호화되어 SQLite에 저장됩니다. 개발 환경의 키는 `.data/.local-key`에 생성되며, 실제 기관 배포 전에는 OS 키체인/TPM 기반 키 관리, 사용자별 권한과 감사로그, 자동 삭제 정책, EXE 코드 서명, 모델 출처 검증을 기관별로 추가 검토해야 합니다. 생성 결과는 자동 확정 기록이 아니라 담당자 검토 전 초안입니다.
 
-현재 버전은 기관용 업무 보조 제품의 기반입니다. 기관 계정·역할별 권한, 중앙 감사로그, HWP/HWPX/DOCX 직접 편집, 실제 Windows 장비별 Whisper 성능 검증은 아직 배포 전 단계입니다. 따라서 “모든 기관에서 검증 완료” 또는 “개인정보 위험이 절대 없음”으로 홍보하면 안 됩니다.
+현재 버전은 기관용 업무 보조 제품의 기반입니다. 문서 스튜디오의 결과도 담당자 검토 전 초안이며, 기관별 양식은 템플릿 필드와 출력 후 편집으로 맞추는 단계입니다. 기관 계정·역할별 권한, 중앙 감사로그, HWP/HWPX 직접 편집, 실제 Windows 장비별 Whisper 성능 검증은 아직 배포 전 단계입니다. 따라서 “모든 기관에서 검증 완료” 또는 “개인정보 위험이 절대 없음”으로 홍보하면 안 됩니다.
 
 오픈소스 기반과 라이선스는 [`UPSTREAM.md`](./UPSTREAM.md), 제품 요구사항은 [`PRD.md`](./PRD.md), 시스템 경계는 [`ARCHITECTURE.md`](./ARCHITECTURE.md)에 기록했습니다.

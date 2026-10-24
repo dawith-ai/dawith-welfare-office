@@ -1,6 +1,6 @@
 {
   "name": "dawith-welfare-office",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "private": true,
   "type": "module",
   "description": "Dawith local-first welfare record workspace with no cloud LLM path",
@@ -11,7 +11,7 @@
   "scripts": {
     "start": "node server.mjs",
     "test": "node --test",
-    "check": "node --check server.mjs && node --check src/processing.mjs && node --check src/storage.mjs && node --check src/capabilities.mjs && node --check public/app.js && node --check desktop/main.mjs",
+    "check": "node --check server.mjs && node --check src/processing.mjs && node --check src/storage.mjs && node --check src/capabilities.mjs && node --check src/documents.mjs && node --check src/document-export.mjs && node --check public/app.js && node --check desktop/main.mjs",
     "test:e2e": "playwright test",
     "desktop": "electron desktop/main.mjs",
     "dist:win": "npm run dist:win:setup && npm run dist:win:portable",
@@ -22,7 +22,7 @@
   "main": "desktop/main.mjs",
   "devDependencies": {
     "@playwright/test": "^1.55.0",
-    "electron": "^39.0.0",
+    "electron": "^45.0.0",
     "electron-builder": "^26.0.12"
   },
   "build": {
@@ -41,8 +41,18 @@
     },
     "win": {
       "target": [
-        { "target": "nsis", "arch": ["x64"] },
-        { "target": "portable", "arch": ["x64"] }
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
       ]
     },
     "nsis": {
@@ -56,5 +66,8 @@
     "portable": {
       "artifactName": "Dawith-Welfare-Office-${version}-${arch}-Portable.${ext}"
     }
+  },
+  "dependencies": {
+    "docx": "^9.14.0"
   }
 }
