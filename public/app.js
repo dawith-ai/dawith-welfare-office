@@ -98,6 +98,7 @@ function openTask(task) { state.task = task; state.recordId = null; state.draft 
 function updateCharCount() { $('#charCount').textContent = `${$('#rawText').value.length.toLocaleString()}자`; }
 function renderCapabilities() { const c = state.capabilities; if (!c) return; const items = [['규칙 처리', c.rules.available ? '사용 가능' : '불가'], ['Ollama 로컬 모델', c.ollama.available ? `${c.ollama.models.length}개 감지` : '미실행'], ['whisper.cpp 전사', c.whisper.available ? '모델 준비됨' : '모델 경로 필요']]; $('#capabilitySummary').innerHTML = items.map(([name, value]) => `<div class="capability ${value === '사용 가능' || value.includes('감지') || value === '모델 준비됨' ? '' : 'off'}"><span>${name}</span><span>${value}</span></div>`).join(''); const models = c.ollama.models.filter((model) => !model.toLowerCase().includes('embed')); const modelSelect = $('#ollamaModel'); modelSelect.innerHTML = models.map((model) => `<option value="${escapeHtml(model)}">${escapeHtml(model)}</option>`).join(''); $('#ollamaOption').classList.toggle('disabled', !models.length); $('#ollamaOption input').disabled = !models.length; $('#ollamaHint').textContent = models.length ? `${models.length}개 로컬 모델 · 127.0.0.1` : 'Ollama를 실행하면 이 PC의 모델만 선택 가능'; }
 function renderCases() { const select = $('#caseSelect'); if (!select) return; select.innerHTML = state.cases.map((item) => `<option value="${escapeHtml(item.id)}">${escapeHtml(item.label)}</option>`).join(''); if (state.caseId && state.cases.some((item) => item.id === state.caseId)) select.value = state.caseId; else if (state.cases[0]) { state.caseId = state.cases[0].id; select.value = state.caseId; } }
+function refreshDocumentViewIfActive() { if (!$('#documentsView')?.classList.contains('active')) return; renderDocumentTemplates(); renderDocumentSources(); renderSavedDocuments(); renderDocumentForm(); if (state.documentDraft) renderDocumentPreview(); }
 async function load() {
   try {
     if (DEMO_MODE) {
@@ -113,7 +114,7 @@ async function load() {
       $('#ollamaOption').classList.add('disabled');
       $('#ollamaOption input').disabled = true;
       $('#privacyDialog .dialog-note').textContent = '공개 데모는 입력 내용을 서버 API로 보내지 않고 이 브라우저의 localStorage에만 저장합니다. 실제 개인정보는 공개 데모가 아니라 기관용 Windows EXE를 사용하세요.';
-      renderCapabilities(); renderCases(); renderRecent(); renderRecentDocuments(); renderSettings();
+      renderCapabilities(); renderCases(); renderRecent(); renderRecentDocuments(); renderSettings(); refreshDocumentViewIfActive();
       return;
     }
     const [capabilities, cases, records, settings, templates, documents] = await Promise.all([
@@ -132,7 +133,7 @@ async function load() {
     state.documentTemplates = templates.templates;
     state.uploadedTemplates = templates.uploadedTemplates || [];
     state.documents = documents.documents;
-    renderCapabilities(); renderCases(); renderRecent(); renderRecentDocuments(); renderSettings();
+    renderCapabilities(); renderCases(); renderRecent(); renderRecentDocuments(); renderSettings(); refreshDocumentViewIfActive();
   } catch (error) { console.error(error); showToast('로컬 서버에 연결할 수 없습니다. 앱을 다시 실행해 주세요.'); }
 }
 function recordLabel(record) { return { counseling: '상담 기록', meeting: '회의록', audio: '녹취 기록' }[record.kind] || record.kind; }

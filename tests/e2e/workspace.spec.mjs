@@ -73,6 +73,10 @@ test('document studio creates, edits, saves, and exports a business plan', async
 });
 
 test('document studio switches the built-in welfare document templates', async ({ page }) => {
+  await page.route('**/api/document-templates', async (route) => {
+    await new Promise((resolve) => setTimeout(resolve, 1200));
+    await route.continue();
+  });
   await page.goto('/');
   await page.getByRole('button', { name: /기관 문서 만들기/ }).click();
   await page.locator('#documentTemplates [data-doc-template="business-report"]').click();
