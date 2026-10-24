@@ -45,7 +45,15 @@ function renderRecords() { const target = $('#allRecords'); target.innerHTML = s
 async function createCase() { const label = window.prompt('사례 이름을 입력하세요. 실명 대신 기관 내부 식별명을 권장합니다.'); if (!label?.trim()) return; try { const created = DEMO_MODE ? { id: `demo_case_${Date.now()}`, label: label.trim().slice(0, 160), createdAt: new Date().toISOString() } : await fetch('/api/cases', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ label: label.trim() }) }).then(async (response) => { const result = await response.json(); if (!response.ok) throw new Error(result.error || 'case_create_failed'); return result.case; }); state.cases = [created, ...state.cases]; state.caseId = created.id; if (DEMO_MODE) demoWrite(demoCasesKey, state.cases); renderCases(); showToast(`사례를 선택했습니다: ${created.label}`); } catch { showToast('사례를 만들지 못했습니다.'); } }
 function renderSettings() { if (!state.settings) return; $('#organizationName').value = state.settings.organizationName || ''; $('#retentionDays').value = state.settings.retentionDays || 0; $('#whisperModelPath').value = state.settings.whisperModelPath || ''; $('#whisperBinaryPath').value = state.settings.whisperBinaryPath || ''; }
 function currentProvider() { return document.querySelector('input[name="provider"]:checked').value; }
-function syncEditor() { if (state.draft && state.activeTab) state.draft[state.activeTab] = $('#outputText').value; }
+function syncEditor() {
+  if (!state.draft) return;
+  if (state.task === 'meeting') {
+    state.draft.assessment = $('#meetingDecisionText').value;
+    state.draft.servicePlan = $('#meetingActionText').value;
+    return;
+  }
+  if (state.activeTab) state.draft[state.activeTab] = $('#outputText').value;
+}
 async function processDraft() {
   const rawText = $('#rawText').value.trim();
   if (!rawText) { showToast('먼저 원문을 입력하거나 예시를 넣어주세요.'); $('#rawText').focus(); return; }
@@ -64,7 +72,31 @@ async function processDraft() {
   } catch (error) { showToast(error.message === 'ollama_http_404' ? '선택한 Ollama 모델을 찾을 수 없습니다.' : `처리하지 못했습니다: ${error.message}`); }
   finally { button.disabled = false; button.firstChild.textContent = '초안 만들기 '; }
 }
-function renderDraft() { $('#outputEmpty').classList.add('hidden'); $('#outputContent').classList.remove('hidden'); $('#outputTitle').textContent = `${state.draft.typeLabel} ${state.recordId ? '기록' : '초안'}`; const labels = state.task === 'meeting' ? ['회의 요약', '논의·결정사항', '후속 실행 항목', '후속 확인'] : ['상담일지', '사정기록', '서비스계획', '후속조치']; $$('.output-tabs button').forEach((button, index) => { button.textContent = labels[index]; }); const facts = state.draft.facts || {}; const factGroups = [['관계', facts.relations], ['주제', facts.topics], ['일정', facts.dates], ['후속 단서', facts.plans]]; $('#factSummary').innerHTML = `<div class="fact-summary-head"><b>추출된 단서</b><span>원문과 대조하세요</span></div><div class="fact-chips">${factGroups.flatMap(([label, values]) => (values || []).slice(0, 5).map((value) => `<span><small>${label}</small>${escapeHtml(value)}</span>`)).join('') || '<em>추출된 단서가 없습니다. 초안 내용을 직접 확인하세요.</em>'}</div>`; renderTab(state.activeTab || 'counselingLog', true); }
+function renderDraft() {
+  $('#outputEmpty').classList.add('hidden');
+  $('#outputContent').classList.remove('hidden');
+  $('#outputTitle').textContent = `${state.draft.typeLabel} ${state.recordId ? '기록' : '초안'}`;
+  const isMeeting = state.task === 'meeting';
+  const isAudio = state.task === 'audio';
+  $('#standardEditor').classList.toggle('hidden', isMeeting);
+  $('#meetingBoard').classList.toggle('hidden', !isMeeting);
+  $('#audioResultMeta').classList.toggle('hidden', !isAudio);
+  if (isAudio) {
+    $('#audioSourceLabel').textContent = state.sourceName || '직접 입력한 전사 텍스트';
+    $('#audioSourceDescription').textContent = state.sourceName ? '선택한 녹취 파일을 로컬 전사한 결과입니다.' : '파일 없이 입력한 전사 텍스트입니다. 원문 대조가 필요합니다.';
+  }
+  const labels = ['상담일지', '사정기록', '서비스계획', '후속조치'];
+  $$('.output-tabs button').forEach((button, index) => { button.textContent = labels[index]; });
+  const facts = state.draft.facts || {};
+  const factGroups = [['관계', facts.relations], ['주제', facts.topics], ['일정', facts.dates], ['후속 단서', facts.plans]];
+  $('#factSummary').innerHTML = `<div class="fact-summary-head"><b>${isMeeting ? '회의에서 포착된 단서' : isAudio ? '전사에서 포착된 단서' : '상담에서 포착된 단서'}</b><span>원문과 대조하세요</span></div><div class="fact-chips">${factGroups.flatMap(([label, values]) => (values || []).slice(0, 5).map((value) => `<span><small>${label}</small>${escapeHtml(value)}</span>`)).join('') || '<em>추출된 단서가 없습니다. 초안 내용을 직접 확인하세요.</em>'}</div>`;
+  if (isMeeting) {
+    $('#meetingDecisionText').value = state.draft.assessment || '';
+    $('#meetingActionText').value = state.draft.servicePlan || '';
+  } else {
+    renderTab(state.activeTab || 'counselingLog', true);
+  }
+}
 function renderTab(tab, skipSync = false) { if (!skipSync) syncEditor(); state.activeTab = tab; $$('.output-tabs button').forEach((button) => button.classList.toggle('active', button.dataset.tab === tab)); $('#outputText').value = state.draft?.[tab] || ''; }
 async function saveDraft() {
   syncEditor();
@@ -90,4 +122,4 @@ async function transcribe() { if (DEMO_MODE) return showToast('공개 데모에�
 async function saveSettings() { if (DEMO_MODE) { state.settings = { ...state.settings, organizationName: $('#organizationName').value, retentionDays: Number($('#retentionDays').value) || 0 }; demoWrite(demoSettingsKey, state.settings); $('#settingsStatus').textContent = '브라우저에 저장됨'; showToast('공개 데모 설정을 브라우저에 저장했습니다.'); return; } const response = await fetch('/api/settings', { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ organizationName: $('#organizationName').value, retentionDays: $('#retentionDays').value, whisperModelPath: $('#whisperModelPath').value, whisperBinaryPath: $('#whisperBinaryPath').value }) }); if (!response.ok) return showToast('설정을 저장하지 못했습니다.'); state.settings = (await response.json()).settings; state.capabilities = await fetch('/api/capabilities').then((r) => r.json()); renderCapabilities(); $('#settingsStatus').textContent = '저장됨'; showToast('기관 설정을 로컬에 저장했습니다.'); }
 function privacy() { $('#privacyDialog').showModal(); }
 document.addEventListener('click', (event) => { const nav = event.target.closest('[data-nav]'); if (nav) { event.preventDefault(); navigate(nav.dataset.nav); } const task = event.target.closest('[data-task]'); if (task) openTask(task.dataset.task); const record = event.target.closest('[data-record]'); if (record) openRecord(record.dataset.record); const actionElement = event.target.closest('[data-action]'); const action = actionElement?.dataset.action; if (action === 'sample') { $('#rawText').value = samples[state.task]; updateCharCount(); } if (action === 'process') processDraft(); if (action === 'save') saveDraft(); if (action === 'export') exportDraft(actionElement.dataset.format || 'json'); if (action === 'transcribe') transcribe(); if (action === 'privacy') privacy(); if (action === 'closePrivacy') $('#privacyDialog').close(); if (action === 'searchRecords') refreshRecords(); if (action === 'saveSettings') saveSettings(); if (action === 'newCase') createCase(); const tab = event.target.closest('[data-tab]')?.dataset.tab; if (tab) renderTab(tab); });
-$('#rawText').addEventListener('input', updateCharCount); $('#outputText').addEventListener('input', syncEditor); $('#caseSelect').addEventListener('change', (event) => { state.caseId = event.target.value; }); load();
+$('#rawText').addEventListener('input', updateCharCount); $('#outputText').addEventListener('input', syncEditor); $('#meetingDecisionText').addEventListener('input', syncEditor); $('#meetingActionText').addEventListener('input', syncEditor); $('#caseSelect').addEventListener('change', (event) => { state.caseId = event.target.value; }); load();
