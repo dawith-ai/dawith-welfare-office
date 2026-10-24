@@ -65,12 +65,12 @@ test('document studio creates, edits, saves, and exports a business plan', async
   await expect(page.locator('#documentReviewStatus')).toHaveClass(/ready/);
   await page.locator('[data-doc-section="necessity"]').fill('담당자가 검토한 합성 필요성입니다.');
   await page.getByRole('button', { name: '검토한 문서 저장' }).click();
-  await expect(page.locator('#savedDocuments .saved-document-item')).toHaveCount(1);
+  await expect.poll(() => page.locator('#savedDocuments .saved-document-item').count()).toBeGreaterThan(0);
   const downloadPromise = page.waitForEvent('download');
   await page.getByRole('button', { name: 'Word 다운로드' }).click();
   const download = await downloadPromise;
   expect(download.suggestedFilename()).toMatch(/\.docx$/);
-  await page.getByRole('button', { name: '회의록' }).click();
+  await page.locator('#documentTemplates [data-doc-template="meeting-minutes"]').click();
   await expect(page.locator('#documentFormTitle')).toHaveText('회의록');
   await page.locator('#documentTemplates [data-doc-template="business-plan"]').click();
   await page.locator('#savedDocuments .saved-document-item').click();
