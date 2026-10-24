@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: Dawith Welfare Office Local API
-  version: 0.1.0
+  version: 0.1.2
   description: Local-only API used by the Dawith browser workspace and Electron app.
 servers:
   - url: http://127.0.0.1:4387
@@ -19,6 +19,24 @@ paths:
       responses:
         '200':
           description: Capability map
+  /api/cases:
+    get:
+      summary: List encrypted local cases
+      responses:
+        '200': { description: Local case list }
+    post:
+      summary: Create a local case label
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [label]
+              properties:
+                label: { type: string, maxLength: 160 }
+      responses:
+        '201': { description: Created local case }
   /api/process:
     post:
       summary: Create a counseling, meeting, or audio draft
@@ -103,5 +121,6 @@ components:
         kind: { type: string, enum: [counseling, meeting, audio] }
         provider: { type: string, enum: [rules, ollama-local] }
         model: { type: string }
+        caseId: { type: string }
         rawText: { type: string }
         contextText: { type: string }

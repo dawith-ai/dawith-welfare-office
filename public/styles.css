@@ -234,6 +234,10 @@ dialog::backdrop { background: #19312766; }
 .workspace-view .workspace-heading { padding-top: 2px; }
 .workspace-view .workspace-head h1 { font-size: clamp(28px, 3vw, 42px); }
 .workspace-view .workspace-head p:not(.eyebrow) { max-width: 680px; }
+.case-row { display: flex; align-items: center; gap: 8px; margin-top: 15px; }
+.case-row label { color: #7d8a81; font-size: 10px; font-weight: 800; }
+.case-row select { min-width: 180px; height: 30px; padding: 0 9px; border: 1px solid var(--task-line); border-radius: 7px; background: #fff; color: var(--task-ink); font-size: 11px; outline: 0; }
+.inline-action { padding: 0; border: 0; border-bottom: 1px solid color-mix(in srgb, var(--task-accent) 45%, white); background: transparent; color: var(--task-accent); font-size: 10px; font-weight: 800; }
 .workspace-view .workspace-grid { grid-template-columns: minmax(0, .94fr) minmax(0, 1.06fr); gap: 24px; }
 .workspace-view .input-column { grid-template-columns: 1fr; grid-template-areas: none; gap: 0; border: 1px solid var(--task-line); border-radius: 16px; overflow: hidden; background: #fff; }
 .workspace-view .input-column > #rawPanel, .workspace-view .input-column > #contextPanel, .workspace-view .input-column > #processPanel { grid-area: auto !important; }
@@ -257,6 +261,13 @@ dialog::backdrop { background: #19312766; }
 .workspace-view #outputContent { padding: 24px; }
 .workspace-view .output-tabs { margin-top: 18px; }
 .workspace-view .output-actions { gap: 6px; }
+.fact-summary { padding: 11px 0 0; border-bottom: 1px solid #e8eeea; }
+.fact-summary-head { display: flex; justify-content: space-between; align-items: center; color: var(--task-ink); font-size: 11px; }
+.fact-summary-head span { color: #a07b4b; font-size: 10px; font-weight: 500; }
+.fact-chips { display: flex; gap: 6px; flex-wrap: wrap; padding: 9px 0 13px; }
+.fact-chips span { display: inline-flex; gap: 5px; align-items: baseline; padding: 5px 8px; border: 1px solid var(--task-line); border-radius: 6px; background: var(--task-soft); color: var(--task-ink); font-size: 11px; }
+.fact-chips small { color: var(--task-accent); font-size: 9px; font-weight: 800; }
+.fact-chips em { color: #98a49d; font-size: 10px; font-style: normal; }
 
 /* Purposeful differences remain in the working surface, not in extra chrome. */
 .workspace-meeting .workspace-grid, .workspace-audio .workspace-grid { grid-template-columns: minmax(0, .94fr) minmax(0, 1.06fr); }
@@ -271,15 +282,72 @@ dialog::backdrop { background: #19312766; }
 .workspace-audio .audio-input { display: grid; grid-template-columns: minmax(0, 1fr) auto; }
 .workspace-audio .file-drop { min-height: 92px; }
 
+/* Desktop app shell: an everyday work tool, not a marketing landing page. */
+.topbar { position: fixed; z-index: 10; inset: 0 auto 0 0; width: 232px; height: 100vh; padding: 28px 18px 20px; flex-direction: column; align-items: stretch; justify-content: flex-start; border: 0; border-right: 1px solid #e1e9e3; }
+.brand { padding: 0 10px; }
+.topnav { display: grid; gap: 4px; margin: 58px 0 0; }
+.nav-label { margin: 0 10px 9px; color: #9aa69f; font: 700 9px ui-monospace; letter-spacing: .12em; }
+.nav-button { display: flex; align-items: center; gap: 10px; width: 100%; padding: 11px 12px; border: 0; border-radius: 9px; background: transparent; color: #6a776f; text-align: left; font-size: 12px; }
+.nav-button span { width: 18px; color: #9ca9a1; text-align: center; font-size: 15px; }
+.nav-button:hover, .nav-button.active { background: #edf6ef; color: #1d6a50; font-weight: 800; }
+.nav-button.active span { color: #1d6a50; }
+.topbar-footer { display: grid; gap: 14px; margin-top: auto; }
+.topbar-footer .security-pill { justify-content: flex-start; border-radius: 10px; padding: 10px; font-size: 10px; }
+.topbar-footer .ghost-button { padding: 0 10px; text-align: left; }
+main { max-width: none; margin-left: 232px; padding: 48px clamp(34px, 5vw, 82px) 80px; }
+.home-header { display: flex; justify-content: space-between; align-items: flex-end; gap: 30px; padding: 28px 0 34px; border-bottom: 1px solid #e1e9e3; }
+.home-header h1 { margin: 0; color: #21382d; font-size: clamp(34px, 4vw, 52px); letter-spacing: -.06em; }
+.home-subtitle { margin: 12px 0 0; color: #718078; font-size: 13px; }
+.privacy-link { border: 0; border-bottom: 1px solid #9cc2a7; background: transparent; color: #397458; font-size: 11px; font-weight: 800; white-space: nowrap; }
+.privacy-link span { margin-left: 8px; font-size: 16px; }
+.home-layout { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(280px, .75fr); gap: 32px; padding-top: 34px; align-items: start; }
+.workflow-panel { min-width: 0; }
+.workflow-panel .section-head { margin-bottom: 12px; }
+.workflow-panel .section-head h2 { font-size: 20px; }
+.task-grid { display: grid; grid-template-columns: 1fr; gap: 0; border-top: 1px solid #dfe8e1; }
+.task-card, .task-green, .task-blue, .task-amber { display: grid; grid-template-columns: 44px minmax(0, 1fr) auto; grid-template-rows: auto; align-items: center; gap: 16px; min-height: 112px; padding: 18px 12px; border: 0; border-bottom: 1px solid #dfe8e1; border-radius: 0; background: #fff; color: #263b30; }
+.task-card:hover { transform: none; box-shadow: none; background: #f8fbf8; }
+.task-card.task-blue:hover { background: #f7faff; }
+.task-card.task-amber:hover { background: #fffaf4; }
+.task-number { display: none; }
+.task-icon { display: grid; width: 36px; height: 36px; place-items: center; margin: 0; border-radius: 10px; background: #e2f2e5; color: #237456; font-size: 20px; }
+.task-blue .task-icon { background: #e8f0fa; color: #315985; }
+.task-amber .task-icon { background: #fff0df; color: #a45d2b; }
+.task-content { min-width: 0; }
+.task-content strong, .task-content small { display: block; }
+.task-content strong { font-size: 16px; letter-spacing: -.03em; }
+.task-content small { margin-top: 5px; color: #7c8981; font-size: 11px; }
+.task-cta { margin: 0; color: #397458; font-size: 11px; font-weight: 800; white-space: nowrap; }
+.task-blue .task-cta { color: #315985; }
+.task-amber .task-cta { color: #a45d2b; }
+.home-aside { display: grid; gap: 14px; }
+.home-aside .recent-card, .home-aside .status-card { border-radius: 14px; box-shadow: none; }
+.home-aside .recent-card { padding: 20px; }
+.home-aside .status-card { padding: 20px; background: #f4f8f4; }
+.home-aside .mode-title { font-size: 16px; }
+.home-aside .status-card p { line-height: 1.7; }
+.home-aside .capability-list { gap: 8px; }
+
 @media (max-width: 820px) {
-  .topbar { padding: 0 20px; }
+  .topbar { position: static; width: auto; height: 76px; padding: 0 20px; flex-direction: row; align-items: center; border-right: 0; border-bottom: 1px solid #e4ebe4; }
+  .brand { padding: 0; }
+  .nav-label { display: none; }
+  .topnav { display: flex; margin: 0 0 0 auto; gap: 4px; }
+  .nav-button { width: auto; padding: 8px; font-size: 0; }
+  .nav-button span { font-size: 15px; }
+  .topbar-footer { display: flex; margin: 0 0 0 8px; }
   .ghost-button { display: none; }
-  .topnav { margin-left: auto; margin-right: 12px; gap: 8px; }
-  main { padding: 28px 20px 60px; }
+  main { margin-left: 0; padding: 28px 20px 60px; }
+  .home-header { display: block; padding-top: 10px; }
+  .privacy-link { margin-top: 18px; }
+  .home-layout { grid-template-columns: 1fr; gap: 28px; }
+  .case-row { flex-wrap: wrap; }
+  .case-row select { flex: 1; min-width: 0; }
   .home-grid, .lower-grid, .workspace-grid { grid-template-columns: 1fr; gap: 20px; }
+  .workspace-view .workspace-grid { grid-template-columns: 1fr; gap: 20px; }
   .home-grid { padding: 15px 0 38px; }
   .task-grid { grid-template-columns: 1fr; }
-  .task-card { min-height: 165px; }
+  .task-card { min-height: 96px; }
   .workspace-head { display: block; }
   .workspace-view .workspace-head { padding: 20px; }
   .task-brief { margin-top: 18px; width: fit-content; }
@@ -296,4 +364,5 @@ dialog::backdrop { background: #19312766; }
   .workspace-meeting #processPanel { display: block; }
   .workspace-meeting #processPanel .engine-options { margin-top: 17px; }
   .workspace-meeting #processPanel .primary-button { margin-top: 15px; }
+  .workspace-view .engine-options { grid-template-columns: 1fr; }
 }

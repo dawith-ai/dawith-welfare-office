@@ -45,12 +45,19 @@ export function openStore(dataDir) {
   };
 
   return {
+    createCase({ label = '' } = {}) {
+      const normalizedLabel = String(label).trim().slice(0, 160);
+      if (!normalizedLabel) throw new Error('case_label_required');
+      const caseId = id('case');
+      db.prepare('INSERT INTO cases (id, label, created_at) VALUES (?, ?, ?)').run(caseId, cipher.seal(normalizedLabel), now());
+      return { id: caseId, label: normalizedLabel, createdAt: now() };
+    },
     listCases() {
       return db.prepare('SELECT id, label, created_at AS createdAt FROM cases ORDER BY created_at DESC').all().map((row) => ({ ...row, label: cipher.open(row.label) }));
     },
     ensureDefaultCase,
     listRecords({ query = '', kind = '' } = {}) {
-      const rows = db.prepare('SELECT id, case_id AS caseId, kind, provider, source_name AS sourceName, raw_text AS rawText, context_text AS contextText, draft_json AS draftJson, created_at AS createdAt FROM records ORDER BY created_at DESC').all().map((row) => ({ ...row, sourceName: cipher.open(row.sourceName || ''), rawText: cipher.open(row.rawText), contextText: cipher.open(row.contextText || ''), draft: JSON.parse(cipher.open(row.draftJson)), draftJson: undefined }));
+      const rows = db.prepare('SELECT records.id, records.case_id AS caseId, cases.label AS caseLabel, records.kind, records.provider, records.source_name AS sourceName, records.raw_text AS rawText, records.context_text AS contextText, records.draft_json AS draftJson, records.created_at AS createdAt FROM records LEFT JOIN cases ON cases.id = records.case_id ORDER BY records.created_at DESC').all().map((row) => ({ ...row, caseLabel: cipher.open(row.caseLabel || ''), sourceName: cipher.open(row.sourceName || ''), rawText: cipher.open(row.rawText), contextText: cipher.open(row.contextText || ''), draft: JSON.parse(cipher.open(row.draftJson)), draftJson: undefined }));
       const normalizedQuery = String(query).trim().toLowerCase();
       return rows.filter((row) => (!kind || row.kind === kind) && (!normalizedQuery || [row.sourceName, row.rawText, row.draft?.typeLabel, row.draft?.counselingLog, row.draft?.assessment, row.draft?.servicePlan].join(' ').toLowerCase().includes(normalizedQuery))).map((row) => ({ ...row, rawText: undefined, contextText: undefined }));
     },
@@ -60,6 +67,7 @@ export function openStore(dataDir) {
     saveRecord({ caseId, kind, provider, sourceName = '', rawText, contextText = '', draft }) {
       const recordId = id('record');
       const selectedCase = caseId || ensureDefaultCase();
+      if (!db.prepare('SELECT id FROM cases WHERE id = ?').get(selectedCase)) throw new Error('case_not_found');
       db.prepare('INSERT INTO records (id, case_id, kind, provider, source_name, raw_text, context_text, draft_json, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)').run(recordId, selectedCase, kind, provider, cipher.seal(sourceName), cipher.seal(rawText), cipher.seal(contextText), cipher.seal(JSON.stringify(draft)), now());
       return { id: recordId, caseId: selectedCase, createdAt: now() };
     },
@@ -90,9 +98,9 @@ export function openStore(dataDir) {
       return current;
     },
     exportRecord(recordId) {
-      const row = db.prepare('SELECT id, case_id AS caseId, kind, provider, source_name AS sourceName, raw_text AS rawText, context_text AS contextText, draft_json AS draftJson, created_at AS createdAt FROM records WHERE id = ?').get(recordId);
+      const row = db.prepare('SELECT records.id, records.case_id AS caseId, cases.label AS caseLabel, records.kind, records.provider, records.source_name AS sourceName, records.raw_text AS rawText, records.context_text AS contextText, records.draft_json AS draftJson, records.created_at AS createdAt FROM records LEFT JOIN cases ON cases.id = records.case_id WHERE records.id = ?').get(recordId);
       if (!row) return null;
-      return { ...row, sourceName: cipher.open(row.sourceName || ''), rawText: cipher.open(row.rawText), contextText: cipher.open(row.contextText), draft: JSON.parse(cipher.open(row.draftJson)), draftJson: undefined };
+      return { ...row, caseLabel: cipher.open(row.caseLabel || ''), sourceName: cipher.open(row.sourceName || ''), rawText: cipher.open(row.rawText), contextText: cipher.open(row.contextText), draft: JSON.parse(cipher.open(row.draftJson)), draftJson: undefined };
     },
     close() {
       db.close();

@@ -96,6 +96,11 @@ export function createServer({ dataDir = defaultDataDir } = {}) {
       if (origin && origin !== 'null' && !/^https?:\/\/127\.0\.0\.1(?::\d+)?$/.test(origin)) return json(response, 403, { error: 'origin_not_allowed' });
       if (url.pathname === '/api/health') return json(response, 200, { ok: true, mode: 'local-only', host: '127.0.0.1', externalProviders: 'blocked' });
       if (url.pathname === '/api/capabilities' && request.method === 'GET') return json(response, 200, await getCapabilities(store));
+      if (url.pathname === '/api/cases' && request.method === 'POST') {
+        const input = safeJson(await body(request));
+        const created = store.createCase({ label: input.label });
+        return json(response, 201, { case: created });
+      }
       if (url.pathname === '/api/settings' && request.method === 'GET') return json(response, 200, { settings: store.getSettings() });
       if (url.pathname === '/api/settings' && request.method === 'PATCH') {
         const input = safeJson(await body(request));
@@ -161,7 +166,7 @@ export function createServer({ dataDir = defaultDataDir } = {}) {
       if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) return sendFile(response, filePath);
       return response.writeHead(404).end('Not found');
     } catch (error) {
-      const status = error.message === 'payload_too_large' ? 413 : error.message === 'whisper_model_not_configured' ? 409 : 500;
+      const status = error.message === 'payload_too_large' ? 413 : error.message === 'whisper_model_not_configured' ? 409 : ['case_label_required', 'case_not_found'].includes(error.message) ? 400 : 500;
       return json(response, status, { error: error.message || 'internal_error' });
     }
   });

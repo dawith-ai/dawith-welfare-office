@@ -15,6 +15,8 @@
 - Ollama가 같은 PC에서 실행 중이면 `127.0.0.1:11434`의 로컬 모델 선택
 - 새 기록을 SQLite 파일에 저장하고 다시 읽기
 - 기록 보관함 검색·재열기·검토 수정
+- 로컬 사례 생성·선택 및 기록별 사례 구분
+- 초안 생성 뒤 추출된 관계·주제·일정·후속 단서 확인
 - JSON·Markdown·HTML 로컬 내보내기 및 인쇄용 문서 생성
 - `WHISPER_MODEL_PATH`가 설정된 경우 whisper.cpp CLI로 로컬 음성 전사
 - 외부 provider 요청 차단
@@ -41,8 +43,8 @@ npm run dist:win
 
 생성물:
 
-- `dist/Dawith-Welfare-Office-0.1.1-x64-Setup.exe` — 일반 설치형
-- `dist/Dawith-Welfare-Office-0.1.1-x64-Portable.exe` — 설치 없이 실행하는 portable 형식
+- `dist/Dawith-Welfare-Office-0.1.2-x64-Setup.exe` — 일반 설치형
+- `dist/Dawith-Welfare-Office-0.1.2-x64-Portable.exe` — 설치 없이 실행하는 portable 형식
 
 GitHub Actions의 `Build Dawith Welfare Office for Windows` workflow도 같은 Windows runner에서 검사·브라우저 테스트·빌드를 수행합니다.
 
