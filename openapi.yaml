@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: Dawith Welfare Office Local API
-  version: 0.2.7
+  version: 0.2.8
   description: Local-only API used by the Dawith browser workspace and Electron app.
 servers:
   - url: http://127.0.0.1:4387
