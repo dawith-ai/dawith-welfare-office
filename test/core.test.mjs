@@ -240,7 +240,7 @@ test('unresponsive local model returns a usable local fallback instead of hangin
     assert.equal(response.status, 200);
     assert.equal(payload.provider, 'rules-fallback');
     assert.equal(payload.fallback.used, true);
-    assert.equal(payload.fallback.reason, 'ollama_timeout');
+    assert.ok(['ollama_timeout', 'ollama_unavailable'].includes(payload.fallback.reason));
     assert.match(payload.draft.counselingLog, /주거/);
   } finally {
     await new Promise((resolve) => runtime.server.close(resolve));

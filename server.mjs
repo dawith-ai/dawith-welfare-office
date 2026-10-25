@@ -165,7 +165,9 @@ export function createServer({ dataDir = defaultDataDir, ollamaTimeoutMs = defau
           try {
             draft = parseOllamaDraft(await ollamaDraft({ kind, rawText, contextText, model: String(input.model || '') }, ollamaTimeoutMs), fallback);
           } catch (error) {
-            const reason = error.name === 'TimeoutError' || error.name === 'AbortError' ? 'ollama_timeout' : error.message || 'ollama_unavailable';
+            const reason = error.name === 'TimeoutError' || error.name === 'AbortError'
+              ? 'ollama_timeout'
+              : String(error.message || '').startsWith('ollama_http_') ? error.message : 'ollama_unavailable';
             draft = { ...fallback, provider: 'rules-fallback' };
             fallbackNotice = { used: true, reason, message: '로컬 모델 응답이 없어 로컬 규칙·템플릿으로 초안을 만들었습니다.' };
           }
