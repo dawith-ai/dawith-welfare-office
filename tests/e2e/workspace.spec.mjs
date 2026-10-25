@@ -72,6 +72,23 @@ test('document studio creates, edits, saves, and exports a business plan', async
   expect(download.suggestedFilename()).toMatch(/\.docx$/);
 });
 
+test('workbenches remain readable at a narrow laptop viewport', async ({ page }) => {
+  await page.setViewportSize({ width: 717, height: 825 });
+  for (const taskName of ['사례회의 기록', '녹취 파일 정리']) {
+    await page.goto('/');
+    await page.getByRole('button', { name: new RegExp(taskName) }).click();
+    const layout = await page.evaluate(() => ({
+      viewport: document.documentElement.clientWidth,
+      scrollWidth: document.documentElement.scrollWidth,
+      workspaceColumns: getComputedStyle(document.querySelector('.workspace-grid')).gridTemplateColumns,
+      inputColumns: getComputedStyle(document.querySelector('.input-column')).gridTemplateColumns,
+    }));
+    expect(layout.scrollWidth).toBeLessThanOrEqual(layout.viewport + 1);
+    expect(layout.workspaceColumns).toBe('677px');
+    expect(layout.inputColumns).toBe('677px');
+  }
+});
+
 test('document studio switches the built-in welfare document templates', async ({ page }) => {
   await page.route('**/api/document-templates', async (route) => {
     await new Promise((resolve) => setTimeout(resolve, 1200));
