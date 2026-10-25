@@ -230,3 +230,20 @@ test('local API supports the full review, search, edit, export flow and blocks c
     fs.rmSync(dataDir, { recursive: true, force: true });
   }
 });
+
+test('unresponsive local model returns a usable local fallback instead of hanging', async () => {
+  const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'dawith-welfare-ollama-fallback-'));
+  const runtime = await startServer({ port: 0, dataDir, ollamaTimeoutMs: 5 });
+  try {
+    const response = await fetch(`${runtime.url}/api/process`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ kind: 'counseling', provider: 'ollama-local', model: 'gemma2:9b', rawText: '친모가 주거 지원을 신청하기로 함.' }) });
+    const payload = await response.json();
+    assert.equal(response.status, 200);
+    assert.equal(payload.provider, 'rules-fallback');
+    assert.equal(payload.fallback.used, true);
+    assert.equal(payload.fallback.reason, 'ollama_timeout');
+    assert.match(payload.draft.counselingLog, /주거/);
+  } finally {
+    await new Promise((resolve) => runtime.server.close(resolve));
+    fs.rmSync(dataDir, { recursive: true, force: true });
+  }
+});

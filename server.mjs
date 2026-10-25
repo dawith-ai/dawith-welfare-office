@@ -15,6 +15,7 @@ import { transcribeAudio } from './src/transcription.mjs';
 const root = path.dirname(fileURLToPath(import.meta.url));
 const defaultPort = Number(process.env.PORT || 4387);
 const defaultDataDir = process.env.WELFARE_DATA_DIR || path.join(root, '.data');
+const defaultOllamaTimeoutMs = Number(process.env.OLLAMA_TIMEOUT_MS || 45000);
 const localSecurityHeaders = {
   'X-Content-Type-Options': 'nosniff',
   'X-Frame-Options': 'DENY',
@@ -43,11 +44,11 @@ const routeParam = (value) => {
   try { return decodeURIComponent(value); } catch { return value; }
 };
 
-async function ollamaDraft(input) {
+async function ollamaDraft(input, timeoutMs = defaultOllamaTimeoutMs) {
   const response = await fetch('http://127.0.0.1:11434/api/chat', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    signal: AbortSignal.timeout(120000),
+    signal: AbortSignal.timeout(timeoutMs),
     body: JSON.stringify({
       model: input.model || 'gemma2:9b',
       stream: false,
@@ -77,7 +78,7 @@ async function transcribe(payload, store) {
   return transcribeAudio({ fileName: name, data: bytes, binary: config.binary, model: config.model });
 }
 
-export function createServer({ dataDir = defaultDataDir } = {}) {
+export function createServer({ dataDir = defaultDataDir, ollamaTimeoutMs = defaultOllamaTimeoutMs } = {}) {
   const store = openStore(dataDir);
   store.ensureDefaultCase();
   const server = http.createServer(async (request, response) => {
@@ -159,8 +160,17 @@ export function createServer({ dataDir = defaultDataDir } = {}) {
         if (!['rules', 'ollama-local'].includes(provider)) return json(response, 400, { error: 'external_provider_blocked', message: '외부 provider는 제품 경계에서 차단되어 있습니다.' });
         const fallback = buildDrafts({ kind, rawText, contextText });
         let draft = fallback;
-        if (provider === 'ollama-local') draft = parseOllamaDraft(await ollamaDraft({ kind, rawText, contextText, model: String(input.model || '') }), fallback);
-        return json(response, 200, { draft, provider: draft.provider || provider, transfer: { external: false, destination: 'local machine' } });
+        let fallbackNotice = null;
+        if (provider === 'ollama-local') {
+          try {
+            draft = parseOllamaDraft(await ollamaDraft({ kind, rawText, contextText, model: String(input.model || '') }, ollamaTimeoutMs), fallback);
+          } catch (error) {
+            const reason = error.name === 'TimeoutError' || error.name === 'AbortError' ? 'ollama_timeout' : error.message || 'ollama_unavailable';
+            draft = { ...fallback, provider: 'rules-fallback' };
+            fallbackNotice = { used: true, reason, message: '로컬 모델 응답이 없어 로컬 규칙·템플릿으로 초안을 만들었습니다.' };
+          }
+        }
+        return json(response, 200, { draft, provider: draft.provider || provider, fallback: fallbackNotice, transfer: { external: false, destination: 'local machine' } });
       }
       if (url.pathname === '/api/records' && request.method === 'POST') {
         const input = safeJson(await body(request));
@@ -264,8 +274,8 @@ function recordToHtml(record) {
   return `<!doctype html><meta charset="utf-8"><title>${escape(draft.typeLabel || 'Dawith 복지 기록')}</title><style>body{font-family:Arial,sans-serif;max-width:820px;margin:40px auto;line-height:1.7;color:#26382f}pre{white-space:pre-wrap;background:#f4f7f4;padding:16px;border-radius:8px}h1{color:#1d6a50}</style><h1>${escape(draft.typeLabel || '복지 기록')}</h1><p>작성일: ${escape(record.createdAt)} · 처리 방식: ${escape(record.provider)}</p><h2>초안</h2><h3>기록</h3><pre>${escape(draft.counselingLog)}</pre><h3>사정·논의</h3><pre>${escape(draft.assessment)}</pre><h3>서비스계획·후속 실행</h3><pre>${escape(draft.servicePlan)}</pre><h3>후속 확인</h3><pre>${escape(draft.followUp)}</pre><h2>원문</h2><pre>${escape(record.rawText)}</pre>`;
 }
 
-export function startServer({ port = 0, dataDir = defaultDataDir } = {}) {
-  const { server } = createServer({ dataDir });
+export function startServer({ port = 0, dataDir = defaultDataDir, ollamaTimeoutMs = defaultOllamaTimeoutMs } = {}) {
+  const { server } = createServer({ dataDir, ollamaTimeoutMs });
   return new Promise((resolve, reject) => {
     server.once('error', reject);
     server.listen(port, '127.0.0.1', () => resolve({ server, port: server.address().port, url: `http://127.0.0.1:${server.address().port}` }));

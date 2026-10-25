@@ -51,8 +51,8 @@ npm run dist:win
 
 생성물:
 
-- `dist/Dawith-Welfare-Office-0.2.8-x64-Setup.exe` — 일반 설치형
-- `dist/Dawith-Welfare-Office-0.2.8-x64-Portable.exe` — 설치 없이 실행하는 portable 형식
+- `dist/Dawith-Welfare-Office-0.2.9-x64-Setup.exe` — 일반 설치형
+- `dist/Dawith-Welfare-Office-0.2.9-x64-Portable.exe` — 설치 없이 실행하는 portable 형식
 
 GitHub Actions의 `Build Dawith Welfare Office for Windows` workflow도 같은 Windows runner에서 검사·브라우저 테스트·빌드를 수행합니다.
 

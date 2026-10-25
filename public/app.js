@@ -169,7 +169,7 @@ async function processDraft() {
     state.draft = { ...payload.draft, provider: payload.provider, rawText, contextText: input.contextText, transcript: state.task === 'audio' ? state.audioMeta : undefined };
     renderDraft();
     updateWorkflow(3);
-    showToast(DEMO_MODE ? '브라우저 안에서만 초안을 만들었습니다.' : payload.provider === 'ollama-local' ? 'Ollama 로컬 모델로 초안을 만들었습니다.' : '로컬 규칙으로 초안을 만들었습니다.');
+    showToast(DEMO_MODE ? '브라우저 안에서만 초안을 만들었습니다.' : payload.fallback?.used ? `${payload.fallback.message} 원문 대조 후 저장하세요.` : payload.provider === 'ollama-local' ? 'Ollama 로컬 모델로 초안을 만들었습니다.' : '로컬 규칙으로 초안을 만들었습니다.');
   } catch (error) { showToast(error.message === 'ollama_http_404' ? '선택한 Ollama 모델을 찾을 수 없습니다.' : `처리하지 못했습니다: ${error.message}`); }
   finally { button.disabled = false; button.firstChild.textContent = '초안 만들기 '; }
 }
