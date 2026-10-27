@@ -9,10 +9,26 @@
   </head>
   <body>
     <div id="toast" class="toast" role="status"></div>
+    <section id="authGate" class="auth-gate hidden" aria-live="polite">
+      <div class="auth-card">
+        <div class="auth-brand"><span class="brand-mark">D</span><span>Dawith <small>Welfare Office</small></span></div>
+        <p class="eyebrow" id="authEyebrow">기관 내부 로그인</p>
+        <h1 id="authTitle">기관 계정으로 시작하세요</h1>
+        <p id="authDescription">상담 원문은 기관 내부 서버에만 저장됩니다.</p>
+        <form id="authForm">
+          <label><span>아이디</span><input id="authUsername" name="username" autocomplete="username" required minlength="3" maxlength="64" /></label>
+          <label><span>비밀번호</span><input id="authPassword" name="password" type="password" autocomplete="current-password" required minlength="12" maxlength="256" /></label>
+          <label id="authPasswordConfirmRow" class="hidden"><span>비밀번호 확인</span><input id="authPasswordConfirm" name="passwordConfirm" type="password" minlength="12" maxlength="256" /></label>
+          <button class="primary-button" type="submit" id="authSubmit">로그인 <span>→</span></button>
+        </form>
+        <p id="authError" class="auth-error" role="alert"></p>
+        <p class="auth-note">관리자는 서버 PC에서 최초 계정을 만든 뒤 기관 내부망을 열어야 합니다.</p>
+      </div>
+    </section>
     <header class="topbar">
       <a class="brand" href="#home" data-nav="home"><span class="brand-mark">D</span><span>Dawith <small>Welfare Office · 복지기록 작업대</small></span></a>
       <nav class="topnav"><p class="nav-label">업무 공간</p><button class="nav-button active" data-nav="home"><span>＋</span>새 작업</button><button class="nav-button" data-nav="documents"><span>▣</span>문서 스튜디오</button><button class="nav-button" data-nav="records"><span>▤</span>기록 보관함</button><button class="nav-button" data-nav="settings"><span>⚙</span>기관 설정</button></nav>
-      <div class="topbar-footer"><div class="security-pill"><span class="dot"></span><span id="securityText">로컬 전용 · 외부 전송 차단</span></div><button class="ghost-button" data-action="privacy">개인정보 처리 경계</button></div>
+      <div class="topbar-footer"><div class="security-pill"><span class="dot"></span><span id="securityText">로컬 전용 · 외부 전송 차단</span></div><button class="ghost-button" data-action="privacy">개인정보 처리 경계</button><button class="ghost-button hidden" id="logoutButton" data-action="logout">로그아웃</button></div>
     </header>
 
     <main>

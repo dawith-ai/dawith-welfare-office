@@ -404,6 +404,37 @@ dialog::backdrop { background: rgba(25,49,39,.45); }
   .records-toolbar input { flex-basis: 100%; }
 }
 
+/* Institutional authentication gate. Keep the first-run path calm and explicit. */
+.auth-gate {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(242, 246, 241, .96);
+}
+.auth-gate.hidden { display: none; }
+.auth-card {
+  width: min(100%, 430px);
+  padding: 38px;
+  border: 1px solid #d8e3d9;
+  border-radius: 24px;
+  background: #fff;
+  box-shadow: 0 24px 70px rgba(35, 70, 50, .14);
+}
+.auth-brand { display: flex; align-items: center; gap: 10px; margin-bottom: 46px; color: #173f2c; font-weight: 800; letter-spacing: -.04em; }
+.auth-brand small { display: block; margin-top: 2px; color: #789080; font-size: 10px; letter-spacing: .08em; text-transform: uppercase; }
+.auth-card h1 { margin: 7px 0 10px; color: #173f2c; font-size: clamp(26px, 5vw, 34px); letter-spacing: -.06em; }
+.auth-card > p:not(.eyebrow):not(.auth-error):not(.auth-note) { margin: 0 0 25px; color: #708177; line-height: 1.65; }
+.auth-card form { display: grid; gap: 16px; }
+.auth-card label { display: grid; gap: 7px; color: #355342; font-size: 13px; font-weight: 750; }
+.auth-card input { width: 100%; box-sizing: border-box; padding: 13px 14px; border: 1px solid #d6e3d8; border-radius: 10px; background: #fbfdfb; color: #173f2c; font: inherit; }
+.auth-card input:focus { outline: 3px solid rgba(62, 145, 101, .17); border-color: #41966a; }
+.auth-card .primary-button { margin-top: 6px; justify-content: center; }
+.auth-error { min-height: 20px; margin: 13px 0 0; color: #ad493e; font-size: 13px; font-weight: 700; }
+.auth-note { margin: 18px 0 0; color: #86968b; font-size: 12px; line-height: 1.6; }
+
 @media (max-width: 560px) {
   .home-aside { grid-template-columns: 1fr; }
   .home-aside .status-card { grid-column: auto; }

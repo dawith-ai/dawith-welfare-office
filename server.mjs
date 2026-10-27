@@ -11,17 +11,27 @@ import { buildDocumentDraft, documentTemplates } from './src/documents.mjs';
 import { documentToDocx, documentToHtml, documentToMarkdown } from './src/document-export.mjs';
 import { analyzeTemplate, isUploadedTemplateId, renderTemplate, uploadedTemplateId } from './src/template-engine.mjs';
 import { transcribeAudio } from './src/transcription.mjs';
+import { authPolicy, can, createSession, hashPassword, publicUser, roles, validatePassword, validateUsername, verifyPassword } from './src/auth.mjs';
 
 const root = path.dirname(fileURLToPath(import.meta.url));
 const defaultPort = Number(process.env.PORT || 4387);
+const defaultHost = process.env.WELFARE_BIND_HOST || '127.0.0.1';
 const defaultDataDir = process.env.WELFARE_DATA_DIR || path.join(root, '.data');
 const defaultOllamaTimeoutMs = Number(process.env.OLLAMA_TIMEOUT_MS || 45000);
+const defaultAuthRequired = process.env.WELFARE_AUTH_REQUIRED === '1';
 const localSecurityHeaders = {
   'X-Content-Type-Options': 'nosniff',
   'X-Frame-Options': 'DENY',
   'Referrer-Policy': 'no-referrer',
+  'Permissions-Policy': 'camera=(), microphone=(), geolocation=(), payment=()',
+  'Cross-Origin-Resource-Policy': 'same-origin',
   'Content-Security-Policy': "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'",
 };
+
+const isLoopbackAddress = (value) => ['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(String(value || ''));
+const isLoopbackHost = (value) => ['127.0.0.1', 'localhost', '::1'].includes(String(value || '').toLowerCase());
+const parseCookies = (header = '') => Object.fromEntries(String(header).split(';').map((part) => part.trim().split('='))
+  .filter(([key, value]) => key && value).map(([key, value]) => [key, decodeURIComponent(value)]));
 
 const json = (response, status, body, extraHeaders = {}) => {
   response.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store', ...extraHeaders });
@@ -78,8 +88,55 @@ async function transcribe(payload, store) {
   return transcribeAudio({ fileName: name, data: bytes, binary: config.binary, model: config.model });
 }
 
-export function createServer({ dataDir = defaultDataDir, ollamaTimeoutMs = defaultOllamaTimeoutMs } = {}) {
-  const store = openStore(dataDir);
+export function createServer({ dataDir = defaultDataDir, ollamaTimeoutMs = defaultOllamaTimeoutMs, host = defaultHost, authRequired = defaultAuthRequired, encryptionKey } = {}) {
+  if (!isLoopbackHost(host) && host !== '0.0.0.0' && !authRequired) throw new Error('network_bind_requires_auth');
+  if (host === '0.0.0.0' && !authRequired) throw new Error('network_bind_requires_auth');
+  const store = openStore(dataDir, { encryptionKey });
+  const sessions = new Map();
+  const loginFailures = new Map();
+  const sessionUser = (request) => {
+    const token = parseCookies(request.headers.cookie).dawith_session;
+    if (!token) return null;
+    const session = sessions.get(token);
+    if (!session || session.expiresAt <= Date.now()) {
+      sessions.delete(token);
+      return null;
+    }
+    const user = store.getUser(session.username);
+    if (!user || user.disabled) {
+      sessions.delete(token);
+      return null;
+    }
+    return publicUser(user);
+  };
+  const setSession = (response, username) => {
+    const token = createSession();
+    sessions.set(token, { username, expiresAt: Date.now() + authPolicy.sessionHours * 60 * 60 * 1000 });
+    response.setHeader('Set-Cookie', `dawith_session=${encodeURIComponent(token)}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${authPolicy.sessionHours * 60 * 60}`);
+  };
+  const clearSession = (request, response) => {
+    const token = parseCookies(request.headers.cookie).dawith_session;
+    if (token) sessions.delete(token);
+    response.setHeader('Set-Cookie', 'dawith_session=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0');
+  };
+  const requireUser = (request, response, requiredRole = 'viewer') => {
+    if (!authRequired) return { username: 'local-user', role: 'admin' };
+    const user = sessionUser(request);
+    if (!user) {
+      json(response, 401, { error: 'authentication_required' });
+      return null;
+    }
+    if (!can(user.role, requiredRole)) {
+      json(response, 403, { error: 'insufficient_role', requiredRole });
+      return null;
+    }
+    return user;
+  };
+  const requestRole = (request, url) => {
+    if (url.pathname === '/api/audit' || url.pathname === '/api/auth/users') return 'admin';
+    if (request.method !== 'GET' && request.method !== 'HEAD') return 'editor';
+    return 'viewer';
+  };
   store.ensureDefaultCase();
   const server = http.createServer(async (request, response) => {
     for (const [header, value] of Object.entries(localSecurityHeaders)) response.setHeader(header, value);
@@ -91,15 +148,67 @@ export function createServer({ dataDir = defaultDataDir, ollamaTimeoutMs = defau
         try {
           const parsedOrigin = new URL(origin);
           sameLocalOrigin = parsedOrigin.protocol === 'http:'
-            && (parsedOrigin.hostname === '127.0.0.1' || parsedOrigin.hostname === 'localhost')
-            && parsedOrigin.host === String(request.headers.host || '').toLowerCase();
+            && parsedOrigin.host === String(request.headers.host || '').toLowerCase()
+            && (isLoopbackHost(parsedOrigin.hostname) || authRequired);
         } catch {
           sameLocalOrigin = false;
         }
         if (!sameLocalOrigin) return json(response, 403, { error: 'origin_not_allowed' });
       }
-      if (url.pathname === '/api/health') return json(response, 200, { ok: true, mode: 'local-only', host: '127.0.0.1', externalProviders: 'blocked' });
+      if (url.pathname === '/api/health') return json(response, 200, { ok: true, mode: authRequired ? 'institution-network' : 'local-only', host, externalProviders: 'blocked', authentication: authRequired ? 'required' : 'disabled' });
+      if (url.pathname === '/api/auth/status' && request.method === 'GET') {
+        const user = sessionUser(request);
+        return json(response, 200, { required: authRequired, authenticated: Boolean(user), user, needsSetup: authRequired && store.countUsers() === 0, passwordPolicy: { minLength: authPolicy.minPasswordLength } });
+      }
+      if (url.pathname === '/api/auth/setup' && request.method === 'POST') {
+        if (!authRequired) return json(response, 400, { error: 'authentication_not_required' });
+        if (store.countUsers() > 0) return json(response, 409, { error: 'admin_already_initialized' });
+        if (!isLoopbackAddress(request.socket.remoteAddress)) return json(response, 403, { error: 'initial_setup_must_be_local' });
+        const input = safeJson(await body(request, 32 * 1024));
+        const username = validateUsername(input.username);
+        const password = validatePassword(input.password);
+        const user = store.createUser({ username, role: 'admin', passwordHash: hashPassword(password) });
+        setSession(response, username);
+        return json(response, 201, { user: publicUser(user) });
+      }
+      if (url.pathname === '/api/auth/login' && request.method === 'POST') {
+        if (!authRequired) return json(response, 400, { error: 'authentication_not_required' });
+        const loginKey = String(request.socket.remoteAddress || 'unknown');
+        const failure = loginFailures.get(loginKey);
+        if (failure && failure.resetAt > Date.now() && failure.count >= 10) {
+          response.setHeader('Retry-After', String(Math.ceil((failure.resetAt - Date.now()) / 1000)));
+          return json(response, 429, { error: 'login_rate_limited' });
+        }
+        const input = safeJson(await body(request, 32 * 1024));
+        const username = validateUsername(input.username);
+        const user = store.getUser(username);
+        if (!user || user.disabled || !verifyPassword(input.password, user.passwordHash)) {
+          const current = failure && failure.resetAt > Date.now() ? failure : { count: 0, resetAt: Date.now() + 15 * 60 * 1000 };
+          loginFailures.set(loginKey, { count: current.count + 1, resetAt: current.resetAt });
+          return json(response, 401, { error: 'invalid_credentials' });
+        }
+        loginFailures.delete(loginKey);
+        setSession(response, username);
+        return json(response, 200, { user: publicUser(user) });
+      }
+      if (url.pathname === '/api/auth/logout' && request.method === 'POST') {
+        clearSession(request, response);
+        return json(response, 200, { ok: true });
+      }
+      if (url.pathname.startsWith('/api/')) {
+        const user = requireUser(request, response, requestRole(request, url));
+        if (!user) return;
+      }
       if (url.pathname === '/api/capabilities' && request.method === 'GET') return json(response, 200, await getCapabilities(store));
+      if (url.pathname === '/api/auth/users' && request.method === 'GET') return json(response, 200, { users: store.listUsers() });
+      if (url.pathname === '/api/auth/users' && request.method === 'POST') {
+        const input = safeJson(await body(request, 32 * 1024));
+        const username = validateUsername(input.username);
+        const password = validatePassword(input.password);
+        const role = roles.includes(input.role) ? input.role : 'viewer';
+        if (store.getUser(username)) return json(response, 409, { error: 'username_taken' });
+        return json(response, 201, { user: store.createUser({ username, role, passwordHash: hashPassword(password) }) });
+      }
       if (url.pathname === '/api/cases' && request.method === 'POST') {
         const input = safeJson(await body(request));
         const created = store.createCase({ label: input.label });
@@ -257,11 +366,11 @@ export function createServer({ dataDir = defaultDataDir, ollamaTimeoutMs = defau
       if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) return sendFile(response, filePath);
       return response.writeHead(404).end('Not found');
     } catch (error) {
-      const status = error.message === 'payload_too_large' ? 413 : error.message === 'whisper_model_not_configured' ? 409 : ['case_label_required', 'case_not_found', 'document_payload_invalid', 'document_template_invalid', 'template_size_invalid', 'template_format_unsupported', 'audio_size_invalid', 'audio_format_unsupported'].includes(error.message) ? 400 : 500;
+      const status = error.message === 'payload_too_large' ? 413 : error.message === 'whisper_model_not_configured' ? 409 : ['case_label_required', 'case_not_found', 'document_payload_invalid', 'document_template_invalid', 'template_size_invalid', 'template_format_unsupported', 'audio_size_invalid', 'audio_format_unsupported', 'username_invalid', 'password_policy', 'authentication_not_required'].includes(error.message) ? 400 : 500;
       return json(response, status, { error: error.message || 'internal_error' });
     }
   });
-  server.on('close', () => store.close());
+  server.on('close', () => { sessions.clear(); loginFailures.clear(); store.close(); });
   return { server, store };
 }
 
@@ -276,17 +385,21 @@ function recordToHtml(record) {
   return `<!doctype html><meta charset="utf-8"><title>${escape(draft.typeLabel || 'Dawith 복지 기록')}</title><style>body{font-family:Arial,sans-serif;max-width:820px;margin:40px auto;line-height:1.7;color:#26382f}pre{white-space:pre-wrap;background:#f4f7f4;padding:16px;border-radius:8px}h1{color:#1d6a50}</style><h1>${escape(draft.typeLabel || '복지 기록')}</h1><p>작성일: ${escape(record.createdAt)} · 처리 방식: ${escape(record.provider)}</p><h2>초안</h2><h3>기록</h3><pre>${escape(draft.counselingLog)}</pre><h3>사정·논의</h3><pre>${escape(draft.assessment)}</pre><h3>서비스계획·후속 실행</h3><pre>${escape(draft.servicePlan)}</pre><h3>후속 확인</h3><pre>${escape(draft.followUp)}</pre><h2>원문</h2><pre>${escape(record.rawText)}</pre>`;
 }
 
-export function startServer({ port = 0, dataDir = defaultDataDir, ollamaTimeoutMs = defaultOllamaTimeoutMs } = {}) {
-  const { server } = createServer({ dataDir, ollamaTimeoutMs });
+export function startServer({ port = 0, host = defaultHost, dataDir = defaultDataDir, ollamaTimeoutMs = defaultOllamaTimeoutMs, authRequired = defaultAuthRequired, encryptionKey } = {}) {
+  const { server } = createServer({ dataDir, host, ollamaTimeoutMs, authRequired, encryptionKey });
   return new Promise((resolve, reject) => {
     server.once('error', reject);
-    server.listen(port, '127.0.0.1', () => resolve({ server, port: server.address().port, url: `http://127.0.0.1:${server.address().port}` }));
+    server.listen(port, host, () => {
+      const displayHost = host === '0.0.0.0' ? '127.0.0.1' : host;
+      resolve({ server, port: server.address().port, host, url: `http://${displayHost}:${server.address().port}` });
+    });
   });
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === path.resolve(fileURLToPath(import.meta.url))) {
-  startServer({ port: defaultPort }).then(({ port }) => {
-    console.log(`Dawith Welfare Office: http://127.0.0.1:${port}`);
+  startServer({ port: defaultPort, host: defaultHost, authRequired: defaultAuthRequired }).then(({ port, host }) => {
+    console.log(`Dawith Welfare Office: http://${host === '0.0.0.0' ? '127.0.0.1' : host}:${port}`);
     console.log(`Local data: ${defaultDataDir}`);
+    console.log(`Authentication: ${defaultAuthRequired ? 'required' : 'disabled (loopback only)'}`);
   });
 }

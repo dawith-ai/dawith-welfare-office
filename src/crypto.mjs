@@ -17,8 +17,9 @@ function readKey(dataDir) {
   return key;
 }
 
-export function createFieldCipher(dataDir) {
-  const key = readKey(dataDir);
+export function createFieldCipher(dataDir, { encryptionKey } = {}) {
+  const key = encryptionKey || readKey(dataDir);
+  if (!Buffer.isBuffer(key) || key.length !== 32) throw new Error('encryption_key_invalid');
   return {
     seal(value) {
       const iv = crypto.randomBytes(12);

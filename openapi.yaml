@@ -1,12 +1,56 @@
 openapi: 3.0.3
 info:
   title: Dawith Welfare Office Local API
-  version: 0.2.12
-  description: Local-only API used by the Dawith browser workspace and Electron app.
+  version: 0.3.0
+  description: Local-only or institution-network API used by the Dawith browser workspace and Electron app. Institution-network mode requires authentication.
 servers:
   - url: http://127.0.0.1:4387
     description: Institution device only
 paths:
+  /api/auth/status:
+    get:
+      summary: Read institution authentication status
+      responses:
+        '200': { description: Authentication requirement and current user }
+  /api/auth/setup:
+    post:
+      summary: Create the first local administrator from the server host
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [username, password]
+              properties:
+                username: { type: string, minLength: 3, maxLength: 64 }
+                password: { type: string, minLength: 12, maxLength: 256 }
+      responses:
+        '201': { description: Administrator created and session started }
+        '403': { description: Setup is not from the server host }
+        '409': { description: Administrator already initialized }
+  /api/auth/login:
+    post:
+      summary: Start an institution session
+      responses:
+        '200': { description: Authenticated session cookie set }
+        '401': { description: Invalid credentials }
+        '429': { description: Login attempts temporarily limited }
+  /api/auth/logout:
+    post:
+      summary: End the current institution session
+      responses:
+        '200': { description: Session cleared }
+  /api/auth/users:
+    get:
+      summary: List users for an administrator
+      responses:
+        '200': { description: User list without password hashes }
+    post:
+      summary: Create a viewer, editor, or admin user
+      responses:
+        '201': { description: User created }
+        '403': { description: Administrator role required }
   /api/health:
     get:
       summary: Check the local boundary
@@ -215,6 +259,11 @@ paths:
       responses:
         '200': { description: Updated settings }
 components:
+  securitySchemes:
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: dawith_session
   parameters:
     RecordId:
       name: id

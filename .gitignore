@@ -3,6 +3,7 @@
 .data-e2e-*/
 node_modules/
 .local-key
+.os-protected-key
 *.sqlite
 *.sqlite-shm
 *.sqlite-wal

@@ -4,10 +4,10 @@ import { DatabaseSync } from 'node:sqlite';
 import { createFieldCipher } from './crypto.mjs';
 import { sha256 } from './transcription.mjs';
 
-export function openStore(dataDir) {
+export function openStore(dataDir, { encryptionKey } = {}) {
   fs.mkdirSync(dataDir, { recursive: true, mode: 0o700 });
   const db = new DatabaseSync(path.join(dataDir, 'welfare-office.sqlite'));
-  const cipher = createFieldCipher(dataDir);
+  const cipher = createFieldCipher(dataDir, { encryptionKey });
   db.exec(`
     PRAGMA journal_mode = WAL;
     PRAGMA foreign_keys = ON;
@@ -60,6 +60,13 @@ export function openStore(dataDir) {
       metadata_json TEXT NOT NULL,
       created_at TEXT NOT NULL
     );
+    CREATE TABLE IF NOT EXISTS auth_users (
+      username TEXT PRIMARY KEY,
+      role TEXT NOT NULL,
+      password_hash TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      disabled INTEGER NOT NULL DEFAULT 0
+    );
   `);
   try { db.exec('ALTER TABLE records ADD COLUMN source_hash TEXT'); } catch { /* Existing database already migrated. */ }
   try { db.exec('ALTER TABLE records ADD COLUMN draft_hash TEXT'); } catch { /* Existing database already migrated. */ }
@@ -89,6 +96,22 @@ export function openStore(dataDir) {
   };
 
   return {
+    countUsers() {
+      return Number(db.prepare('SELECT COUNT(*) AS count FROM auth_users WHERE disabled = 0').get().count || 0);
+    },
+    getUser(username) {
+      const row = db.prepare('SELECT username, role, password_hash AS passwordHash, created_at AS createdAt, disabled FROM auth_users WHERE username = ?').get(String(username));
+      return row ? { ...row, disabled: Boolean(row.disabled) } : null;
+    },
+    createUser({ username, role, passwordHash }) {
+      const createdAt = now();
+      db.prepare('INSERT INTO auth_users (username, role, password_hash, created_at, disabled) VALUES (?, ?, ?, ?, 0)').run(String(username), String(role), String(passwordHash), createdAt);
+      audit('user_created', 'user', String(username), { role: String(role) });
+      return { username: String(username), role: String(role), createdAt };
+    },
+    listUsers() {
+      return db.prepare('SELECT username, role, created_at AS createdAt, disabled FROM auth_users ORDER BY username').all().map((row) => ({ ...row, disabled: Boolean(row.disabled) }));
+    },
     createCase({ label = '' } = {}) {
       const normalizedLabel = String(label).trim().slice(0, 160);
       if (!normalizedLabel) throw new Error('case_label_required');

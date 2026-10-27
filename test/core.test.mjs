@@ -12,7 +12,7 @@ import { buildDocumentDraft } from '../src/documents.mjs';
 import { documentToDocx } from '../src/document-export.mjs';
 import { openStore } from '../src/storage.mjs';
 import { analyzeTemplate, renderTemplate } from '../src/template-engine.mjs';
-import { startServer } from '../server.mjs';
+import { createServer, startServer } from '../server.mjs';
 
 test('buildDrafts extracts welfare-record facts without a model', () => {
   const draft = buildDrafts({
@@ -242,6 +242,37 @@ test('unresponsive local model returns a usable local fallback instead of hangin
     assert.equal(payload.fallback.used, true);
     assert.ok(['ollama_timeout', 'ollama_unavailable'].includes(payload.fallback.reason));
     assert.match(payload.draft.counselingLog, /주거/);
+  } finally {
+    await new Promise((resolve) => runtime.server.close(resolve));
+    fs.rmSync(dataDir, { recursive: true, force: true });
+  }
+});
+
+test('institution mode requires authentication and enforces viewer permissions', async () => {
+  const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'dawith-welfare-auth-'));
+  const runtime = await startServer({ port: 0, host: '127.0.0.1', authRequired: true, dataDir });
+  const request = async (pathname, options = {}) => fetch(`${runtime.url}${pathname}`, options);
+  const cookieFrom = (response) => String(response.headers.get('set-cookie') || '').split(';')[0];
+  try {
+    assert.throws(() => createServer({ host: '0.0.0.0', authRequired: false, dataDir: fs.mkdtempSync(path.join(os.tmpdir(), 'dawith-welfare-bind-')) }), /network_bind_requires_auth/);
+    const status = await request('/api/auth/status').then((response) => response.json());
+    assert.equal(status.required, true);
+    assert.equal(status.needsSetup, true);
+    assert.equal((await request('/api/cases')).status, 401);
+
+    const setup = await request('/api/auth/setup', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ username: 'admin', password: 'institution-safe-password' }) });
+    assert.equal(setup.status, 201);
+    const adminCookie = cookieFrom(setup);
+    assert.ok(adminCookie.startsWith('dawith_session='));
+    const created = await request('/api/auth/users', { method: 'POST', headers: { 'content-type': 'application/json', cookie: adminCookie }, body: JSON.stringify({ username: 'reviewer', password: 'reviewer-safe-password', role: 'viewer' }) });
+    assert.equal(created.status, 201);
+    const logout = await request('/api/auth/logout', { method: 'POST', headers: { cookie: adminCookie } });
+    assert.equal(logout.status, 200);
+    const login = await request('/api/auth/login', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ username: 'reviewer', password: 'reviewer-safe-password' }) });
+    assert.equal(login.status, 200);
+    const viewerCookie = cookieFrom(login);
+    assert.equal((await request('/api/cases', { headers: { cookie: viewerCookie } })).status, 200);
+    assert.equal((await request('/api/cases', { method: 'POST', headers: { 'content-type': 'application/json', cookie: viewerCookie }, body: JSON.stringify({ label: '권한 차단 사례' }) })).status, 403);
   } finally {
     await new Promise((resolve) => runtime.server.close(resolve));
     fs.rmSync(dataDir, { recursive: true, force: true });

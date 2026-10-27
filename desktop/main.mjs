@@ -1,4 +1,6 @@
-import { app, BrowserWindow, shell } from 'electron';
+import { app, BrowserWindow, safeStorage, shell } from 'electron';
+import fs from 'node:fs';
+import crypto from 'node:crypto';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { startServer } from '../server.mjs';
@@ -7,10 +9,32 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 let localServer;
 let mainWindow;
 
+function loadProtectedDatabaseKey(dataDir) {
+  if (!safeStorage.isEncryptionAvailable()) throw new Error('os_key_storage_unavailable');
+  const protectedPath = path.join(dataDir, '.os-protected-key');
+  fs.mkdirSync(dataDir, { recursive: true, mode: 0o700 });
+  if (fs.existsSync(protectedPath)) {
+    const encoded = safeStorage.decryptString(fs.readFileSync(protectedPath));
+    const key = Buffer.from(encoded, 'base64');
+    if (key.length !== 32) throw new Error('protected_database_key_invalid');
+    return key;
+  }
+  const legacyPath = path.join(dataDir, '.local-key');
+  const key = fs.existsSync(legacyPath) ? fs.readFileSync(legacyPath) : crypto.randomBytes(32);
+  if (key.length !== 32) throw new Error('legacy_database_key_invalid');
+  fs.writeFileSync(protectedPath, safeStorage.encryptString(key.toString('base64')), { mode: 0o600 });
+  return key;
+}
+
 async function createWindow() {
+  const dataDir = path.join(app.getPath('userData'), 'data');
+  const encryptionKey = loadProtectedDatabaseKey(dataDir);
   localServer = await startServer({
     port: 0,
-    dataDir: path.join(app.getPath('userData'), 'data'),
+    host: '127.0.0.1',
+    authRequired: false,
+    dataDir,
+    encryptionKey,
   });
 
   mainWindow = new BrowserWindow({

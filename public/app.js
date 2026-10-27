@@ -1,4 +1,4 @@
-const state = { task: 'counseling', draft: null, sourceName: '', audioMeta: null, recordId: null, records: [], cases: [], caseId: '', capabilities: null, settings: null, activeTab: 'counselingLog', documentTemplates: [], uploadedTemplates: [], documents: [], documentId: null, documentTemplateId: 'business-plan', uploadedTemplate: null, documentDraft: null, documentSource: null };
+const state = { task: 'counseling', draft: null, sourceName: '', audioMeta: null, recordId: null, records: [], cases: [], caseId: '', capabilities: null, settings: null, activeTab: 'counselingLog', documentTemplates: [], uploadedTemplates: [], documents: [], documentId: null, documentTemplateId: 'business-plan', uploadedTemplate: null, documentDraft: null, documentSource: null, auth: null };
 const DEMO_MODE = window.DAWITH_DEMO === true || (window.location.protocol === 'https:' && !['127.0.0.1', 'localhost'].includes(window.location.hostname));
 const samples = {
   counseling: '친모는 7월에 이혼할 예정이라고 말함. 현재 월세가 부담되고 아이의 학교 적응도 걱정된다고 함. 이혼 후 친부와 면접교섭을 진행할 계획이며 임대주택 신청 방법을 문의함.',
@@ -100,6 +100,40 @@ function updateCharCount() { $('#charCount').textContent = `${$('#rawText').valu
 function renderCapabilities() { const c = state.capabilities; if (!c) return; const items = [['규칙 처리', c.rules.available ? '사용 가능' : '불가'], ['Ollama 로컬 모델', c.ollama.available ? `${c.ollama.models.length}개 감지` : '미실행'], ['whisper.cpp 전사', c.whisper.available ? '모델 준비됨' : '모델 경로 필요']]; $('#capabilitySummary').innerHTML = items.map(([name, value]) => `<div class="capability ${value === '사용 가능' || value.includes('감지') || value === '모델 준비됨' ? '' : 'off'}"><span>${name}</span><span>${value}</span></div>`).join(''); const models = c.ollama.models.filter((model) => !model.toLowerCase().includes('embed')); const modelSelect = $('#ollamaModel'); modelSelect.innerHTML = models.map((model) => `<option value="${escapeHtml(model)}">${escapeHtml(model)}</option>`).join(''); $('#ollamaOption').classList.toggle('disabled', !models.length); $('#ollamaOption input').disabled = !models.length; $('#ollamaHint').textContent = models.length ? `${models.length}개 로컬 모델 · 127.0.0.1` : 'Ollama를 실행하면 이 PC의 모델만 선택 가능'; }
 function renderCases() { const select = $('#caseSelect'); if (!select) return; select.innerHTML = state.cases.map((item) => `<option value="${escapeHtml(item.id)}">${escapeHtml(item.label)}</option>`).join(''); if (state.caseId && state.cases.some((item) => item.id === state.caseId)) select.value = state.caseId; else if (state.cases[0]) { state.caseId = state.cases[0].id; select.value = state.caseId; } }
 function refreshDocumentViewIfActive() { if (!$('#documentsView')?.classList.contains('active')) return; renderDocumentTemplates(); renderDocumentSources(); renderSavedDocuments(); renderDocumentForm(); if (state.documentDraft) renderDocumentPreview(); }
+function showAuthGate(status) {
+  const gate = $('#authGate');
+  gate.classList.remove('hidden');
+  $('#authPasswordConfirmRow').classList.toggle('hidden', !status.needsSetup);
+  $('#authPasswordConfirm').required = Boolean(status.needsSetup);
+  $('#authEyebrow').textContent = status.needsSetup ? '기관 최초 설정' : '기관 내부 로그인';
+  $('#authTitle').textContent = status.needsSetup ? '관리자 계정을 만드세요' : '기관 계정으로 시작하세요';
+  $('#authDescription').textContent = status.needsSetup ? `관리자 비밀번호는 ${status.passwordPolicy.minLength}자 이상이어야 합니다.` : '권한이 확인된 직원만 상담 기록과 문서에 접근할 수 있습니다.';
+  $('#authSubmit').firstChild.textContent = status.needsSetup ? '관리자 계정 만들기 ' : '로그인 ';
+  $('#authUsername').focus();
+}
+function hideAuthGate() { $('#authGate').classList.add('hidden'); $('#authError').textContent = ''; }
+async function logout() { await fetch('/api/auth/logout', { method: 'POST' }); state.auth = { ...(state.auth || {}), authenticated: false, user: null }; showAuthGate({ ...state.auth, needsSetup: false, passwordPolicy: { minLength: 12 } }); }
+async function submitAuth(event) {
+  event.preventDefault();
+  const status = state.auth;
+  const username = $('#authUsername').value.trim();
+  const password = $('#authPassword').value;
+  const confirm = $('#authPasswordConfirm').value;
+  if (status?.needsSetup && password !== confirm) { $('#authError').textContent = '비밀번호가 일치하지 않습니다.'; return; }
+  const button = $('#authSubmit'); button.disabled = true; $('#authError').textContent = '';
+  try {
+    const endpoint = status?.needsSetup ? '/api/auth/setup' : '/api/auth/login';
+    const response = await fetch(endpoint, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ username, password }) });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'auth_failed');
+    state.auth = { ...status, authenticated: true, needsSetup: false, user: result.user };
+    hideAuthGate();
+    await load();
+  } catch (error) {
+    const messages = { invalid_credentials: '아이디 또는 비밀번호를 확인하세요.', login_rate_limited: '로그인 시도가 너무 많습니다. 잠시 후 다시 시도하세요.', username_invalid: '아이디는 영문 소문자·숫자·기호 3자 이상이어야 합니다.', password_policy: '비밀번호는 12자 이상이어야 합니다.', initial_setup_must_be_local: '최초 관리자 설정은 서버 PC에서 실행해야 합니다.' };
+    $('#authError').textContent = messages[error.message] || '인증을 처리하지 못했습니다.';
+  } finally { button.disabled = false; }
+}
 async function load() {
   try {
     if (DEMO_MODE) {
@@ -118,6 +152,11 @@ async function load() {
       renderCapabilities(); renderCases(); renderRecent(); renderRecentDocuments(); renderSettings(); refreshDocumentViewIfActive();
       return;
     }
+    state.auth = await fetch('/api/auth/status').then((response) => response.json());
+    if (state.auth.required && !state.auth.authenticated) { showAuthGate(state.auth); return; }
+    hideAuthGate();
+    $('#logoutButton').classList.toggle('hidden', !state.auth.required);
+    $('#securityText').textContent = state.auth.required ? `기관 내부망 · ${state.auth.user?.username || '인증됨'} · 외부 전송 차단` : '로컬 전용 · 외부 전송 차단';
     const [capabilities, cases, records, settings, templates, documents] = await Promise.all([
       fetch('/api/capabilities').then((r) => r.json()),
       fetch('/api/cases').then((r) => r.json()),
@@ -245,6 +284,7 @@ document.addEventListener('click', (event) => {
   if (action === 'export') exportDraft(actionElement.dataset.format || 'json');
   if (action === 'transcribe') transcribe();
   if (action === 'privacy') privacy();
+  if (action === 'logout') logout();
   if (action === 'closePrivacy') $('#privacyDialog').close();
   if (action === 'searchRecords') refreshRecords();
   if (action === 'saveSettings') saveSettings();
@@ -258,4 +298,5 @@ document.addEventListener('click', (event) => {
   if (tab) renderTab(tab);
 });
 $('#documentTemplateFile').addEventListener('change', (event) => uploadDocumentTemplate(event.target.files[0]));
+$('#authForm').addEventListener('submit', submitAuth);
 $('#rawText').addEventListener('input', () => { updateCharCount(); if (!state.draft) updateWorkflow($('#rawText').value.trim() ? 2 : 1); }); $('#contextText').addEventListener('input', () => { if (!state.draft && $('#rawText').value.trim()) updateWorkflow(2); }); $('#outputText').addEventListener('input', syncEditor); $('#meetingDecisionText').addEventListener('input', syncEditor); $('#meetingActionText').addEventListener('input', syncEditor); $('#caseSelect').addEventListener('change', (event) => { state.caseId = event.target.value; }); load();
