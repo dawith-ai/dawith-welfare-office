@@ -37,10 +37,15 @@ jobs:
         run: |
           $app = Join-Path $pwd 'dist\win-unpacked\Dawith Welfare Office.exe'
           if (-not (Test-Path $app)) { throw "Packaged app not found: $app" }
-          $process = Start-Process -FilePath $app -ArgumentList '--disable-gpu' -PassThru
+          $userDataDir = Join-Path $env:RUNNER_TEMP 'Dawith Welfare Office Packaged User Data'
+          $logFile = Join-Path $env:RUNNER_TEMP 'dawith-welfare-office-packaged.log'
+          $process = Start-Process -FilePath $app -ArgumentList @('--disable-gpu', "--user-data-dir=$userDataDir", '--enable-logging=file', "--log-file=$logFile") -PassThru
           try {
             Start-Sleep -Seconds 8
-            if ($process.HasExited) { throw "Packaged app exited with code $($process.ExitCode)" }
+            if ($process.HasExited) {
+              if (Test-Path $logFile) { Get-Content $logFile }
+              throw "Packaged app exited with code $($process.ExitCode)"
+            }
             $listener = Get-NetTCPConnection -OwningProcess $process.Id -State Listen -ErrorAction SilentlyContinue | Where-Object { $_.LocalAddress -eq '127.0.0.1' }
             if (-not $listener) { throw 'Packaged app did not open a loopback listener' }
             Write-Host "Packaged app listening on $($listener.LocalPort)"
@@ -57,10 +62,15 @@ jobs:
           if ($install.ExitCode -ne 0) { throw "NSIS installer failed with code $($install.ExitCode)" }
           $installedApp = Join-Path $installDir 'Dawith Welfare Office.exe'
           if (-not (Test-Path $installedApp)) { throw "Installed app not found: $installedApp" }
-          $process = Start-Process -FilePath $installedApp -ArgumentList '--disable-gpu' -PassThru
+          $userDataDir = Join-Path $env:RUNNER_TEMP 'Dawith Welfare Office Installed User Data'
+          $logFile = Join-Path $env:RUNNER_TEMP 'dawith-welfare-office-installed.log'
+          $process = Start-Process -FilePath $installedApp -ArgumentList @('--disable-gpu', "--user-data-dir=$userDataDir", '--enable-logging=file', "--log-file=$logFile") -PassThru
           try {
             Start-Sleep -Seconds 8
-            if ($process.HasExited) { throw "Installed app exited with code $($process.ExitCode)" }
+            if ($process.HasExited) {
+              if (Test-Path $logFile) { Get-Content $logFile }
+              throw "Installed app exited with code $($process.ExitCode)"
+            }
             $processIds = @(Get-CimInstance Win32_Process | Where-Object { $_.ExecutablePath -eq $installedApp } | Select-Object -ExpandProperty ProcessId)
             if (-not $processIds) { $processIds = @($process.Id) }
             $listener = Get-NetTCPConnection -State Listen -ErrorAction SilentlyContinue | Where-Object { ($processIds -contains $_.OwningProcess) -and ($_.LocalAddress -in @('127.0.0.1', '::1')) }
