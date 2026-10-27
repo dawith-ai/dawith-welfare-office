@@ -47,6 +47,26 @@ jobs:
           } finally {
             if (-not $process.HasExited) { Stop-Process -Id $process.Id -Force }
           }
+      - name: Smoke test NSIS installation
+        shell: pwsh
+        run: |
+          $installer = Get-ChildItem (Join-Path $pwd 'dist') -Filter '*-x64-Setup.exe' | Select-Object -First 1 -ExpandProperty FullName
+          if (-not $installer) { throw 'NSIS installer not found' }
+          $installDir = Join-Path $env:RUNNER_TEMP 'Dawith Welfare Office Installed'
+          $install = Start-Process -FilePath $installer -ArgumentList @('/S', "/D=$installDir") -Wait -PassThru
+          if ($install.ExitCode -ne 0) { throw "NSIS installer failed with code $($install.ExitCode)" }
+          $installedApp = Join-Path $installDir 'Dawith Welfare Office.exe'
+          if (-not (Test-Path $installedApp)) { throw "Installed app not found: $installedApp" }
+          $process = Start-Process -FilePath $installedApp -ArgumentList '--disable-gpu' -PassThru
+          try {
+            Start-Sleep -Seconds 8
+            if ($process.HasExited) { throw "Installed app exited with code $($process.ExitCode)" }
+            $listener = Get-NetTCPConnection -OwningProcess $process.Id -State Listen -ErrorAction SilentlyContinue | Where-Object { $_.LocalAddress -eq '127.0.0.1' }
+            if (-not $listener) { throw 'Installed app did not open a loopback listener' }
+            Write-Host "Installed app listening on $($listener.LocalPort)"
+          } finally {
+            if (-not $process.HasExited) { Stop-Process -Id $process.Id -Force }
+          }
       - name: Upload installers
         uses: actions/upload-artifact@v4
         with:

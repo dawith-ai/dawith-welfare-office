@@ -1,4 +1,4 @@
-# Dawith Welfare Office 0.3.1
+# Dawith Welfare Office 0.3.2
 
 사회복지기관의 상담 메모·회의 메모·녹취를 기관 PC 또는 기관 내부망에서 정리하는 Dawith Welfare Office입니다. 웹 데모와 Windows 설치형 EXE가 같은 로컬 API와 SQLite 저장소를 사용합니다.
 
@@ -60,8 +60,8 @@ npm run dist:win
 
 생성물:
 
-- `dist/Dawith-Welfare-Office-0.3.1-x64-Setup.exe` — 일반 설치형
-- `dist/Dawith-Welfare-Office-0.3.1-x64-Portable.exe` — 설치 없이 실행하는 portable 형식
+- `dist/Dawith-Welfare-Office-0.3.2-x64-Setup.exe` — 일반 설치형
+- `dist/Dawith-Welfare-Office-0.3.2-x64-Portable.exe` — 설치 없이 실행하는 portable 형식
 
 GitHub Actions의 `Build Dawith Welfare Office for Windows` workflow도 같은 Windows runner에서 검사·브라우저 테스트·빌드를 수행합니다.
 
