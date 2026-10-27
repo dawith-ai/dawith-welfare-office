@@ -61,7 +61,9 @@ jobs:
           try {
             Start-Sleep -Seconds 8
             if ($process.HasExited) { throw "Installed app exited with code $($process.ExitCode)" }
-            $listener = Get-NetTCPConnection -OwningProcess $process.Id -State Listen -ErrorAction SilentlyContinue | Where-Object { $_.LocalAddress -eq '127.0.0.1' }
+            $processIds = @(Get-CimInstance Win32_Process | Where-Object { $_.ExecutablePath -eq $installedApp } | Select-Object -ExpandProperty ProcessId)
+            if (-not $processIds) { $processIds = @($process.Id) }
+            $listener = Get-NetTCPConnection -State Listen -ErrorAction SilentlyContinue | Where-Object { ($processIds -contains $_.OwningProcess) -and ($_.LocalAddress -in @('127.0.0.1', '::1')) }
             if (-not $listener) { throw 'Installed app did not open a loopback listener' }
             Write-Host "Installed app listening on $($listener.LocalPort)"
           } finally {

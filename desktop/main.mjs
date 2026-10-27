@@ -61,8 +61,14 @@ async function createWindow() {
 }
 
 app.whenReady().then(async () => {
-  await createWindow();
-  app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) createWindow(); });
+  try {
+    await createWindow();
+  } catch (error) {
+    console.error('Dawith Welfare Office failed to start:', error);
+    app.exit(1);
+    return;
+  }
+  app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) createWindow().catch((error) => console.error('window_create_failed', error)); });
 });
 
 app.on('window-all-closed', () => {
