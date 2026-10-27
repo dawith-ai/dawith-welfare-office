@@ -37,7 +37,7 @@ jobs:
         run: |
           $app = Join-Path $pwd 'dist\win-unpacked\Dawith Welfare Office.exe'
           if (-not (Test-Path $app)) { throw "Packaged app not found: $app" }
-          $userDataDir = Join-Path $env:RUNNER_TEMP 'Dawith Welfare Office Packaged User Data'
+          $userDataDir = Join-Path $env:RUNNER_TEMP 'dawith-welfare-office-packaged-data'
           $logFile = Join-Path $env:RUNNER_TEMP 'dawith-welfare-office-packaged.log'
           $process = Start-Process -FilePath $app -ArgumentList @('--disable-gpu', "--user-data-dir=$userDataDir", '--enable-logging=file', "--log-file=$logFile") -PassThru
           try {
@@ -57,12 +57,12 @@ jobs:
         run: |
           $installer = Get-ChildItem (Join-Path $pwd 'dist') -Filter '*-x64-Setup.exe' | Select-Object -First 1 -ExpandProperty FullName
           if (-not $installer) { throw 'NSIS installer not found' }
-          $installDir = Join-Path $env:RUNNER_TEMP 'Dawith Welfare Office Installed'
+          $installDir = Join-Path $env:RUNNER_TEMP 'dawith-welfare-office-installed'
           $install = Start-Process -FilePath $installer -ArgumentList @('/S', "/D=$installDir") -Wait -PassThru
           if ($install.ExitCode -ne 0) { throw "NSIS installer failed with code $($install.ExitCode)" }
           $installedApp = Join-Path $installDir 'Dawith Welfare Office.exe'
           if (-not (Test-Path $installedApp)) { throw "Installed app not found: $installedApp" }
-          $userDataDir = Join-Path $env:RUNNER_TEMP 'Dawith Welfare Office Installed User Data'
+          $userDataDir = Join-Path $env:RUNNER_TEMP 'dawith-welfare-office-installed-data'
           $logFile = Join-Path $env:RUNNER_TEMP 'dawith-welfare-office-installed.log'
           $process = Start-Process -FilePath $installedApp -ArgumentList @('--disable-gpu', "--user-data-dir=$userDataDir", '--enable-logging=file', "--log-file=$logFile") -PassThru
           try {

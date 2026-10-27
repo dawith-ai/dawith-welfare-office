@@ -65,6 +65,13 @@ app.whenReady().then(async () => {
     await createWindow();
   } catch (error) {
     console.error('Dawith Welfare Office failed to start:', error);
+    try {
+      const startupLog = path.join(app.getPath('userData'), 'startup-error.log');
+      fs.mkdirSync(path.dirname(startupLog), { recursive: true });
+      fs.appendFileSync(startupLog, `${new Date().toISOString()}\n${error?.stack ?? error}\n`, 'utf8');
+    } catch (logError) {
+      console.error('Dawith Welfare Office could not write startup log:', logError);
+    }
     app.exit(1);
     return;
   }
