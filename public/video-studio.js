@@ -6,6 +6,7 @@ const studio = {
   overlays: [],
   selected: null,
   selectedOverlay: null,
+  selectedMosaic: null,
   playing: false,
   urls: new Set(),
   sampleIndex: 0,
@@ -96,7 +97,7 @@ function restoreSnapshot(snapshot) {
   $('#videoMusicVolumeValue').textContent = `${Number(project.musicVolume ?? 35)}%`;
   $('#videoVoiceVolume').value = Number(project.voiceVolume ?? 100);
   $('#videoVoiceVolumeValue').textContent = `${Number(project.voiceVolume ?? 100)}%`;
-  studio.scenes = (project.scenes || []).map((scene) => ({ ...scene, file: null, src: scene.src || '' }));
+  studio.scenes = (project.scenes || []).map((scene) => ({ ...scene, file: null, src: scene.src || '', mosaics: Array.isArray(scene.mosaics) ? scene.mosaics : [] }));
   studio.overlays = (project.overlays || []).map((overlay) => ({
     id: overlay.id || `overlay-${Date.now()}-${Math.random().toString(16).slice(2)}`,
     text: overlay.text || '새 타이틀', start: Math.max(0, Number(overlay.start) || 0), duration: Math.max(.2, Number(overlay.duration) || 3),
@@ -105,6 +106,7 @@ function restoreSnapshot(snapshot) {
   }));
   studio.selected = parsed.selected || studio.scenes[0]?.id || null;
   studio.selectedOverlay = parsed.selectedOverlay || studio.overlays[0]?.id || null;
+  studio.selectedMosaic = null;
   studio.currentTime = Math.min(Number(parsed.currentTime) || 0, timelineDuration());
   updateCanvasSize();
   renderSceneList();
@@ -206,6 +208,7 @@ function addScene(file, sample = null) {
     src,
     file,
     fileName: sample ? '예시 장면' : file.name,
+    mosaics: [],
   };
   studio.scenes.push(scene);
   studio.selected = scene.id;
@@ -276,6 +279,7 @@ function renderSceneList() {
     $('#videoDurationSummary').value = '총 0초';
     renderTimeline();
     renderOverlayEditor();
+    renderMosaicEditor();
     return;
   }
   $('#videoStageEmpty').hidden = true;
@@ -308,11 +312,30 @@ function renderSceneEditor() {
   $('#videoScenePositionY').value = Number(scene.positionY ?? 0);
   $('#videoFraming').value = scene.framing || 'cover';
   $('#videoSceneReviewed').checked = scene.reviewed;
+  if (!scene.mosaics) scene.mosaics = [];
+  if (!scene.mosaics.some((mosaic) => mosaic.id === studio.selectedMosaic)) studio.selectedMosaic = scene.mosaics[0]?.id || null;
   $('#videoRelinkStatus').textContent = scene.src ? `연결됨 · ${scene.fileName || '원본 미디어'}` : '원본 파일이 없습니다. 이 PC에서 다시 선택하세요.';
   $('#videoRelinkFile').value = '';
   $('#videoMoveUp').disabled = studio.scenes.indexOf(scene) === 0;
   $('#videoMoveDown').disabled = studio.scenes.indexOf(scene) === studio.scenes.length - 1;
   drawSelected();
+  renderMosaicEditor();
+}
+
+function renderMosaicEditor() {
+  const scene = selectedScene();
+  const mosaic = scene?.mosaics?.find((item) => item.id === studio.selectedMosaic) || null;
+  const form = $('#videoMosaicForm');
+  if (!form) return;
+  form.classList.toggle('video-disabled', !mosaic);
+  $('#videoRemoveMosaic').disabled = !mosaic;
+  if (!mosaic) return;
+  $('#videoMosaicX').value = mosaic.x;
+  $('#videoMosaicY').value = mosaic.y;
+  $('#videoMosaicWidth').value = mosaic.width;
+  $('#videoMosaicHeight').value = mosaic.height;
+  $('#videoMosaicAmount').value = mosaic.amount;
+  $('#videoMosaicAmountValue').textContent = mosaic.amount;
 }
 
 function renderOverlayEditor() {
@@ -453,6 +476,38 @@ function drawOverlays(ctx, time, canvas) {
   }
 }
 
+function drawMosaics(ctx, scene, canvas) {
+  for (const mosaic of scene?.mosaics || []) {
+    const x = Math.max(0, Math.min(canvas.width - 1, Number(mosaic.x || 0) / 100 * canvas.width));
+    const y = Math.max(0, Math.min(canvas.height - 1, Number(mosaic.y || 0) / 100 * canvas.height));
+    const width = Math.max(1, Math.min(canvas.width - x, Number(mosaic.width || 1) / 100 * canvas.width));
+    const height = Math.max(1, Math.min(canvas.height - y, Number(mosaic.height || 1) / 100 * canvas.height));
+    const block = Math.max(6, Math.min(32, Number(mosaic.amount) || 14));
+    try {
+      const image = ctx.getImageData(Math.floor(x), Math.floor(y), Math.floor(width), Math.floor(height));
+      for (let top = 0; top < image.height; top += block) {
+        for (let left = 0; left < image.width; left += block) {
+          const right = Math.min(image.width, left + block);
+          const bottom = Math.min(image.height, top + block);
+          let red = 0; let green = 0; let blue = 0; let alpha = 0; let count = 0;
+          for (let row = top; row < bottom; row += 1) for (let column = left; column < right; column += 1) {
+            const index = (row * image.width + column) * 4;
+            red += image.data[index]; green += image.data[index + 1]; blue += image.data[index + 2]; alpha += image.data[index + 3]; count += 1;
+          }
+          for (let row = top; row < bottom; row += 1) for (let column = left; column < right; column += 1) {
+            const index = (row * image.width + column) * 4;
+            image.data[index] = red / count; image.data[index + 1] = green / count; image.data[index + 2] = blue / count; image.data[index + 3] = alpha / count;
+          }
+        }
+      }
+      ctx.putImageData(image, Math.floor(x), Math.floor(y));
+    } catch {
+      ctx.fillStyle = 'rgba(20, 26, 24, .75)';
+      ctx.fillRect(x, y, width, height);
+    }
+  }
+}
+
 function renderTimeline() {
   const scale = Number($('#videoTimelineScale')?.value || 100) / 100;
   const videoTrack = $('#videoTimelineVideo');
@@ -515,7 +570,7 @@ async function drawScene(scene, progress = 0, timelineTime = studio.currentTime)
   ctx.fillStyle = gradient; ctx.fillRect(0, 0, canvas.width, canvas.height);
   if (scene) {
     const source = await sourceForScene(scene, progress);
-    if (source) { ctx.save(); ctx.globalAlpha = .92; drawCover(ctx, source, canvas, scene, progress); ctx.restore(); ctx.fillStyle = 'rgba(18, 27, 24, .22)'; ctx.fillRect(0, 0, canvas.width, canvas.height); }
+    if (source) { ctx.save(); ctx.globalAlpha = .92; drawCover(ctx, source, canvas, scene, progress); ctx.restore(); ctx.fillStyle = 'rgba(18, 27, 24, .22)'; ctx.fillRect(0, 0, canvas.width, canvas.height); drawMosaics(ctx, scene, canvas); }
     ctx.fillStyle = textColor;
     ctx.textAlign = 'left'; ctx.font = `700 ${Math.max(18, Math.round(canvas.width / 43))}px sans-serif`;
     ctx.fillText($('#videoOrgName').value.trim() || '우리 기관', 28, 42);
@@ -572,6 +627,32 @@ function syncOverlayEditor() {
   scheduleSave();
 }
 
+function syncMosaicEditor() {
+  const scene = selectedScene();
+  const mosaic = scene?.mosaics?.find((item) => item.id === studio.selectedMosaic);
+  if (!mosaic) return;
+  mosaic.x = Math.max(0, Math.min(100, Number($('#videoMosaicX').value) || 0));
+  mosaic.y = Math.max(0, Math.min(100, Number($('#videoMosaicY').value) || 0));
+  mosaic.width = Math.max(1, Math.min(100, Number($('#videoMosaicWidth').value) || 1));
+  mosaic.height = Math.max(1, Math.min(100, Number($('#videoMosaicHeight').value) || 1));
+  mosaic.amount = Math.max(6, Math.min(32, Number($('#videoMosaicAmount').value) || 14));
+  $('#videoMosaicAmountValue').textContent = mosaic.amount;
+  drawSelected();
+  scheduleSave();
+}
+
+function addMosaic() {
+  const scene = selectedScene();
+  if (!scene) return toast('모자이크를 넣을 장면을 먼저 선택해 주세요.');
+  if (!scene.mosaics) scene.mosaics = [];
+  const mosaic = { id: `mosaic-${Date.now()}-${Math.random().toString(16).slice(2)}`, x: 35, y: 30, width: 30, height: 25, amount: 14 };
+  scene.mosaics.push(mosaic);
+  studio.selectedMosaic = mosaic.id;
+  renderMosaicEditor();
+  drawSelected();
+  saveProjectState();
+}
+
 function selectOverlay(id) {
   studio.selectedOverlay = id;
   renderOverlayEditor();
@@ -623,7 +704,7 @@ function addSamples() {
 
 function clearScenes() {
   for (const scene of studio.scenes) if (scene.src.startsWith('blob:')) URL.revokeObjectURL(scene.src);
-  studio.urls.clear(); studio.sourceCache.clear(); studio.scenes = []; studio.overlays = []; studio.selected = null; studio.selectedOverlay = null; studio.currentTime = 0; renderSceneList(); drawSelected(); saveProjectState();
+  studio.urls.clear(); studio.sourceCache.clear(); studio.scenes = []; studio.overlays = []; studio.selected = null; studio.selectedOverlay = null; studio.selectedMosaic = null; studio.currentTime = 0; renderSceneList(); drawSelected(); saveProjectState();
 }
 
 function reorder(fromId, toId) {
@@ -842,13 +923,16 @@ function bind() {
   $('#videoRelinkFile').addEventListener('change', (event) => { relinkSelectedScene(event.target.files[0]); });
   $('#videoAddOverlay').addEventListener('click', addOverlay);
   $('#videoRemoveOverlay').addEventListener('click', () => { if (!selectedOverlay()) return; studio.overlays = studio.overlays.filter((overlay) => overlay.id !== studio.selectedOverlay); studio.selectedOverlay = studio.overlays[0]?.id || null; renderTimeline(); drawSelected(); saveProjectState(); });
+  $('#videoAddMosaic').addEventListener('click', addMosaic);
+  $('#videoRemoveMosaic').addEventListener('click', () => { const scene = selectedScene(); if (!scene?.mosaics) return; scene.mosaics = scene.mosaics.filter((mosaic) => mosaic.id !== studio.selectedMosaic); studio.selectedMosaic = scene.mosaics[0]?.id || null; renderMosaicEditor(); drawSelected(); saveProjectState(); });
   $('#videoUndoButton').addEventListener('click', undo); $('#videoRedoButton').addEventListener('click', redo);
   ['videoProjectTitle', 'videoOrgName', 'videoEventDate', 'videoEndingText'].forEach((id) => $(`#${id}`).addEventListener('input', () => { drawSelected(); scheduleSave(); }));
   ['videoConsentCheck', 'videoPrivacyCheck', 'videoCreditCheck'].forEach((id) => $(`#${id}`).addEventListener('change', scheduleSave));
   ['videoSceneName', 'videoSceneCaption', 'videoSceneDuration', 'videoCaptionStyle', 'videoSceneReviewed', 'videoTrimStart', 'videoTrimEnd', 'videoTransition', 'videoEffect', 'videoMotion', 'videoEffectAmount', 'videoSceneScaleStart', 'videoSceneScaleEnd', 'videoScenePositionX', 'videoScenePositionY', 'videoFraming'].forEach((id) => { $(`#${id}`).addEventListener('input', syncSceneEditor); $(`#${id}`).addEventListener('change', syncSceneEditor); });
   ['videoOverlayText', 'videoOverlayStart', 'videoOverlayDuration', 'videoOverlayStyle', 'videoOverlayAnimation', 'videoOverlayX', 'videoOverlayY', 'videoOverlaySize'].forEach((id) => { $(`#${id}`).addEventListener('input', syncOverlayEditor); $(`#${id}`).addEventListener('change', syncOverlayEditor); });
+  ['videoMosaicX', 'videoMosaicY', 'videoMosaicWidth', 'videoMosaicHeight', 'videoMosaicAmount'].forEach((id) => { $(`#${id}`).addEventListener('input', syncMosaicEditor); $(`#${id}`).addEventListener('change', syncMosaicEditor); });
   $('#videoMoveUp').addEventListener('click', () => moveSelected(-1)); $('#videoMoveDown').addEventListener('click', () => moveSelected(1));
-  $('#videoRemoveScene').addEventListener('click', () => { studio.scenes = studio.scenes.filter((scene) => scene.id !== studio.selected); studio.selected = studio.scenes[0]?.id || null; studio.currentTime = 0; renderSceneList(); saveProjectState(); });
+  $('#videoRemoveScene').addEventListener('click', () => { studio.scenes = studio.scenes.filter((scene) => scene.id !== studio.selected); studio.selected = studio.scenes[0]?.id || null; studio.selectedMosaic = null; studio.currentTime = 0; renderSceneList(); saveProjectState(); });
   const splitButton = document.createElement('button'); splitButton.id = 'videoSplitScene'; splitButton.className = 'secondary-button'; splitButton.type = 'button'; splitButton.textContent = '✂ 분할'; $('#videoRemoveScene').before(splitButton); splitButton.addEventListener('click', splitSelected);
   $('#videoSceneList').addEventListener('click', (event) => { const item = event.target.closest('[data-scene-id]'); if (item) selectScene(item.dataset.sceneId); });
   $('#videoTimeline').addEventListener('click', (event) => {
@@ -893,7 +977,7 @@ function bind() {
     if (command && event.key.toLowerCase() === 'z') { event.preventDefault(); event.shiftKey ? redo() : undo(); return; }
     if (event.code === 'Space' && !editing) { event.preventDefault(); if (studio.playing) stopPreview(); else previewAll(); }
     if (event.key.toLowerCase() === 's' && !editing && selectedScene()) { event.preventDefault(); splitSelected(); }
-    if (event.key === 'Delete' && !editing && selectedScene()) { studio.scenes = studio.scenes.filter((scene) => scene.id !== studio.selected); studio.selected = studio.scenes[0]?.id || null; renderSceneList(); saveProjectState(); }
+    if (event.key === 'Delete' && !editing && selectedScene()) { studio.scenes = studio.scenes.filter((scene) => scene.id !== studio.selected); studio.selected = studio.scenes[0]?.id || null; studio.selectedMosaic = null; renderSceneList(); saveProjectState(); }
     if (event.altKey && event.key === 'ArrowUp') moveSelected(-1);
     if (event.altKey && event.key === 'ArrowDown') moveSelected(1);
     if (event.key === 'ArrowLeft' && !editing) seekTimeline(studio.currentTime - (event.shiftKey ? 1 : 1 / 30));

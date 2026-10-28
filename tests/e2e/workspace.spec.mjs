@@ -275,3 +275,18 @@ test('로컬 Whisper 타임코드가 편집 가능한 TITLE 자막으로 들어�
   await expect(page.locator('#videoTimelineOverlay')).toContainText('함께 준비한 하루입니다.');
   await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('dawith.video-studio.project.v2')).project.overlays[0].source)).toBe('auto-caption');
 });
+
+test('장면별 개인정보 모자이크 영역이 프로젝트와 캔버스 렌더 경로에 반영된다', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: /행사 결과 영상 만들기/ }).click();
+  await page.getByRole('button', { name: '예시 장면 넣기' }).click();
+  await page.getByRole('button', { name: '＋ 영역' }).click();
+  await page.locator('#videoMosaicX').fill('10');
+  await page.locator('#videoMosaicY').fill('20');
+  await page.locator('#videoMosaicWidth').fill('25');
+  await page.locator('#videoMosaicHeight').fill('30');
+  await page.locator('#videoMosaicAmount').fill('22');
+  await expect(page.locator('#videoMosaicAmountValue')).toHaveText('22');
+  await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('dawith.video-studio.project.v2')).project.scenes[0].mosaics[0].width)).toBe(25);
+  await expect(page.locator('#videoRemoveMosaic')).toBeEnabled();
+});

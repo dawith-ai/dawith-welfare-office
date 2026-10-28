@@ -442,6 +442,7 @@ dialog::backdrop { background: rgba(25,49,39,.45); }
 .video-step-card input:focus, .video-step-card select:focus, .video-scene-editor input:focus, .video-scene-editor textarea:focus, .video-credits input:focus { outline: 2px solid #e6a4ba; outline-offset: 2px; border-color: #c43e68; }
 .video-two-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .video-three-fields { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.video-four-fields { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; }
 .video-inspector-section { margin-top: 14px; padding-top: 12px; border-top: 1px solid #ecece8; }
 .video-inspector-title { margin-bottom: 3px; color: #34483d; font-size: 11px; font-weight: 850; letter-spacing: .03em; }
 .video-inspector-section .range-row { margin-top: 8px; }
@@ -514,6 +515,10 @@ dialog::backdrop { background: rgba(25,49,39,.45); }
 .video-overlay-form.video-disabled { opacity: .48; pointer-events: none; }
 .video-overlay-actions { display: flex; justify-content: flex-end; margin-top: 7px; }
 .video-overlay-actions .text-button { min-height: 30px; padding: 5px 8px; font-size: 10px; }
+.video-mosaic-editor .video-overlay-heading { align-items: center; }
+.video-mosaic-editor .secondary-button { min-height: 28px; padding: 5px 8px; font-size: 10px; }
+.video-mosaic-form.video-disabled { opacity: .48; pointer-events: none; }
+.video-mosaic-form .text-button { min-height: 28px; margin-top: 7px; padding: 5px 8px; font-size: 10px; }
 .video-credits { display: grid; grid-template-columns: minmax(0, .8fr) minmax(260px, 1fr); gap: 18px; align-items: center; margin-top: 14px; padding: 16px; border: 1px solid #e5e6e1; border-radius: 14px; background: #fafbf9; }
 .video-credits b, .video-credits span { display: block; }
 .video-credits b { color: #34483d; font-size: 13px; }
