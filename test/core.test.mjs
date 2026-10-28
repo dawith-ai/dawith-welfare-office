@@ -172,6 +172,12 @@ test('local API supports the full review, search, edit, export flow and blocks c
     const sameOrigin = await fetch(`${runtime.url}/api/health`, { headers: { Origin: runtime.url } });
     assert.equal(sameOrigin.status, 200);
     assert.equal(sameOrigin.headers.get('content-security-policy').includes("frame-ancestors 'none'"), true);
+    const capabilities = await fetch(`${runtime.url}/api/capabilities`).then((response) => response.json());
+    assert.ok(capabilities.system.memoryGB >= 1);
+    assert.ok(capabilities.system.cpuCores >= 1);
+    assert.match(capabilities.ollama.recommendation.model, /^qwen2\.5:/);
+    const invalidOllamaPull = await fetch(`${runtime.url}/api/ollama/pull`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ model: 'https://example.invalid/model' }) });
+    assert.equal(invalidOllamaPull.status, 400);
     const cases = await fetch(`${runtime.url}/api/cases`).then((response) => response.json());
     assert.equal(cases.cases.length, 1);
     const createdCase = await fetch(`${runtime.url}/api/cases`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ label: '합성 사례 A' }) }).then((response) => response.json());
