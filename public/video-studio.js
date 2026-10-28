@@ -3,7 +3,9 @@ const $$ = (selector) => [...document.querySelectorAll(selector)];
 
 const studio = {
   scenes: [],
+  overlays: [],
   selected: null,
+  selectedOverlay: null,
   playing: false,
   urls: new Set(),
   sampleIndex: 0,
@@ -21,7 +23,9 @@ const studio = {
 const STORAGE_KEY = 'dawith.video-studio.project.v2';
 
 function timelineDuration() {
-  return studio.scenes.reduce((sum, scene) => sum + Math.max(0, Number(scene.duration) || 0), 0) + (studio.scenes.length ? 2 : 0);
+  const sceneDuration = studio.scenes.reduce((sum, scene) => sum + Math.max(0, Number(scene.duration) || 0), 0) + (studio.scenes.length ? 2 : 0);
+  const overlayDuration = studio.overlays.reduce((max, overlay) => Math.max(max, Number(overlay.start || 0) + Number(overlay.duration || 0)), 0);
+  return Math.max(sceneDuration, overlayDuration);
 }
 
 function formatTime(value) {
@@ -31,7 +35,7 @@ function formatTime(value) {
 
 function serializableProject() {
   return {
-    version: 2,
+    version: 3,
     title: $('#videoProjectTitle')?.value || '',
     organization: $('#videoOrgName')?.value || '',
     eventDate: $('#videoEventDate')?.value || '',
@@ -42,6 +46,7 @@ function serializableProject() {
     voiceName: $('#videoVoiceFile')?.files[0]?.name || '',
     musicVolume: Number($('#videoMusicVolume')?.value || 35),
     voiceVolume: Number($('#videoVoiceVolume')?.value || 100),
+    overlays: studio.overlays.map(({ ...overlay }) => ({ ...overlay })),
     scenes: studio.scenes.map(({ file, src, ...scene }) => ({ ...scene, src: src?.startsWith('data:') ? src : '' })),
   };
 }
@@ -87,8 +92,19 @@ function restoreSnapshot(snapshot) {
   $('#videoAspect').value = project.aspect || '16:9';
   $('#videoTheme').value = project.theme || 'warm';
   $('#videoEndingText').value = project.ending || '';
-  studio.scenes = (project.scenes || []).filter((scene) => scene.src).map((scene) => ({ ...scene, file: null }));
+  $('#videoMusicVolume').value = Number(project.musicVolume ?? 35);
+  $('#videoMusicVolumeValue').textContent = `${Number(project.musicVolume ?? 35)}%`;
+  $('#videoVoiceVolume').value = Number(project.voiceVolume ?? 100);
+  $('#videoVoiceVolumeValue').textContent = `${Number(project.voiceVolume ?? 100)}%`;
+  studio.scenes = (project.scenes || []).map((scene) => ({ ...scene, file: null, src: scene.src || '' }));
+  studio.overlays = (project.overlays || []).map((overlay) => ({
+    id: overlay.id || `overlay-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+    text: overlay.text || '새 타이틀', start: Math.max(0, Number(overlay.start) || 0), duration: Math.max(.2, Number(overlay.duration) || 3),
+    x: Number(overlay.x ?? 50), y: Number(overlay.y ?? 22), size: Number(overlay.size ?? 42),
+    style: overlay.style || 'title', animation: overlay.animation || 'fade', color: overlay.color || '#ffffff', source: overlay.source || '',
+  }));
   studio.selected = parsed.selected || studio.scenes[0]?.id || null;
+  studio.selectedOverlay = parsed.selectedOverlay || studio.overlays[0]?.id || null;
   studio.currentTime = Math.min(Number(parsed.currentTime) || 0, timelineDuration());
   updateCanvasSize();
   renderSceneList();
@@ -196,6 +212,25 @@ function addScene(file, sample = null) {
   return scene;
 }
 
+function addOverlay() {
+  if (!studio.scenes.length) return toast('타이틀을 넣기 전에 장면을 하나 이상 추가해 주세요.');
+  const overlay = {
+    id: `overlay-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+    text: '우리 기관 행사 이야기', start: 0, duration: 3, x: 50, y: 22, size: 42,
+    style: 'title', animation: 'fade', color: '#ffffff',
+  };
+  studio.overlays.push(overlay);
+  studio.selectedOverlay = overlay.id;
+  renderTimeline();
+  renderOverlayEditor();
+  drawSelected();
+  saveProjectState();
+}
+
+function selectedOverlay() {
+  return studio.overlays.find((overlay) => overlay.id === studio.selectedOverlay) || null;
+}
+
 function selectedScene() {
   return studio.scenes.find((scene) => scene.id === studio.selected) || null;
 }
@@ -240,11 +275,12 @@ function renderSceneList() {
     $('#videoSelectedSceneTitle').textContent = '장면을 선택하세요';
     $('#videoDurationSummary').value = '총 0초';
     renderTimeline();
+    renderOverlayEditor();
     return;
   }
   $('#videoStageEmpty').hidden = true;
   $('#videoSceneEditor').classList.remove('video-disabled');
-  list.innerHTML = studio.scenes.map((scene, index) => `<button class="video-scene-item${scene.id === studio.selected ? ' is-selected' : ''}" type="button" draggable="true" data-scene-id="${esc(scene.id)}"><img class="video-scene-thumb" src="${esc(scene.src)}" alt="" /><span><b>${index + 1}. ${esc(scene.name || '이름 없는 장면')}</b><small>${scene.type === 'video' ? '영상' : '사진'} · ${Number(scene.duration).toFixed(1)}초${scene.caption ? ` · ${esc(scene.caption)}` : ''}</small></span><i class="video-scene-status">${scene.reviewed ? '✓' : '!'}</i></button>`).join('');
+  list.innerHTML = studio.scenes.map((scene, index) => `<button class="video-scene-item${scene.id === studio.selected ? ' is-selected' : ''}" type="button" draggable="true" data-scene-id="${esc(scene.id)}"><img class="video-scene-thumb" src="${esc(scene.src || './dawith-ci.svg')}" alt="" /><span><b>${index + 1}. ${esc(scene.name || '이름 없는 장면')}</b><small>${scene.type === 'video' ? '영상' : '사진'} · ${Number(scene.duration).toFixed(1)}초${scene.caption ? ` · ${esc(scene.caption)}` : ''}</small></span><i class="video-scene-status${scene.src ? '' : ' is-missing'}">${scene.src ? (scene.reviewed ? '✓' : '!') : '↗'}</i></button>`).join('');
   const total = studio.scenes.reduce((sum, scene) => sum + Number(scene.duration || 0), 0);
   $('#videoDurationSummary').value = `총 ${total.toFixed(1)}초`;
   renderSceneEditor();
@@ -272,9 +308,28 @@ function renderSceneEditor() {
   $('#videoScenePositionY').value = Number(scene.positionY ?? 0);
   $('#videoFraming').value = scene.framing || 'cover';
   $('#videoSceneReviewed').checked = scene.reviewed;
+  $('#videoRelinkStatus').textContent = scene.src ? `연결됨 · ${scene.fileName || '원본 미디어'}` : '원본 파일이 없습니다. 이 PC에서 다시 선택하세요.';
+  $('#videoRelinkFile').value = '';
   $('#videoMoveUp').disabled = studio.scenes.indexOf(scene) === 0;
   $('#videoMoveDown').disabled = studio.scenes.indexOf(scene) === studio.scenes.length - 1;
   drawSelected();
+}
+
+function renderOverlayEditor() {
+  const overlay = selectedOverlay();
+  const form = $('#videoOverlayForm');
+  if (!form) return;
+  form.classList.toggle('video-disabled', !overlay);
+  $('#videoRemoveOverlay').disabled = !overlay;
+  if (!overlay) return;
+  $('#videoOverlayText').value = overlay.text;
+  $('#videoOverlayStart').value = overlay.start;
+  $('#videoOverlayDuration').value = overlay.duration;
+  $('#videoOverlayStyle').value = overlay.style;
+  $('#videoOverlayAnimation').value = overlay.animation;
+  $('#videoOverlayX').value = overlay.x;
+  $('#videoOverlayY').value = overlay.y;
+  $('#videoOverlaySize').value = overlay.size;
 }
 
 function roundedRect(ctx, x, y, width, height, radius) {
@@ -354,14 +409,60 @@ function drawText(ctx, text, x, y, maxWidth, style, canvas) {
   lines.forEach((line, index) => ctx.fillText(line, canvas.width / 2, centerY - (lines.length - 1) * lineHeight / 2 + index * lineHeight + fontSize / 3));
 }
 
+function drawOverlays(ctx, time, canvas) {
+  for (const overlay of studio.overlays) {
+    const start = Number(overlay.start) || 0;
+    const duration = Math.max(.2, Number(overlay.duration) || 3);
+    if (time < start || time >= start + duration || !overlay.text) continue;
+    const elapsed = time - start;
+    const edge = Math.min(.35, duration / 3);
+    const fade = overlay.animation === 'fade' ? Math.min(1, elapsed / edge, (duration - elapsed) / edge) : 1;
+    const x = Math.max(0, Math.min(100, Number(overlay.x ?? 50))) / 100 * canvas.width;
+    const y = Math.max(0, Math.min(100, Number(overlay.y ?? 22))) / 100 * canvas.height;
+    const size = Math.max(12, Math.min(180, Number(overlay.size) || 42));
+    const maxWidth = Math.min(canvas.width - 48, canvas.width * (overlay.style === 'lower-third' ? .78 : .86));
+    ctx.font = `800 ${size}px sans-serif`;
+    const lines = String(overlay.text).split(/\n/).flatMap((line) => wrapLines(ctx, line, maxWidth)).slice(0, 3);
+    const lineHeight = size * 1.18;
+    const boxHeight = lines.length * lineHeight + 24;
+    ctx.save();
+    ctx.globalAlpha = Math.max(0, Math.min(1, fade));
+    ctx.textBaseline = 'middle';
+    ctx.textAlign = overlay.style === 'lower-third' ? 'left' : 'center';
+    if (overlay.style === 'lower-third') {
+      const left = Math.max(20, x - maxWidth / 2);
+      ctx.fillStyle = 'rgba(18, 27, 24, .78)';
+      roundedRect(ctx, left - 18, y - boxHeight / 2, Math.min(maxWidth + 36, canvas.width - left - 20), boxHeight, 12);
+      ctx.fill();
+      ctx.fillStyle = overlay.color || '#ffffff';
+      lines.forEach((line, index) => ctx.fillText(line, left, y - (lines.length - 1) * lineHeight / 2 + index * lineHeight));
+    } else if (overlay.style === 'badge') {
+      const textWidth = Math.min(maxWidth, Math.max(80, ctx.measureText(overlay.text).width + 42));
+      ctx.fillStyle = 'rgba(196, 62, 104, .9)';
+      roundedRect(ctx, x - textWidth / 2, y - size * .8, textWidth, size * 1.6, size * .8);
+      ctx.fill();
+      ctx.fillStyle = overlay.color || '#ffffff';
+      ctx.fillText(lines[0], x, y);
+    } else {
+      ctx.shadowColor = 'rgba(0, 0, 0, .38)';
+      ctx.shadowBlur = 12;
+      ctx.fillStyle = overlay.color || '#ffffff';
+      lines.forEach((line, index) => ctx.fillText(line, x, y - (lines.length - 1) * lineHeight / 2 + index * lineHeight));
+    }
+    ctx.restore();
+  }
+}
+
 function renderTimeline() {
   const scale = Number($('#videoTimelineScale')?.value || 100) / 100;
   const videoTrack = $('#videoTimelineVideo');
   const captionTrack = $('#videoTimelineCaption');
-  if (!videoTrack || !captionTrack) return;
+  const overlayTrack = $('#videoTimelineOverlay');
+  if (!videoTrack || !captionTrack || !overlayTrack) return;
   const widthFor = (scene) => Math.max(112, scene.duration * 76 * scale);
   videoTrack.innerHTML = studio.scenes.length ? studio.scenes.map((scene, index) => `<button type="button" class="timeline-clip${scene.id === studio.selected ? ' is-selected' : ''}" data-scene-id="${esc(scene.id)}" style="--clip-width:${widthFor(scene)}px"><span>${index + 1}</span><b>${esc(scene.name || '장면')}</b><small>${Number(scene.duration).toFixed(1)}s</small><i class="timeline-handle timeline-handle-start" data-trim="start" aria-label="시작 조절"></i><i class="timeline-handle timeline-handle-end" data-trim="end" aria-label="끝 조절"></i></button>`).join('') : '<span class="timeline-empty">장면을 넣으면 타임라인에 표시됩니다.</span>';
   captionTrack.innerHTML = studio.scenes.length ? studio.scenes.map((scene) => `<button type="button" class="timeline-caption-clip${scene.id === studio.selected ? ' is-selected' : ''}" data-scene-id="${esc(scene.id)}" style="--clip-width:${widthFor(scene)}px">${esc(scene.caption || '자막 없음')}</button>`).join('') : '';
+  overlayTrack.innerHTML = studio.overlays.length ? studio.overlays.map((overlay) => `<button type="button" class="timeline-overlay-clip${overlay.id === studio.selectedOverlay ? ' is-selected' : ''}" data-overlay-id="${esc(overlay.id)}" style="--clip-offset:${Math.max(0, Number(overlay.start) || 0) * 76 * scale}px;--clip-width:${Math.max(44, Number(overlay.duration || 3) * 76 * scale)}px">${esc(overlay.text || '타이틀')}</button>`).join('') : '<span class="timeline-empty">＋ 타이틀 버튼으로 독립 그래픽을 추가하세요.</span>';
   const ruler = $('#videoTimelineRuler');
   if (ruler) {
     const duration = timelineDuration();
@@ -369,6 +470,7 @@ function renderTimeline() {
     ruler.innerHTML = marks.map((mark) => `<span>${mark}</span>`).join('');
   }
   updatePlayhead();
+  renderOverlayEditor();
 }
 
 async function sourceForScene(scene, progress = 0) {
@@ -402,7 +504,7 @@ async function sourceForScene(scene, progress = 0) {
   return video;
 }
 
-async function drawScene(scene, progress = 0) {
+async function drawScene(scene, progress = 0, timelineTime = studio.currentTime) {
   const canvas = $('#videoCanvas');
   if (!canvas) return;
   const ctx = canvas.getContext('2d');
@@ -423,9 +525,10 @@ async function drawScene(scene, progress = 0) {
     if (scene.transition === 'fade' && progress < .18) { ctx.fillStyle = `rgba(0, 0, 0, ${Math.max(0, 1 - progress / .18)})`; ctx.fillRect(0, 0, canvas.width, canvas.height); }
     if (scene.transition === 'wipe' && progress < .18) { ctx.fillStyle = `rgba(255, 255, 255, ${Math.max(0, 1 - progress / .18)})`; ctx.fillRect(0, 0, canvas.width * Math.max(0, 1 - progress / .18), canvas.height); }
   }
+  drawOverlays(ctx, Number(timelineTime) || 0, canvas);
 }
 
-async function drawSelected() { await drawScene(selectedScene()); }
+async function drawSelected() { await drawScene(selectedScene(), 0, studio.currentTime); }
 
 function syncSceneEditor() {
   const scene = selectedScene();
@@ -453,6 +556,61 @@ function syncSceneEditor() {
   scheduleSave();
 }
 
+function syncOverlayEditor() {
+  const overlay = selectedOverlay();
+  if (!overlay) return;
+  overlay.text = $('#videoOverlayText').value.slice(0, 80);
+  overlay.start = Math.max(0, Math.min(120, Number($('#videoOverlayStart').value) || 0));
+  overlay.duration = Math.max(.2, Math.min(120, Number($('#videoOverlayDuration').value) || 3));
+  overlay.style = $('#videoOverlayStyle').value;
+  overlay.animation = $('#videoOverlayAnimation').value;
+  overlay.x = Math.max(0, Math.min(100, Number($('#videoOverlayX').value) || 0));
+  overlay.y = Math.max(0, Math.min(100, Number($('#videoOverlayY').value) || 0));
+  overlay.size = Math.max(12, Math.min(180, Number($('#videoOverlaySize').value) || 42));
+  renderTimeline();
+  drawSelected();
+  scheduleSave();
+}
+
+function selectOverlay(id) {
+  studio.selectedOverlay = id;
+  renderOverlayEditor();
+  renderTimeline();
+  drawSelected();
+}
+
+function relinkSelectedScene(file) {
+  const scene = selectedScene();
+  if (!scene || !file) return;
+  if (scene.src?.startsWith('blob:')) URL.revokeObjectURL(scene.src);
+  scene.src = URL.createObjectURL(file);
+  scene.file = file;
+  scene.fileName = file.name;
+  scene.type = file.type.startsWith('video/') ? 'video' : 'image';
+  studio.urls.add(scene.src);
+  studio.sourceCache.clear();
+  studio.videoCache.delete(scene.id);
+  renderSceneList();
+  saveProjectState();
+  toast(`원본 미디어를 다시 연결했습니다: ${file.name}`);
+}
+
+async function importProjectFile(file) {
+  if (!file) return;
+  try {
+    const project = JSON.parse(await file.text());
+    if (!Array.isArray(project.scenes)) throw new Error('scenes');
+    restoreSnapshot(JSON.stringify({ project, selected: project.scenes[0]?.id || null, selectedOverlay: project.overlays?.[0]?.id || null, currentTime: project.currentTime || 0 }));
+    studio.history = [stateSnapshot()];
+    studio.historyIndex = 0;
+    updateHistoryButtons();
+    saveProjectState({ history: false });
+    toast('프로젝트 설계도를 불러왔습니다. 연결이 끊긴 미디어를 확인하세요.');
+  } catch {
+    toast('프로젝트 설계도 형식이 올바르지 않습니다. Dawith 영상 스튜디오에서 저장한 JSON을 선택하세요.');
+  }
+}
+
 function selectScene(id) { studio.selected = id; const target = sceneAtTime(studio.currentTime); if (!target || target.scene.id !== id) studio.currentTime = studio.scenes.slice(0, studio.scenes.findIndex((scene) => scene.id === id)).reduce((sum, scene) => sum + Number(scene.duration || 0), 0); renderSceneList(); seekTimeline(studio.currentTime); scheduleSave(); }
 
 function addSamples() {
@@ -465,7 +623,7 @@ function addSamples() {
 
 function clearScenes() {
   for (const scene of studio.scenes) if (scene.src.startsWith('blob:')) URL.revokeObjectURL(scene.src);
-  studio.urls.clear(); studio.sourceCache.clear(); studio.scenes = []; studio.selected = null; studio.currentTime = 0; renderSceneList(); drawSelected(); saveProjectState();
+  studio.urls.clear(); studio.sourceCache.clear(); studio.scenes = []; studio.overlays = []; studio.selected = null; studio.selectedOverlay = null; studio.currentTime = 0; renderSceneList(); drawSelected(); saveProjectState();
 }
 
 function reorder(fromId, toId) {
@@ -551,6 +709,53 @@ async function renderAudioWaveform(file, selector = '#videoAudioWaveform') {
   }
 }
 
+function transcriptTime(value) {
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  const raw = String(value ?? '').trim();
+  if (!raw) return 0;
+  if (/^\d+(?:\.\d+)?$/.test(raw)) return Number(raw);
+  const parts = raw.replace(',', '.').split(':').map(Number);
+  if (parts.some((part) => !Number.isFinite(part))) return 0;
+  return parts.length === 3 ? parts[0] * 3600 + parts[1] * 60 + parts[2] : parts[0] * 60 + parts[1];
+}
+
+async function createAutoCaptions() {
+  const file = $('#videoVoiceFile').files[0];
+  if (!file) return toast('먼저 내레이션·음성 트랙을 선택해 주세요.');
+  const button = $('#videoAutoCaptionButton');
+  button.disabled = true;
+  button.textContent = '로컬 전사 중…';
+  try {
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    let binary = '';
+    const chunkSize = 0x8000;
+    for (let index = 0; index < bytes.length; index += chunkSize) binary += String.fromCharCode(...bytes.subarray(index, index + chunkSize));
+    const response = await fetch('/api/transcribe', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ fileName: file.name, dataBase64: btoa(binary) }) });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(payload.message || payload.error || 'transcription_failed');
+    const segments = Array.isArray(payload.segments) ? payload.segments : [];
+    if (!segments.length) throw new Error('transcription_empty');
+    studio.overlays = studio.overlays.filter((overlay) => overlay.source !== 'auto-caption');
+    const maxEnd = timelineDuration();
+    for (const segment of segments.slice(0, 200)) {
+      const start = Math.max(0, transcriptTime(segment.from ?? segment.start));
+      const end = Math.max(start + .4, transcriptTime(segment.to ?? segment.end) || start + 2.2);
+      if (start >= maxEnd) continue;
+      studio.overlays.push({ id: `caption-${Date.now()}-${Math.random().toString(16).slice(2)}`, text: String(segment.text || '').trim().slice(0, 160), start, duration: Math.min(end - start, Math.max(.4, maxEnd - start)), x: 50, y: 86, size: 26, style: 'lower-third', animation: 'fade', color: '#ffffff', source: 'auto-caption' });
+    }
+    studio.selectedOverlay = studio.overlays.at(-1)?.id || null;
+    renderTimeline();
+    drawSelected();
+    saveProjectState();
+    toast(`로컬 음성 자막 ${segments.length}개를 TITLE 트랙에 추가했습니다.`);
+  } catch (error) {
+    toast(error.message === 'transcription_empty' ? '음성에서 자막 구간을 찾지 못했습니다.' : '로컬 Whisper 전사를 실행하지 못했습니다. 설정에서 모델 경로를 확인하세요.');
+  } finally {
+    button.disabled = false;
+    button.textContent = '로컬 음성에서 자막 만들기';
+  }
+}
+
 function projectPayload() {
   return { ...serializableProject(), currentTime: studio.currentTime };
 }
@@ -561,6 +766,7 @@ function exportProject() {
 
 async function exportVideo(format = 'webm') {
   if (!studio.scenes.length) return toast('사진이나 영상을 하나 이상 넣어 주세요.');
+  if (studio.scenes.some((scene) => !scene.src)) return toast('연결되지 않은 장면이 있습니다. 장면 편집기에서 원본 미디어를 다시 연결해 주세요.');
   if (!$('#videoConsentCheck').checked || !$('#videoPrivacyCheck').checked) return toast('동의·개인정보 확인을 마친 뒤 저장해 주세요.');
   if (studio.scenes.some((scene) => !scene.reviewed)) return toast('아직 개인정보를 검토하지 않은 장면이 있어요.');
   const musicFile = $('#videoMusicFile').files[0];
@@ -593,12 +799,14 @@ async function exportVideo(format = 'webm') {
     const recorder = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 4_000_000 }); const chunks = [];
     recorder.ondataavailable = (event) => { if (event.data.size) chunks.push(event.data); };
     const stopped = new Promise((resolve) => { recorder.onstop = resolve; }); recorder.start(250);
+    let timelineCursor = 0;
     for (const scene of studio.scenes) {
       const started = performance.now();
-      while (performance.now() - started < scene.duration * 1000) { await drawScene(scene, (performance.now() - started) / (scene.duration * 1000)); await new Promise((resolve) => requestAnimationFrame(resolve)); }
+      while (performance.now() - started < scene.duration * 1000) { const elapsed = (performance.now() - started) / 1000; await drawScene(scene, elapsed / scene.duration, timelineCursor + elapsed); await new Promise((resolve) => requestAnimationFrame(resolve)); }
+      timelineCursor += Number(scene.duration) || 0;
     }
     const ending = { name: '끝 화면', caption: $('#videoEndingText').value.trim() || '함께해 주셔서 고맙습니다.', captionStyle: 'center', duration: 2, type: 'image', src: '' };
-    await drawScene(ending); await new Promise((resolve) => setTimeout(resolve, ending.duration * 1000)); recorder.stop(); await stopped;
+    await drawScene(ending, 0, timelineCursor); await new Promise((resolve) => setTimeout(resolve, ending.duration * 1000)); recorder.stop(); await stopped;
     const title = ($('#videoProjectTitle').value.trim() || 'dawith-welfare-video').replace(/[^\w가-힣-]+/g, '-').slice(0, 60);
     const webmBlob = new Blob(chunks, { type: 'video/webm' });
     if (format === 'mp4') {
@@ -617,8 +825,10 @@ function toast(message) { window.dispatchEvent(new CustomEvent('dawith-toast', {
 
 function bind() {
   $('#videoMediaFile').addEventListener('change', (event) => { [...event.target.files].slice(0, 200 - studio.scenes.length).forEach((file) => addScene(file)); renderSceneList(); saveProjectState(); event.target.value = ''; });
+  $('#videoProjectImportFile').addEventListener('change', (event) => { importProjectFile(event.target.files[0]); event.target.value = ''; });
   $('#videoMusicFile').addEventListener('change', (event) => { const file = event.target.files[0]; $('#videoMusicName').textContent = file?.name || '선택하지 않으면 무음으로 저장합니다.'; $('#videoAudioTrackLabel').textContent = file ? `배경음악 · ${file.name}` : '배경음악 · 선택한 파일'; renderAudioWaveform(file, '#videoAudioWaveform'); scheduleSave(); });
   $('#videoVoiceFile').addEventListener('change', (event) => { const file = event.target.files[0]; $('#videoVoiceName').textContent = file?.name || '두 번째 오디오 트랙을 추가할 수 있습니다.'; $('#videoVoiceTrackLabel').textContent = file ? `내레이션 · ${file.name}` : '내레이션 · 선택한 파일'; renderAudioWaveform(file, '#videoVoiceWaveform'); scheduleSave(); });
+  $('#videoAutoCaptionButton').addEventListener('click', createAutoCaptions);
   $('#videoMusicVolume').addEventListener('input', (event) => { $('#videoMusicVolumeValue').textContent = `${event.target.value}%`; if (studio.audioPreview) studio.audioPreview.volume = Number(event.target.value) / 100; scheduleSave(); });
   $('#videoVoiceVolume').addEventListener('input', (event) => { $('#videoVoiceVolumeValue').textContent = `${event.target.value}%`; scheduleSave(); });
   $('#videoAspect').addEventListener('change', () => { updateCanvasSize(); scheduleSave(); }); $('#videoTheme').addEventListener('change', () => { drawSelected(); scheduleSave(); });
@@ -629,16 +839,22 @@ function bind() {
   $('#videoNextButton').addEventListener('click', () => { const index = Math.min(studio.scenes.length - 1, studio.scenes.findIndex((scene) => scene.id === studio.selected) + 1); if (studio.scenes[index]) selectScene(studio.scenes[index].id); });
   $('#videoStepButton').addEventListener('click', () => seekTimeline(studio.currentTime + 1 / 30));
   $('#videoExportButton').addEventListener('click', () => exportVideo('webm')); $('#videoMp4Button').addEventListener('click', () => exportVideo('mp4')); $('#videoProjectExportButton').addEventListener('click', exportProject);
+  $('#videoRelinkFile').addEventListener('change', (event) => { relinkSelectedScene(event.target.files[0]); });
+  $('#videoAddOverlay').addEventListener('click', addOverlay);
+  $('#videoRemoveOverlay').addEventListener('click', () => { if (!selectedOverlay()) return; studio.overlays = studio.overlays.filter((overlay) => overlay.id !== studio.selectedOverlay); studio.selectedOverlay = studio.overlays[0]?.id || null; renderTimeline(); drawSelected(); saveProjectState(); });
   $('#videoUndoButton').addEventListener('click', undo); $('#videoRedoButton').addEventListener('click', redo);
   ['videoProjectTitle', 'videoOrgName', 'videoEventDate', 'videoEndingText'].forEach((id) => $(`#${id}`).addEventListener('input', () => { drawSelected(); scheduleSave(); }));
   ['videoConsentCheck', 'videoPrivacyCheck', 'videoCreditCheck'].forEach((id) => $(`#${id}`).addEventListener('change', scheduleSave));
   ['videoSceneName', 'videoSceneCaption', 'videoSceneDuration', 'videoCaptionStyle', 'videoSceneReviewed', 'videoTrimStart', 'videoTrimEnd', 'videoTransition', 'videoEffect', 'videoMotion', 'videoEffectAmount', 'videoSceneScaleStart', 'videoSceneScaleEnd', 'videoScenePositionX', 'videoScenePositionY', 'videoFraming'].forEach((id) => { $(`#${id}`).addEventListener('input', syncSceneEditor); $(`#${id}`).addEventListener('change', syncSceneEditor); });
+  ['videoOverlayText', 'videoOverlayStart', 'videoOverlayDuration', 'videoOverlayStyle', 'videoOverlayAnimation', 'videoOverlayX', 'videoOverlayY', 'videoOverlaySize'].forEach((id) => { $(`#${id}`).addEventListener('input', syncOverlayEditor); $(`#${id}`).addEventListener('change', syncOverlayEditor); });
   $('#videoMoveUp').addEventListener('click', () => moveSelected(-1)); $('#videoMoveDown').addEventListener('click', () => moveSelected(1));
   $('#videoRemoveScene').addEventListener('click', () => { studio.scenes = studio.scenes.filter((scene) => scene.id !== studio.selected); studio.selected = studio.scenes[0]?.id || null; studio.currentTime = 0; renderSceneList(); saveProjectState(); });
   const splitButton = document.createElement('button'); splitButton.id = 'videoSplitScene'; splitButton.className = 'secondary-button'; splitButton.type = 'button'; splitButton.textContent = '✂ 분할'; $('#videoRemoveScene').before(splitButton); splitButton.addEventListener('click', splitSelected);
   $('#videoSceneList').addEventListener('click', (event) => { const item = event.target.closest('[data-scene-id]'); if (item) selectScene(item.dataset.sceneId); });
   $('#videoTimeline').addEventListener('click', (event) => {
     if (event.target.closest('.timeline-handle')) return;
+    const overlayItem = event.target.closest('[data-overlay-id]');
+    if (overlayItem) return selectOverlay(overlayItem.dataset.overlayId);
     const item = event.target.closest('[data-scene-id]');
     if (item) return selectScene(item.dataset.sceneId);
     const track = $('#videoTimelineVideo');

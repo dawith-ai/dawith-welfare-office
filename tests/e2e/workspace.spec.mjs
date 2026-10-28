@@ -234,3 +234,44 @@ test('전문 타임라인의 플레이헤드·Undo/Redo·단축키를 사용할 
   await page.keyboard.press('Control+Z');
   await expect(page.locator('#videoSceneList .video-scene-item')).toHaveCount(3);
 });
+
+test('독립 타이틀 트랙이 캔버스·타임라인·자동저장에 연결된다', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: /행사 결과 영상 만들기/ }).click();
+  await page.getByRole('button', { name: '예시 장면 넣기' }).click();
+  await page.getByRole('button', { name: '＋ 타이틀' }).click();
+  await expect(page.locator('#videoTimelineOverlay .timeline-overlay-clip')).toHaveCount(1);
+  await page.locator('#videoOverlayText').fill('2026 우리동네 나눔 행사');
+  await page.locator('#videoOverlayStart').fill('1.5');
+  await page.locator('#videoOverlayDuration').fill('4');
+  await page.locator('#videoOverlayStyle').selectOption('lower-third');
+  await page.locator('#videoOverlayX').fill('35');
+  await page.locator('#videoOverlayY').fill('78');
+  await expect(page.locator('#videoTimelineOverlay .timeline-overlay-clip')).toContainText('2026 우리동네 나눔 행사');
+  await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('dawith.video-studio.project.v2')).project.overlays[0].start)).toBe(1.5);
+});
+
+test('프로젝트 설계도를 불러오고 빠진 원본 미디어를 다시 연결할 수 있다', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: /행사 결과 영상 만들기/ }).click();
+  const sceneId = 'imported-scene';
+  const project = { version: 3, title: '가져온 행사', organization: '다빛 복지관', aspect: '16:9', theme: 'warm', ending: '감사합니다.', scenes: [{ id: sceneId, name: '연결 대기 장면', caption: '원본을 연결해 주세요.', duration: 2, trimStart: 0, trimEnd: 1, transition: 'cut', captionStyle: 'bottom', effect: 'none', effectAmount: 50, motion: 'none', scaleStart: 100, scaleEnd: 100, positionX: 0, positionY: 0, framing: 'cover', reviewed: true, type: 'image', src: '', fileName: 'missing.png' }], overlays: [] };
+  await page.locator('#videoProjectImportFile').setInputFiles({ name: 'imported-project.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(project)) });
+  await expect(page.locator('#videoSceneList .video-scene-item')).toHaveCount(1);
+  await expect(page.locator('.video-scene-status')).toHaveClass(/is-missing/);
+  await page.locator('#videoRelinkFile').setInputFiles({ name: 'relinked.svg', mimeType: 'image/svg+xml', buffer: Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><rect width="100" height="100" fill="#c43e68"/></svg>') });
+  await expect(page.locator('#videoRelinkStatus')).toContainText('relinked.svg');
+  await expect(page.locator('.video-scene-status')).not.toHaveClass(/is-missing/);
+});
+
+test('로컬 Whisper 타임코드가 편집 가능한 TITLE 자막으로 들어온다', async ({ page }) => {
+  await page.route('**/api/transcribe', async (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ segments: [{ text: '함께 준비한 하루입니다.', from: '00:00:01,000', to: '00:00:03,000' }, { text: '모두가 즐겁게 참여했어요.', from: '00:00:04,000', to: '00:00:06,500' }] }) }));
+  await page.goto('/');
+  await page.getByRole('button', { name: /행사 결과 영상 만들기/ }).click();
+  await page.getByRole('button', { name: '예시 장면 넣기' }).click();
+  await page.locator('#videoVoiceFile').setInputFiles({ name: 'narration.wav', mimeType: 'audio/wav', buffer: Buffer.from('local-audio') });
+  await page.getByRole('button', { name: '로컬 음성에서 자막 만들기' }).click();
+  await expect(page.locator('#videoTimelineOverlay .timeline-overlay-clip')).toHaveCount(2);
+  await expect(page.locator('#videoTimelineOverlay')).toContainText('함께 준비한 하루입니다.');
+  await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('dawith.video-studio.project.v2')).project.overlays[0].source)).toBe('auto-caption');
+});
