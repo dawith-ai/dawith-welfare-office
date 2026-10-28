@@ -224,6 +224,10 @@ test('전문 타임라인의 플레이헤드·Undo/Redo·단축키를 사용할 
   await page.locator('#videoMotion').selectOption('zoom-in');
   await page.locator('#videoEffectAmount').fill('80');
   await expect(page.locator('#videoEffectAmountValue')).toHaveText('80%');
+  await page.locator('#videoSceneScaleStart').fill('110');
+  await page.locator('#videoSceneScaleEnd').fill('135');
+  await page.locator('#videoFraming').selectOption('contain');
+  await expect(page.locator('#videoTimeline')).toContainText('A2 VOICE');
   await page.locator('#videoSceneList .video-scene-item').first().click();
   await page.locator('body').press('s');
   await expect(page.locator('#videoSceneList .video-scene-item')).toHaveCount(4);

@@ -449,6 +449,7 @@ dialog::backdrop { background: rgba(25,49,39,.45); }
 .video-file-drop input, .video-file-button input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
 .video-file-drop span { color: #a1355b; font-weight: 800; }
 .video-file-drop small { color: #88767d; font-weight: 500; line-height: 1.4; }
+.compact-file-drop { min-height: 58px; margin-top: 12px !important; }
 .range-row { grid-template-columns: 1fr auto !important; align-items: center; }
 .range-row input { grid-column: 1 / -1; width: 100%; accent-color: #c43e68; }
 .range-row output { color: #a1355b; font-variant-numeric: tabular-nums; }

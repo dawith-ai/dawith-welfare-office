@@ -15,6 +15,7 @@ const studio = {
   audioPreview: null,
   sourceCache: new Map(),
   videoCache: new Map(),
+  brandImage: null,
 };
 
 const STORAGE_KEY = 'dawith.video-studio.project.v2';
@@ -38,6 +39,9 @@ function serializableProject() {
     theme: $('#videoTheme')?.value || 'warm',
     ending: $('#videoEndingText')?.value || '',
     musicName: $('#videoMusicFile')?.files[0]?.name || '',
+    voiceName: $('#videoVoiceFile')?.files[0]?.name || '',
+    musicVolume: Number($('#videoMusicVolume')?.value || 35),
+    voiceVolume: Number($('#videoVoiceVolume')?.value || 100),
     scenes: studio.scenes.map(({ file, src, ...scene }) => ({ ...scene, src: src?.startsWith('data:') ? src : '' })),
   };
 }
@@ -137,6 +141,14 @@ function themeColors() {
   }[$('#videoTheme')?.value || 'warm'];
 }
 
+function getBrandImage() {
+  if (!studio.brandImage) {
+    studio.brandImage = new Image();
+    studio.brandImage.src = './dawith-ci.svg';
+  }
+  return studio.brandImage;
+}
+
 function updateCanvasSize() {
   const canvas = $('#videoCanvas');
   if (!canvas) return;
@@ -167,8 +179,11 @@ function addScene(file, sample = null) {
     effectAmount: 50,
     motion: 'none',
     scale: 100,
+    scaleStart: 100,
+    scaleEnd: 100,
     positionX: 0,
     positionY: 0,
+    framing: 'cover',
     opacity: 100,
     reviewed: false,
     type: sample ? 'image' : (file.type.startsWith('video/') ? 'video' : 'image'),
@@ -251,9 +266,11 @@ function renderSceneEditor() {
   $('#videoMotion').value = scene.motion || 'none';
   $('#videoEffectAmount').value = Number(scene.effectAmount ?? 50);
   $('#videoEffectAmountValue').textContent = `${Number(scene.effectAmount ?? 50)}%`;
-  $('#videoSceneScale').value = Number(scene.scale ?? 100);
+  $('#videoSceneScaleStart').value = Number(scene.scaleStart ?? scene.scale ?? 100);
+  $('#videoSceneScaleEnd').value = Number(scene.scaleEnd ?? scene.scale ?? 100);
   $('#videoScenePositionX').value = Number(scene.positionX ?? 0);
   $('#videoScenePositionY').value = Number(scene.positionY ?? 0);
+  $('#videoFraming').value = scene.framing || 'cover';
   $('#videoSceneReviewed').checked = scene.reviewed;
   $('#videoMoveUp').disabled = studio.scenes.indexOf(scene) === 0;
   $('#videoMoveDown').disabled = studio.scenes.indexOf(scene) === studio.scenes.length - 1;
@@ -284,8 +301,12 @@ function drawCover(ctx, source, canvas, scene, progress = 0) {
   const width = source.videoWidth || source.naturalWidth || source.width;
   const height = source.videoHeight || source.naturalHeight || source.height;
   if (!width || !height) return;
-  const coverScale = Math.max(canvas.width / width, canvas.height / height);
-  let motionScale = Math.max(.5, Number(scene.scale ?? 100) / 100);
+  const coverScale = scene.framing === 'contain'
+    ? Math.min(canvas.width / width, canvas.height / height)
+    : Math.max(canvas.width / width, canvas.height / height);
+  const startScale = Number(scene.scaleStart ?? scene.scale ?? 100);
+  const endScale = Number(scene.scaleEnd ?? scene.scale ?? startScale);
+  let motionScale = Math.max(.5, (startScale + (endScale - startScale) * progress) / 100);
   let offsetX = Number(scene.positionX ?? 0) / 100 * canvas.width;
   let offsetY = Number(scene.positionY ?? 0) / 100 * canvas.height;
   if (scene.motion === 'zoom-in') motionScale *= 1 + progress * .12;
@@ -396,6 +417,8 @@ async function drawScene(scene, progress = 0) {
     ctx.fillStyle = textColor;
     ctx.textAlign = 'left'; ctx.font = `700 ${Math.max(18, Math.round(canvas.width / 43))}px sans-serif`;
     ctx.fillText($('#videoOrgName').value.trim() || '우리 기관', 28, 42);
+    const brand = getBrandImage();
+    if (brand.complete && brand.naturalWidth) { ctx.save(); ctx.globalAlpha = .92; ctx.drawImage(brand, canvas.width - 74, 18, 48, 48); ctx.restore(); }
     drawText(ctx, scene.caption || scene.name, canvas.width / 2, canvas.height / 2, canvas.width - 90, scene.captionStyle, canvas);
     if (scene.transition === 'fade' && progress < .18) { ctx.fillStyle = `rgba(0, 0, 0, ${Math.max(0, 1 - progress / .18)})`; ctx.fillRect(0, 0, canvas.width, canvas.height); }
     if (scene.transition === 'wipe' && progress < .18) { ctx.fillStyle = `rgba(255, 255, 255, ${Math.max(0, 1 - progress / .18)})`; ctx.fillRect(0, 0, canvas.width * Math.max(0, 1 - progress / .18), canvas.height); }
@@ -418,9 +441,12 @@ function syncSceneEditor() {
   scene.effect = $('#videoEffect').value;
   scene.motion = $('#videoMotion').value;
   scene.effectAmount = Math.max(0, Math.min(100, Number($('#videoEffectAmount').value) || 0));
-  scene.scale = Math.max(50, Math.min(200, Number($('#videoSceneScale').value) || 100));
+  scene.scaleStart = Math.max(50, Math.min(200, Number($('#videoSceneScaleStart').value) || 100));
+  scene.scaleEnd = Math.max(50, Math.min(200, Number($('#videoSceneScaleEnd').value) || scene.scaleStart));
+  scene.scale = scene.scaleStart;
   scene.positionX = Math.max(-100, Math.min(100, Number($('#videoScenePositionX').value) || 0));
   scene.positionY = Math.max(-100, Math.min(100, Number($('#videoScenePositionY').value) || 0));
+  scene.framing = $('#videoFraming').value;
   $('#videoEffectAmountValue').textContent = `${scene.effectAmount}%`;
   scene.reviewed = $('#videoSceneReviewed').checked;
   renderSceneList();
@@ -497,8 +523,8 @@ function downloadBlob(blob, name) {
   setTimeout(() => URL.revokeObjectURL(link.href), 2000);
 }
 
-async function renderAudioWaveform(file) {
-  const target = $('#videoAudioWaveform');
+async function renderAudioWaveform(file, selector = '#videoAudioWaveform') {
+  const target = $(selector);
   if (!target) return;
   target.innerHTML = '';
   if (!file || !window.AudioContext) return;
@@ -538,18 +564,30 @@ async function exportVideo(format = 'webm') {
   if (!$('#videoConsentCheck').checked || !$('#videoPrivacyCheck').checked) return toast('동의·개인정보 확인을 마친 뒤 저장해 주세요.');
   if (studio.scenes.some((scene) => !scene.reviewed)) return toast('아직 개인정보를 검토하지 않은 장면이 있어요.');
   const musicFile = $('#videoMusicFile').files[0];
-  if (musicFile && !$('#videoCreditCheck').checked) return toast('음악 출처 확인을 체크해 주세요.');
+  const voiceFile = $('#videoVoiceFile').files[0];
+  if ((musicFile || voiceFile) && !$('#videoCreditCheck').checked) return toast('음악·음성 출처 확인을 체크해 주세요.');
   if (!window.MediaRecorder || !$('#videoCanvas').captureStream) return toast('이 브라우저는 로컬 영상 저장을 지원하지 않습니다. Chrome 또는 Windows EXE에서 다시 시도해 주세요.');
   const button = format === 'mp4' ? $('#videoMp4Button') : $('#videoExportButton');
   button.disabled = true; button.textContent = format === 'mp4' ? 'MP4 변환 중…' : '영상 저장 중…';
   $('#videoExportStatus').textContent = format === 'mp4' ? '로컬 FFmpeg가 영상을 변환하고 있습니다. 파일은 이 PC 밖으로 전송되지 않습니다.' : '브라우저 렌더러가 프레임을 기록하고 있습니다.';
-  const canvas = $('#videoCanvas'); const stream = canvas.captureStream(30); let audioContext; let audio;
+  const canvas = $('#videoCanvas'); const stream = canvas.captureStream(30); let audioContext; const audioTracks = [];
   try {
-    if (musicFile) {
+    if (musicFile || voiceFile) {
       audioContext = new AudioContext();
-      audio = new Audio(URL.createObjectURL(musicFile)); audio.loop = true; audio.volume = Number($('#videoMusicVolume').value) / 100;
-      const source = audioContext.createMediaElementSource(audio); const destination = audioContext.createMediaStreamDestination(); source.connect(destination); source.connect(audioContext.destination); destination.stream.getAudioTracks().forEach((track) => stream.addTrack(track));
-      await audioContext.resume(); await audio.play();
+      const destination = audioContext.createMediaStreamDestination();
+      for (const [file, volume] of [[musicFile, Number($('#videoMusicVolume').value) / 100], [voiceFile, Number($('#videoVoiceVolume').value) / 100]]) {
+        if (!file) continue;
+        const audio = new Audio(URL.createObjectURL(file));
+        audio.loop = true;
+        const source = audioContext.createMediaElementSource(audio);
+        const gain = audioContext.createGain();
+        gain.gain.value = volume;
+        source.connect(gain).connect(destination);
+        audioTracks.push(audio);
+      }
+      destination.stream.getAudioTracks().forEach((track) => stream.addTrack(track));
+      await audioContext.resume();
+      await Promise.all(audioTracks.map((audio) => audio.play()));
     }
     const mime = MediaRecorder.isTypeSupported('video/webm;codecs=vp9,opus') ? 'video/webm;codecs=vp9,opus' : 'video/webm';
     const recorder = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 4_000_000 }); const chunks = [];
@@ -572,15 +610,17 @@ async function exportVideo(format = 'webm') {
     }
     $('#videoExportStatus').textContent = `${format.toUpperCase()} 저장 완료 · 로컬 파일로 내려받았습니다.`;
   } catch (error) { toast(`영상을 저장하지 못했습니다: ${error.message || '알 수 없는 오류'}`); }
-  finally { stream.getTracks().forEach((track) => track.stop()); if (audio) { audio.pause(); audio.src = ''; } if (audioContext) await audioContext.close(); button.disabled = false; button.innerHTML = format === 'mp4' ? 'MP4로 변환 저장' : '영상으로 저장하기 · WebM <span>→</span>'; }
+  finally { stream.getTracks().forEach((track) => track.stop()); audioTracks.forEach((audio) => { audio.pause(); audio.src = ''; }); if (audioContext) await audioContext.close(); button.disabled = false; button.innerHTML = format === 'mp4' ? 'MP4로 변환 저장' : '영상으로 저장하기 · WebM <span>→</span>'; }
 }
 
 function toast(message) { window.dispatchEvent(new CustomEvent('dawith-toast', { detail: message })); const target = $('#toast'); if (target) { target.textContent = message; target.classList.add('show'); setTimeout(() => target.classList.remove('show'), 2600); } }
 
 function bind() {
   $('#videoMediaFile').addEventListener('change', (event) => { [...event.target.files].slice(0, 200 - studio.scenes.length).forEach((file) => addScene(file)); renderSceneList(); saveProjectState(); event.target.value = ''; });
-  $('#videoMusicFile').addEventListener('change', (event) => { const file = event.target.files[0]; $('#videoMusicName').textContent = file?.name || '선택하지 않으면 무음으로 저장합니다.'; $('#videoAudioTrackLabel').textContent = file ? `배경음악 · ${file.name}` : '배경음악 · 선택한 파일'; renderAudioWaveform(file); scheduleSave(); });
+  $('#videoMusicFile').addEventListener('change', (event) => { const file = event.target.files[0]; $('#videoMusicName').textContent = file?.name || '선택하지 않으면 무음으로 저장합니다.'; $('#videoAudioTrackLabel').textContent = file ? `배경음악 · ${file.name}` : '배경음악 · 선택한 파일'; renderAudioWaveform(file, '#videoAudioWaveform'); scheduleSave(); });
+  $('#videoVoiceFile').addEventListener('change', (event) => { const file = event.target.files[0]; $('#videoVoiceName').textContent = file?.name || '두 번째 오디오 트랙을 추가할 수 있습니다.'; $('#videoVoiceTrackLabel').textContent = file ? `내레이션 · ${file.name}` : '내레이션 · 선택한 파일'; renderAudioWaveform(file, '#videoVoiceWaveform'); scheduleSave(); });
   $('#videoMusicVolume').addEventListener('input', (event) => { $('#videoMusicVolumeValue').textContent = `${event.target.value}%`; if (studio.audioPreview) studio.audioPreview.volume = Number(event.target.value) / 100; scheduleSave(); });
+  $('#videoVoiceVolume').addEventListener('input', (event) => { $('#videoVoiceVolumeValue').textContent = `${event.target.value}%`; scheduleSave(); });
   $('#videoAspect').addEventListener('change', () => { updateCanvasSize(); scheduleSave(); }); $('#videoTheme').addEventListener('change', () => { drawSelected(); scheduleSave(); });
   $('#videoSampleButton').addEventListener('click', addSamples); $('#videoClearButton').addEventListener('click', clearScenes);
   $('#videoPlayButton').addEventListener('click', () => { if (studio.playing) stopPreview(); else previewAll(); });
@@ -592,7 +632,7 @@ function bind() {
   $('#videoUndoButton').addEventListener('click', undo); $('#videoRedoButton').addEventListener('click', redo);
   ['videoProjectTitle', 'videoOrgName', 'videoEventDate', 'videoEndingText'].forEach((id) => $(`#${id}`).addEventListener('input', () => { drawSelected(); scheduleSave(); }));
   ['videoConsentCheck', 'videoPrivacyCheck', 'videoCreditCheck'].forEach((id) => $(`#${id}`).addEventListener('change', scheduleSave));
-  ['videoSceneName', 'videoSceneCaption', 'videoSceneDuration', 'videoCaptionStyle', 'videoSceneReviewed', 'videoTrimStart', 'videoTrimEnd', 'videoTransition', 'videoEffect', 'videoMotion', 'videoEffectAmount', 'videoSceneScale', 'videoScenePositionX', 'videoScenePositionY'].forEach((id) => { $(`#${id}`).addEventListener('input', syncSceneEditor); $(`#${id}`).addEventListener('change', syncSceneEditor); });
+  ['videoSceneName', 'videoSceneCaption', 'videoSceneDuration', 'videoCaptionStyle', 'videoSceneReviewed', 'videoTrimStart', 'videoTrimEnd', 'videoTransition', 'videoEffect', 'videoMotion', 'videoEffectAmount', 'videoSceneScaleStart', 'videoSceneScaleEnd', 'videoScenePositionX', 'videoScenePositionY', 'videoFraming'].forEach((id) => { $(`#${id}`).addEventListener('input', syncSceneEditor); $(`#${id}`).addEventListener('change', syncSceneEditor); });
   $('#videoMoveUp').addEventListener('click', () => moveSelected(-1)); $('#videoMoveDown').addEventListener('click', () => moveSelected(1));
   $('#videoRemoveScene').addEventListener('click', () => { studio.scenes = studio.scenes.filter((scene) => scene.id !== studio.selected); studio.selected = studio.scenes[0]?.id || null; studio.currentTime = 0; renderSceneList(); saveProjectState(); });
   const splitButton = document.createElement('button'); splitButton.id = 'videoSplitScene'; splitButton.className = 'secondary-button'; splitButton.type = 'button'; splitButton.textContent = '✂ 분할'; $('#videoRemoveScene').before(splitButton); splitButton.addEventListener('click', splitSelected);
