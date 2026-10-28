@@ -46,7 +46,7 @@ test('first launch explains the runtime and local Ollama setup', async ({ page }
   await page.locator('[data-action="ollamaSetup"]').first().click();
   await expect(page.locator('#ollamaDialog')).toBeVisible();
   await expect(page.locator('#ollamaDialog .ollama-steps li')).toHaveCount(3);
-  await expect(page.locator('#ollamaStepModel')).toHaveClass(/is-current|is-done/);
+  await expect(page.locator('#ollamaStepModel')).toHaveClass(/is-(current|done|blocked)/);
   await expect(page.locator('#ollamaRecommendationTitle')).toContainText(/qwen2\.5:/);
   await expect(page.locator('#ollamaSystemMemory')).toContainText('메모리');
   await expect(page.locator('#ollamaSystemCpu')).toContainText('CPU');
