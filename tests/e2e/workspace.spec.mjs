@@ -36,6 +36,8 @@ test('social-work meeting workflow can be completed locally', async ({ page }) =
 test('first launch explains the runtime and local Ollama setup', async ({ page }) => {
   await page.goto('/');
   await expect(page.locator('#runtimePillText')).toHaveText('브라우저 로컬 모드');
+  await expect(page.locator('.home-ci-lockup img')).toHaveAttribute('src', './dawith-ci.svg');
+  await expect(page.locator('.brand-logo').first()).toHaveAttribute('alt', '다빛 CI');
   await expect(page.getByRole('button', { name: /상담 예시로 시작/ })).toBeVisible();
   await page.getByRole('button', { name: /상담 예시로 시작/ }).click();
   await expect(page.locator('#workspaceView')).toHaveClass(/active/);
@@ -155,4 +157,47 @@ test('document studio uploads a tagged institution template and exports the fill
   } finally {
     fs.rmSync(tempDir, { recursive: true, force: true });
   }
+});
+
+test('행사 결과 영상 스튜디오는 장면·자막·검토 흐름을 로컬에서 제공한다', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: /행사 결과 영상 만들기/ }).click();
+  await expect(page.locator('#videoView')).toHaveClass(/active/);
+  await page.getByRole('button', { name: '예시 장면 넣기' }).click();
+  await expect(page.locator('#videoSceneList .video-scene-item')).toHaveCount(3);
+  await page.locator('#videoSceneName').fill('오프닝 행사');
+  await page.locator('#videoSceneCaption').fill('우리 기관의 즐거운 하루');
+  await page.locator('#videoSceneReviewed').check();
+  await expect(page.locator('#videoSelectedSceneTitle')).toContainText('장면 1');
+  await expect(page.locator('#videoDurationSummary')).toHaveText('총 9.0초');
+  await page.locator('#videoTrimStart').fill('0.1');
+  await page.locator('#videoTrimEnd').fill('0.9');
+  await page.locator('#videoTransition').selectOption('fade');
+  await page.locator('#videoSplitScene').click();
+  await expect(page.locator('#videoSceneList .video-scene-item')).toHaveCount(4);
+  await expect(page.locator('#videoTimelineVideo .timeline-clip')).toHaveCount(4);
+  await page.locator('#videoAspect').selectOption('9:16');
+  await expect.poll(() => page.locator('#videoCanvas').evaluate((canvas) => `${canvas.width}:${canvas.height}`)).toBe('540:960');
+  const projectDownload = page.waitForEvent('download');
+  await page.getByRole('button', { name: '프로젝트 설계도 저장' }).click();
+  const download = await projectDownload;
+  expect(download.suggestedFilename()).toMatch(/\.json$/);
+});
+
+test('검토한 예시 장면은 실제 로컬 WebM으로 저장된다', async ({ page }) => {
+  test.setTimeout(30_000);
+  await page.goto('/');
+  await page.getByRole('button', { name: /행사 결과 영상 만들기/ }).click();
+  await page.getByRole('button', { name: '예시 장면 넣기' }).click();
+  for (let index = 0; index < 3; index += 1) {
+    await page.locator('#videoSceneList .video-scene-item').nth(index).click();
+    await page.locator('#videoSceneDuration').fill('1');
+    await page.locator('#videoSceneReviewed').check();
+  }
+  await page.locator('#videoConsentCheck').check();
+  await page.locator('#videoPrivacyCheck').check();
+  const videoDownload = page.waitForEvent('download', { timeout: 20_000 });
+  await page.getByRole('button', { name: /영상으로 저장하기/ }).click();
+  const download = await videoDownload;
+  expect(download.suggestedFilename()).toMatch(/\.webm$/);
 });
