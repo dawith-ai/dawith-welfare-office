@@ -96,8 +96,14 @@ main { max-width: 1560px; min-height: 100vh; margin-left: 248px; padding: 38px c
 .empty-record { padding: 15px 0 4px; color: #98a59d; font-size: 11px; line-height: 1.6; }
 
 /* Shared workbench */
-.workspace-head { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 22px; align-items: start; padding: 20px 0 25px; margin-bottom: 26px; border-bottom: 1px solid var(--task-line, var(--line)); }
-.task-brief { display: none !important; }
+.workspace-head { display: grid; grid-template-columns: auto minmax(0, 1fr) 168px; gap: 14px 22px; align-items: start; padding: 20px 0 25px; margin-bottom: 26px; border-bottom: 1px solid var(--task-line, var(--line)); }
+.task-brief { display: none; min-width: 142px; gap: 9px; align-items: center; align-self: start; padding: 10px 12px; border: 1px solid var(--task-line, var(--line)); border-radius: 11px; background: color-mix(in srgb, var(--task-soft, var(--green-soft)) 72%, white); }
+.workspace-counseling .task-brief-counseling, .workspace-meeting .task-brief-meeting, .workspace-audio .task-brief-audio { display: flex; }
+.task-brief { grid-column: 3 / 4; grid-row: 1 / 2; }
+.brief-icon { display: grid; width: 26px; height: 26px; flex: 0 0 26px; place-items: center; border-radius: 8px; background: rgba(255,255,255,.82); color: var(--task-accent, var(--green)); font-size: 13px; }
+.task-brief b, .task-brief small { display: block; }
+.task-brief b { color: var(--task-ink, var(--ink)); font-size: 10px; }
+.task-brief small { margin-top: 3px; color: color-mix(in srgb, var(--task-ink, var(--ink)) 62%, white); font-size: 8px; }
 .back-button { margin-top: 5px; color: var(--task-accent, var(--green)); font-weight: 800; white-space: nowrap; }
 .workspace-heading { min-width: 0; }
 .workspace-head h1, .records-head h1 { margin: 0; color: var(--task-ink, #193f31); font-size: clamp(30px, 3.7vw, 46px); line-height: 1.08; letter-spacing: -.07em; }
@@ -106,7 +112,7 @@ main { max-width: 1560px; min-height: 100vh; margin-left: 248px; padding: 38px c
 .case-row label { color: #7c8981; font-size: 10px; font-weight: 800; }
 .case-row select { min-width: 190px; height: 31px; padding: 0 10px; border: 1px solid var(--task-line, var(--line)); border-radius: 8px; background: #fff; color: var(--task-ink, var(--ink)); font-size: 11px; }
 .inline-action { color: var(--task-accent, var(--green)); font-weight: 800; }
-.step-label { margin-top: 6px; color: #9aa79f; font: 10px ui-monospace, monospace; white-space: nowrap; }
+.step-label { grid-column: 3 / 4; grid-row: 2 / 3; margin-top: -5px; color: #9aa79f; font: 10px ui-monospace, monospace; text-align: right; white-space: nowrap; }
 .step-label strong { color: var(--task-accent, var(--green)); }
 .workspace-flow { display: flex; max-width: 550px; align-items: center; gap: 7px; margin-top: 20px; padding: 9px 11px; border: 1px solid var(--task-line, var(--line)); border-radius: 10px; background: rgba(255,255,255,.6); }
 .flow-step { display: flex; min-width: 0; flex: 1; align-items: center; gap: 7px; color: #a0aaa3; }
@@ -514,13 +520,11 @@ dialog::backdrop { background: rgba(25,49,39,.45); }
   *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; }
 }
 
-/* v0.3 workbench architecture: each job gets a different working surface. */
-.workspace-view .workspace-flow,
-.workspace-view .step-label,
-.workspace-view .task-brief { display: none !important; }
-.workspace-view .workspace-head { display: block; padding: 18px 0 22px; margin-bottom: 26px; background: transparent !important; }
+/* Each job gets a visible working surface and an explicit three-step path. */
+.workspace-view .workspace-head { display: grid; grid-template-columns: auto minmax(0, 1fr) 168px; gap: 14px 22px; padding: 18px 0 22px; margin-bottom: 26px; background: transparent !important; }
 .workspace-view .workspace-head .back-button { display: inline-block; margin-bottom: 18px; }
-.workspace-view .workspace-heading { max-width: 860px; }
+.workspace-view .workspace-head > .back-button { grid-column: 1 / 2; grid-row: 1 / 3; }
+.workspace-view .workspace-heading { grid-column: 2 / 3; grid-row: 1 / 3; max-width: 860px; }
 .workspace-view .workspace-heading h1 { max-width: 760px; }
 .workspace-view .workspace-grid { grid-template-columns: minmax(0, 1.08fr) minmax(360px, .92fr); gap: 28px; }
 .workspace-view .input-column { min-width: 0; }

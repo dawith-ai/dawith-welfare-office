@@ -8,9 +8,15 @@ test('social-work meeting workflow can be completed locally', async ({ page }) =
   await page.goto('/');
   await expect(page).toHaveTitle(/Dawith Welfare Office/);
   await page.getByRole('button', { name: /사례회의 기록/ }).click();
+  await expect(page.locator('#workspaceFlow')).toBeVisible();
+  await expect(page.locator('.task-brief-meeting')).toBeVisible();
+  await expect(page.locator('.task-brief-counseling')).toBeHidden();
+  await expect(page.locator('#stepNumber')).toHaveText('1');
   await page.getByRole('button', { name: '예시 넣기' }).click();
+  await expect(page.locator('#stepNumber')).toHaveText('2');
   await page.getByRole('button', { name: /초안 만들기/ }).click();
   await expect(page.locator('#outputContent')).toBeVisible();
+  await expect(page.locator('#stepNumber')).toHaveText('3');
   await expect(page.locator('#meetingBoard')).toBeVisible();
   await expect(page.locator('#standardEditor')).toBeHidden();
   await expect(page.locator('#meetingDecisionText')).toHaveValue(/논의 및 결정사항/);
