@@ -1,4 +1,4 @@
-# Dawith Welfare Office 0.4.0
+# Dawith Welfare Office 0.4.2
 
 사회복지기관의 상담 메모·회의 메모·녹취를 기관 PC 또는 기관 내부망에서 정리하는 Dawith Welfare Office입니다. 웹 데모와 Windows 설치형 EXE가 같은 로컬 API와 SQLite 저장소를 사용합니다.
 
@@ -93,3 +93,13 @@ WHISPER_MODEL_PATH=/기관이승인한경로/ggml-small.bin npm start
 로컬 서버는 요청 Origin이 현재 접속한 `127.0.0.1` 또는 `localhost` 주소와 정확히 일치할 때만 브라우저 요청을 허용합니다. 다른 로컬 포트나 외부 웹사이트에서 API를 호출할 수 없으며, CSP·프레임 삽입 차단·MIME 보호 헤더도 적용됩니다.
 
 오픈소스 기반과 라이선스는 [`UPSTREAM.md`](./UPSTREAM.md), 제품 요구사항은 [`PRD.md`](./PRD.md), 시스템 경계는 [`ARCHITECTURE.md`](./ARCHITECTURE.md)에 기록했습니다.
+
+## REA 기반 릴리스 감사
+
+이 저장소는 [morluto/rea](https://github.com/morluto/rea)의 MIT 라이선스 CLI를 개발·릴리스 감사 단계에서 사용합니다. REA는 앱에 포함되어 개인정보를 처리하지 않으며, 배포 전 `desktop`, `public`, `src`, `server.mjs`만 별도 임시 디렉터리에서 정적 분석합니다.
+
+```bash
+npm run rea:audit
+```
+
+분석 결과는 `artifacts/rea/summary.json`에 생성되며 Git에는 포함하지 않습니다. 이 검사는 Electron 경계, 모듈 그래프, 로컬 저장·프로세스 경계를 확인하는 보조 감사이며 실제 실행 테스트를 대체하지 않습니다.

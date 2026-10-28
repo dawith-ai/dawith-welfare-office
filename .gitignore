@@ -11,5 +11,6 @@ test-results/
 playwright-report/
 .playwright/
 dist/
+artifacts/rea/
 .DS_Store
 .vercel/

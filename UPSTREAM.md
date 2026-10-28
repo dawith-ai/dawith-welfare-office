@@ -28,6 +28,7 @@
 - [Stuk/jszip](https://github.com/Stuk/jszip) — MIT 라이선스 ZIP 처리 라이브러리. HWPX 구조 분석·치환·재패키징에 사용한다.
 - [univa-agent/univa](https://github.com/univa-agent/univa) — 사용자가 언급한 `univa.zephy`와 일치할 가능성이 높은 UniVA 저장소를 확인했다. 영상 제작 에이전트와 MCP·도구 오케스트레이션 구조는 참고할 수 있지만, 복지 문서 생성과 직접 관련이 없고 외부 모델·영상 파이프라인을 포함하므로 현재 제품에 코드를 가져오지 않았다.
 - [citrolabs/ego-lite](https://github.com/citrolabs/ego-lite) — 기관 시스템 연결 자동화의 후보로 검토했다. 브라우저 페이지·로그인 상태를 에이전트에 전달할 수 있어 개인정보 업무의 기본 경로에는 포함하지 않는다.
+- [morluto/rea](https://github.com/morluto/rea) — MIT 라이선스의 JavaScript/Electron 정적 분석·Evidence 도구를 릴리스 감사에 사용한다. `scripts/rea-audit.mjs`가 소스 일부를 임시 디렉터리로 복사해 REA CLI를 실행하며, REA 자체는 제품 런타임이나 개인정보 처리 경로에 포함하지 않는다.
 
 ## 현재 구현 범위
 
