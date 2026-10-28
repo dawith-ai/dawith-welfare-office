@@ -441,6 +441,10 @@ dialog::backdrop { background: rgba(25,49,39,.45); }
 .video-step-card input[type="text"], .video-step-card input[type="date"], .video-step-card select, .video-scene-editor input[type="text"], .video-scene-editor input[type="number"], .video-scene-editor select, .video-scene-editor textarea, .video-credits input { width: 100%; min-height: 38px; padding: 8px 10px; border: 1px solid #dddeda; border-radius: 8px; background: #fbfbfa; color: #27332e; font: inherit; font-weight: 500; }
 .video-step-card input:focus, .video-step-card select:focus, .video-scene-editor input:focus, .video-scene-editor textarea:focus, .video-credits input:focus { outline: 2px solid #e6a4ba; outline-offset: 2px; border-color: #c43e68; }
 .video-two-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.video-three-fields { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.video-inspector-section { margin-top: 14px; padding-top: 12px; border-top: 1px solid #ecece8; }
+.video-inspector-title { margin-bottom: 3px; color: #34483d; font-size: 11px; font-weight: 850; letter-spacing: .03em; }
+.video-inspector-section .range-row { margin-top: 8px; }
 .video-file-drop { display: flex !important; min-height: 77px; align-content: center; justify-content: center; text-align: center; border: 1px dashed #d2a0af; border-radius: 10px; background: #fff7f9; cursor: pointer; }
 .video-file-drop input, .video-file-button input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
 .video-file-drop span { color: #a1355b; font-weight: 800; }
@@ -520,6 +524,10 @@ dialog::backdrop { background: rgba(25,49,39,.45); }
 .timeline-clip.is-selected, .timeline-caption-clip.is-selected { outline: 2px solid #f3c1cf; outline-offset: 1px; }
 .timeline-caption-clip { padding: 6px 8px; border-color: #b58a3e; background: #7f6330; color: #fff1c9; font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
 .timeline-audio-track { align-items: center; padding: 4px 9px; border: 1px solid #45647b; border-radius: 6px; background: repeating-linear-gradient(135deg, rgba(92, 155, 196, .28) 0, rgba(92, 155, 196, .28) 3px, rgba(54, 91, 114, .45) 3px, rgba(54, 91, 114, .45) 7px); color: #bfdeef; font-size: 10px; }
+.timeline-audio-track { position: relative; min-height: 46px; overflow: hidden; }
+.timeline-audio-track > span { position: relative; z-index: 1; text-shadow: 0 1px 2px #233d4b; }
+.audio-waveform { position: absolute; inset: 5px 8px; display: flex; gap: 2px; align-items: center; opacity: .82; }
+.audio-waveform i { flex: 1 1 0; min-width: 1px; border-radius: 2px; background: #a7d6eb; opacity: .8; }
 .timeline-empty { display: grid; align-items: center; color: #76847d; font-size: 11px; }
 .timeline-playhead { position: absolute; top: 32px; bottom: 16px; left: 84px; z-index: 4; width: 1px; background: #f2a8bd; pointer-events: none; box-shadow: 0 0 0 1px rgba(242,168,189,.18), 0 0 12px rgba(242,168,189,.55); }
 .timeline-playhead i { position: absolute; top: -4px; left: -5px; width: 11px; height: 11px; border-radius: 50% 50% 50% 0; background: #f2a8bd; transform: rotate(-45deg); }
@@ -600,16 +608,27 @@ dialog::backdrop { background: rgba(25,49,39,.45); }
 .ollama-advanced div { padding-bottom: 5px; }
 .ollama-advanced p { margin: 0 0 7px; line-height: 1.5; }
 .ollama-advanced code { display: inline-block; padding: 8px 9px; border-radius: 7px; background: #eef4f8; color: #355b7c; font: 11px ui-monospace, monospace; }
-.ollama-steps { display: grid; gap: 13px; margin: 0 0 20px; padding: 0 0 0 21px; color: #31483b; }
-.ollama-steps li { padding-left: 5px; }
-.ollama-steps li::marker { color: #4d7598; font-weight: 900; }
+.ollama-steps { display: grid; gap: 7px; margin: 0 0 15px; padding: 0; list-style: none; color: #31483b; }
+.ollama-steps li { display: grid; grid-template-columns: 24px minmax(0, 1fr) auto; gap: 10px; align-items: center; min-height: 48px; padding: 8px 10px; border: 1px solid #e6ece8; border-radius: 10px; background: #fbfdfb; transition: border-color .18s ease, background .18s ease, transform .18s ease; }
+.ollama-steps li.is-current { border-color: #a9d6bb; background: #f0faf3; box-shadow: 0 4px 13px rgba(46, 117, 78, .07); transform: translateX(2px); }
+.ollama-steps li.is-done { border-color: #d5e8db; background: #f7fbf8; }
+.ollama-steps li.is-blocked { opacity: .62; }
+.ollama-step-marker { display: grid; width: 22px; height: 22px; place-items: center; border-radius: 50%; background: #edf1ee; color: #71827a; font: 800 10px ui-monospace, monospace; }
+.ollama-steps li.is-current .ollama-step-marker { background: #17694f; color: #fff; }
+.ollama-steps li.is-done .ollama-step-marker { background: #d8eddf; color: #23704e; }
+.ollama-steps li.is-done .ollama-step-marker::before { content: '✓'; }
+.ollama-steps li.is-done .ollama-step-marker { font-size: 0; }
 .ollama-steps b, .ollama-steps span { display: block; }
-.ollama-steps b { font-size: 12px; }
-.ollama-steps span { margin-top: 3px; color: #7e8c84; font-size: 10px; line-height: 1.5; }
-.ollama-steps a { display: inline-block; margin-top: 7px; color: #3e6d96; font-size: 10px; font-weight: 800; }
-.ollama-steps code { display: inline-block; margin-top: 7px; padding: 8px 9px; border-radius: 7px; background: #eef4f8; color: #355b7c; font: 11px ui-monospace, monospace; }
+.ollama-steps b { font-size: 11px; }
+.ollama-steps li.is-current b { color: #145f48; }
+.ollama-steps span:not(.ollama-step-marker) { margin-top: 2px; color: #7e8c84; font-size: 9px; line-height: 1.45; }
+.ollama-steps a { color: #2c7256; font-size: 9px; font-weight: 850; white-space: nowrap; }
+.ollama-steps .step-action { min-height: 26px; padding: 5px 8px; font-size: 9px; white-space: nowrap; }
+.ollama-steps .step-action.text-button { padding-inline: 3px; color: #2c7256; }
 .copy-command { margin-left: 5px; padding: 7px 8px; border: 1px solid #d5e2ec; border-radius: 7px; background: #fff; color: #4c6e89; font-size: 9px; font-weight: 800; }
 .copy-command:hover { background: #f1f7fb; }
+.ollama-use-button { width: 100%; margin-top: 9px; background: #17694f; }
+.ollama-use-button:hover { background: #0e533d; }
 
 @media (max-width: 820px) {
   .quick-start { grid-template-columns: 1fr; gap: 11px; padding: 17px; }

@@ -14,6 +14,7 @@ const studio = {
   playbackToken: 0,
   audioPreview: null,
   sourceCache: new Map(),
+  videoCache: new Map(),
 };
 
 const STORAGE_KEY = 'dawith.video-studio.project.v2';
@@ -75,6 +76,7 @@ function restoreSnapshot(snapshot) {
   const project = parsed.project || parsed;
   for (const scene of studio.scenes) if (scene.src?.startsWith('blob:')) URL.revokeObjectURL(scene.src);
   studio.sourceCache.clear();
+  studio.videoCache.clear();
   $('#videoProjectTitle').value = project.title || '';
   $('#videoOrgName').value = project.organization || '';
   $('#videoEventDate').value = project.eventDate || '';
@@ -161,6 +163,13 @@ function addScene(file, sample = null) {
     trimEnd: 1,
     transition: 'cut',
     captionStyle: 'bottom',
+    effect: 'none',
+    effectAmount: 50,
+    motion: 'none',
+    scale: 100,
+    positionX: 0,
+    positionY: 0,
+    opacity: 100,
     reviewed: false,
     type: sample ? 'image' : (file.type.startsWith('video/') ? 'video' : 'image'),
     src,
@@ -238,6 +247,13 @@ function renderSceneEditor() {
   $('#videoTrimEnd').value = scene.trimEnd;
   $('#videoTransition').value = scene.transition;
   $('#videoCaptionStyle').value = scene.captionStyle;
+  $('#videoEffect').value = scene.effect || 'none';
+  $('#videoMotion').value = scene.motion || 'none';
+  $('#videoEffectAmount').value = Number(scene.effectAmount ?? 50);
+  $('#videoEffectAmountValue').textContent = `${Number(scene.effectAmount ?? 50)}%`;
+  $('#videoSceneScale').value = Number(scene.scale ?? 100);
+  $('#videoScenePositionX').value = Number(scene.positionX ?? 0);
+  $('#videoScenePositionY').value = Number(scene.positionY ?? 0);
   $('#videoSceneReviewed').checked = scene.reviewed;
   $('#videoMoveUp').disabled = studio.scenes.indexOf(scene) === 0;
   $('#videoMoveDown').disabled = studio.scenes.indexOf(scene) === studio.scenes.length - 1;
@@ -255,14 +271,33 @@ function roundedRect(ctx, x, y, width, height, radius) {
   ctx.closePath();
 }
 
-function drawCover(ctx, source, canvas) {
+function sceneFilter(scene) {
+  const amount = Math.max(0, Math.min(100, Number(scene.effectAmount ?? 50))) / 100;
+  if (scene.effect === 'cinematic') return `contrast(${100 + amount * 28}%) brightness(${100 - amount * 8}%) saturate(${100 + amount * 20}%)`;
+  if (scene.effect === 'bright') return `brightness(${100 + amount * 35}%) saturate(${100 + amount * 12}%)`;
+  if (scene.effect === 'mono') return `grayscale(${amount * 100}%) contrast(${100 + amount * 12}%)`;
+  if (scene.effect === 'soft') return `blur(${amount * 3}px) saturate(${100 - amount * 18}%)`;
+  return 'none';
+}
+
+function drawCover(ctx, source, canvas, scene, progress = 0) {
   const width = source.videoWidth || source.naturalWidth || source.width;
   const height = source.videoHeight || source.naturalHeight || source.height;
   if (!width || !height) return;
-  const scale = Math.max(canvas.width / width, canvas.height / height);
-  const drawWidth = width * scale;
-  const drawHeight = height * scale;
-  ctx.drawImage(source, (canvas.width - drawWidth) / 2, (canvas.height - drawHeight) / 2, drawWidth, drawHeight);
+  const coverScale = Math.max(canvas.width / width, canvas.height / height);
+  let motionScale = Math.max(.5, Number(scene.scale ?? 100) / 100);
+  let offsetX = Number(scene.positionX ?? 0) / 100 * canvas.width;
+  let offsetY = Number(scene.positionY ?? 0) / 100 * canvas.height;
+  if (scene.motion === 'zoom-in') motionScale *= 1 + progress * .12;
+  if (scene.motion === 'zoom-out') motionScale *= 1.12 - progress * .12;
+  if (scene.motion === 'pan-left') offsetX += (progress - .5) * canvas.width * .16;
+  if (scene.motion === 'pan-right') offsetX += (.5 - progress) * canvas.width * .16;
+  const drawWidth = width * coverScale * motionScale;
+  const drawHeight = height * coverScale * motionScale;
+  ctx.filter = sceneFilter(scene);
+  ctx.globalAlpha = Math.max(0, Math.min(1, Number(scene.opacity ?? 100) / 100));
+  ctx.drawImage(source, (canvas.width - drawWidth) / 2 + offsetX, (canvas.height - drawHeight) / 2 + offsetY, drawWidth, drawHeight);
+  ctx.filter = 'none';
 }
 
 function wrapLines(ctx, text, maxWidth) {
@@ -325,17 +360,24 @@ async function sourceForScene(scene, progress = 0) {
     studio.sourceCache.set(scene.src, image);
     return image;
   }
-  const video = document.createElement('video');
-  video.src = scene.src;
-  video.muted = true;
-  video.preload = 'auto';
-  await new Promise((resolve) => { video.onloadeddata = resolve; video.onerror = resolve; });
+  let video = studio.videoCache.get(scene.id);
+  if (!video) {
+    video = document.createElement('video');
+    video.src = scene.src;
+    video.muted = true;
+    video.preload = 'auto';
+    video.playsInline = true;
+    studio.videoCache.set(scene.id, video);
+    await new Promise((resolve) => { video.onloadeddata = resolve; video.onerror = resolve; });
+  }
   if (video.duration) {
     const start = Math.max(0, Math.min(.9, Number(scene.trimStart || 0)));
     const end = Math.max(start + .1, Math.min(1, Number(scene.trimEnd || 1)));
-    video.currentTime = Math.min(video.duration - .05, video.duration * (start + progress * (end - start)));
+    const nextTime = Math.min(video.duration - .05, video.duration * (start + progress * (end - start)));
+    if (Math.abs(video.currentTime - nextTime) > .04) {
+      await new Promise((resolve) => { video.addEventListener('seeked', resolve, { once: true }); video.currentTime = nextTime; setTimeout(resolve, 120); });
+    }
   }
-  await new Promise((resolve) => { video.onseeked = resolve; setTimeout(resolve, 120); });
   return video;
 }
 
@@ -350,12 +392,13 @@ async function drawScene(scene, progress = 0) {
   ctx.fillStyle = gradient; ctx.fillRect(0, 0, canvas.width, canvas.height);
   if (scene) {
     const source = await sourceForScene(scene, progress);
-    if (source) { ctx.save(); ctx.globalAlpha = .92; drawCover(ctx, source, canvas); ctx.restore(); ctx.fillStyle = 'rgba(18, 27, 24, .22)'; ctx.fillRect(0, 0, canvas.width, canvas.height); }
+    if (source) { ctx.save(); ctx.globalAlpha = .92; drawCover(ctx, source, canvas, scene, progress); ctx.restore(); ctx.fillStyle = 'rgba(18, 27, 24, .22)'; ctx.fillRect(0, 0, canvas.width, canvas.height); }
     ctx.fillStyle = textColor;
     ctx.textAlign = 'left'; ctx.font = `700 ${Math.max(18, Math.round(canvas.width / 43))}px sans-serif`;
     ctx.fillText($('#videoOrgName').value.trim() || '우리 기관', 28, 42);
     drawText(ctx, scene.caption || scene.name, canvas.width / 2, canvas.height / 2, canvas.width - 90, scene.captionStyle, canvas);
     if (scene.transition === 'fade' && progress < .18) { ctx.fillStyle = `rgba(0, 0, 0, ${Math.max(0, 1 - progress / .18)})`; ctx.fillRect(0, 0, canvas.width, canvas.height); }
+    if (scene.transition === 'wipe' && progress < .18) { ctx.fillStyle = `rgba(255, 255, 255, ${Math.max(0, 1 - progress / .18)})`; ctx.fillRect(0, 0, canvas.width * Math.max(0, 1 - progress / .18), canvas.height); }
   }
 }
 
@@ -372,6 +415,13 @@ function syncSceneEditor() {
   $('#videoTrimEnd').value = scene.trimEnd;
   scene.transition = $('#videoTransition').value;
   scene.captionStyle = $('#videoCaptionStyle').value;
+  scene.effect = $('#videoEffect').value;
+  scene.motion = $('#videoMotion').value;
+  scene.effectAmount = Math.max(0, Math.min(100, Number($('#videoEffectAmount').value) || 0));
+  scene.scale = Math.max(50, Math.min(200, Number($('#videoSceneScale').value) || 100));
+  scene.positionX = Math.max(-100, Math.min(100, Number($('#videoScenePositionX').value) || 0));
+  scene.positionY = Math.max(-100, Math.min(100, Number($('#videoScenePositionY').value) || 0));
+  $('#videoEffectAmountValue').textContent = `${scene.effectAmount}%`;
   scene.reviewed = $('#videoSceneReviewed').checked;
   renderSceneList();
   scheduleSave();
@@ -447,6 +497,34 @@ function downloadBlob(blob, name) {
   setTimeout(() => URL.revokeObjectURL(link.href), 2000);
 }
 
+async function renderAudioWaveform(file) {
+  const target = $('#videoAudioWaveform');
+  if (!target) return;
+  target.innerHTML = '';
+  if (!file || !window.AudioContext) return;
+  let context;
+  try {
+    context = new AudioContext();
+    const buffer = await context.decodeAudioData(await file.arrayBuffer());
+    const channel = buffer.getChannelData(0);
+    const bars = 96;
+    const step = Math.max(1, Math.floor(channel.length / bars));
+    const fragment = document.createDocumentFragment();
+    for (let index = 0; index < bars; index += 1) {
+      let peak = 0;
+      for (let offset = 0; offset < step && (index * step + offset) < channel.length; offset += 1) peak = Math.max(peak, Math.abs(channel[index * step + offset]));
+      const bar = document.createElement('i');
+      bar.style.height = `${Math.max(12, Math.round(peak * 100))}%`;
+      fragment.appendChild(bar);
+    }
+    target.appendChild(fragment);
+  } catch {
+    target.textContent = '파형을 읽을 수 없는 형식입니다.';
+  } finally {
+    if (context) await context.close();
+  }
+}
+
 function projectPayload() {
   return { ...serializableProject(), currentTime: studio.currentTime };
 }
@@ -501,7 +579,7 @@ function toast(message) { window.dispatchEvent(new CustomEvent('dawith-toast', {
 
 function bind() {
   $('#videoMediaFile').addEventListener('change', (event) => { [...event.target.files].slice(0, 200 - studio.scenes.length).forEach((file) => addScene(file)); renderSceneList(); saveProjectState(); event.target.value = ''; });
-  $('#videoMusicFile').addEventListener('change', (event) => { $('#videoMusicName').textContent = event.target.files[0]?.name || '선택하지 않으면 무음으로 저장합니다.'; $('#videoAudioTrackLabel').textContent = event.target.files[0] ? `배경음악 · ${event.target.files[0].name}` : '배경음악 · 선택한 파일'; scheduleSave(); });
+  $('#videoMusicFile').addEventListener('change', (event) => { const file = event.target.files[0]; $('#videoMusicName').textContent = file?.name || '선택하지 않으면 무음으로 저장합니다.'; $('#videoAudioTrackLabel').textContent = file ? `배경음악 · ${file.name}` : '배경음악 · 선택한 파일'; renderAudioWaveform(file); scheduleSave(); });
   $('#videoMusicVolume').addEventListener('input', (event) => { $('#videoMusicVolumeValue').textContent = `${event.target.value}%`; if (studio.audioPreview) studio.audioPreview.volume = Number(event.target.value) / 100; scheduleSave(); });
   $('#videoAspect').addEventListener('change', () => { updateCanvasSize(); scheduleSave(); }); $('#videoTheme').addEventListener('change', () => { drawSelected(); scheduleSave(); });
   $('#videoSampleButton').addEventListener('click', addSamples); $('#videoClearButton').addEventListener('click', clearScenes);
@@ -514,7 +592,7 @@ function bind() {
   $('#videoUndoButton').addEventListener('click', undo); $('#videoRedoButton').addEventListener('click', redo);
   ['videoProjectTitle', 'videoOrgName', 'videoEventDate', 'videoEndingText'].forEach((id) => $(`#${id}`).addEventListener('input', () => { drawSelected(); scheduleSave(); }));
   ['videoConsentCheck', 'videoPrivacyCheck', 'videoCreditCheck'].forEach((id) => $(`#${id}`).addEventListener('change', scheduleSave));
-  ['videoSceneName', 'videoSceneCaption', 'videoSceneDuration', 'videoCaptionStyle', 'videoSceneReviewed', 'videoTrimStart', 'videoTrimEnd', 'videoTransition'].forEach((id) => $(`#${id}`).addEventListener('input', syncSceneEditor));
+  ['videoSceneName', 'videoSceneCaption', 'videoSceneDuration', 'videoCaptionStyle', 'videoSceneReviewed', 'videoTrimStart', 'videoTrimEnd', 'videoTransition', 'videoEffect', 'videoMotion', 'videoEffectAmount', 'videoSceneScale', 'videoScenePositionX', 'videoScenePositionY'].forEach((id) => { $(`#${id}`).addEventListener('input', syncSceneEditor); $(`#${id}`).addEventListener('change', syncSceneEditor); });
   $('#videoMoveUp').addEventListener('click', () => moveSelected(-1)); $('#videoMoveDown').addEventListener('click', () => moveSelected(1));
   $('#videoRemoveScene').addEventListener('click', () => { studio.scenes = studio.scenes.filter((scene) => scene.id !== studio.selected); studio.selected = studio.scenes[0]?.id || null; studio.currentTime = 0; renderSceneList(); saveProjectState(); });
   const splitButton = document.createElement('button'); splitButton.id = 'videoSplitScene'; splitButton.className = 'secondary-button'; splitButton.type = 'button'; splitButton.textContent = '✂ 분할'; $('#videoRemoveScene').before(splitButton); splitButton.addEventListener('click', splitSelected);

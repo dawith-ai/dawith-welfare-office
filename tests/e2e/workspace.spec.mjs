@@ -45,6 +45,8 @@ test('first launch explains the runtime and local Ollama setup', async ({ page }
   await page.getByRole('button', { name: /업무 선택/ }).click();
   await page.locator('[data-action="ollamaSetup"]').first().click();
   await expect(page.locator('#ollamaDialog')).toBeVisible();
+  await expect(page.locator('#ollamaDialog .ollama-steps li')).toHaveCount(3);
+  await expect(page.locator('#ollamaStepModel')).toHaveClass(/is-current|is-done/);
   await expect(page.locator('#ollamaRecommendationTitle')).toContainText(/qwen2\.5:/);
   await expect(page.locator('#ollamaSystemMemory')).toContainText('메모리');
   await expect(page.locator('#ollamaSystemCpu')).toContainText('CPU');
@@ -218,6 +220,11 @@ test('전문 타임라인의 플레이헤드·Undo/Redo·단축키를 사용할 
   await page.locator('#videoTimelineVideo .timeline-clip').nth(1).click();
   await page.locator('#videoStepButton').click();
   await expect(page.locator('#videoCurrentTime')).not.toHaveText('00:00.0');
+  await page.locator('#videoEffect').selectOption('cinematic');
+  await page.locator('#videoMotion').selectOption('zoom-in');
+  await page.locator('#videoEffectAmount').fill('80');
+  await expect(page.locator('#videoEffectAmountValue')).toHaveText('80%');
+  await page.locator('#videoSceneList .video-scene-item').first().click();
   await page.locator('body').press('s');
   await expect(page.locator('#videoSceneList .video-scene-item')).toHaveCount(4);
   await page.keyboard.press('Control+Z');
