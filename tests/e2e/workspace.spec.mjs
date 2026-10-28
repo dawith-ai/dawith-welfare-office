@@ -45,8 +45,11 @@ test('first launch explains the runtime and local Ollama setup', async ({ page }
   await page.getByRole('button', { name: /업무 선택/ }).click();
   await page.locator('[data-action="ollamaSetup"]').first().click();
   await expect(page.locator('#ollamaDialog')).toBeVisible();
-  await expect(page.locator('#ollamaDownloadLink')).toHaveAttribute('href', 'https://ollama.com/download');
-  await expect(page.locator('#ollamaCommand')).toHaveText('ollama pull qwen2.5:7b');
+  await expect(page.locator('#ollamaRecommendationTitle')).toContainText(/qwen2\.5:/);
+  await expect(page.locator('#ollamaSystemMemory')).toContainText('메모리');
+  await expect(page.locator('#ollamaSystemCpu')).toContainText('CPU');
+  await expect(page.locator('#ollamaDownloadLink')).toHaveAttribute('href', /https:\/\/ollama\.com\/download/);
+  await expect(page.locator('#ollamaCommand')).toHaveText(/ollama pull qwen2\.5:\d+b/);
   await page.getByRole('button', { name: '×' }).last().click();
   await page.goto('/?desktop=1');
   await expect(page.locator('#runtimePillText')).toHaveText('Dawith 데스크톱 EXE');
@@ -200,4 +203,23 @@ test('검토한 예시 장면은 실제 로컬 WebM으로 저장된다', async (
   await page.getByRole('button', { name: /영상으로 저장하기/ }).click();
   const download = await videoDownload;
   expect(download.suggestedFilename()).toMatch(/\.webm$/);
+});
+
+test('전문 타임라인의 플레이헤드·Undo/Redo·단축키를 사용할 수 있다', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: /행사 결과 영상 만들기/ }).click();
+  await page.getByRole('button', { name: '예시 장면 넣기' }).click();
+  await page.locator('#videoSceneName').fill('새 오프닝 제목');
+  await expect(page.locator('#videoSaveState')).toContainText('자동 저장됨', { timeout: 1_500 });
+  await page.locator('#videoUndoButton').click();
+  await expect(page.locator('#videoSceneList .video-scene-item').first()).toContainText('함께 준비한 시간');
+  await page.locator('#videoRedoButton').click();
+  await expect(page.locator('#videoSceneList .video-scene-item').first()).toContainText('새 오프닝 제목');
+  await page.locator('#videoTimelineVideo .timeline-clip').nth(1).click();
+  await page.locator('#videoStepButton').click();
+  await expect(page.locator('#videoCurrentTime')).not.toHaveText('00:00.0');
+  await page.locator('body').press('s');
+  await expect(page.locator('#videoSceneList .video-scene-item')).toHaveCount(4);
+  await page.keyboard.press('Control+Z');
+  await expect(page.locator('#videoSceneList .video-scene-item')).toHaveCount(3);
 });

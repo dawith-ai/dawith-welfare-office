@@ -7,7 +7,103 @@ const studio = {
   playing: false,
   urls: new Set(),
   sampleIndex: 0,
+  currentTime: 0,
+  history: [],
+  historyIndex: -1,
+  historyTimer: null,
+  playbackToken: 0,
+  audioPreview: null,
+  sourceCache: new Map(),
 };
+
+const STORAGE_KEY = 'dawith.video-studio.project.v2';
+
+function timelineDuration() {
+  return studio.scenes.reduce((sum, scene) => sum + Math.max(0, Number(scene.duration) || 0), 0) + (studio.scenes.length ? 2 : 0);
+}
+
+function formatTime(value) {
+  const seconds = Math.max(0, Number(value) || 0);
+  return `${String(Math.floor(seconds / 60)).padStart(2, '0')}:${(seconds % 60).toFixed(1).padStart(4, '0')}`;
+}
+
+function serializableProject() {
+  return {
+    version: 2,
+    title: $('#videoProjectTitle')?.value || '',
+    organization: $('#videoOrgName')?.value || '',
+    eventDate: $('#videoEventDate')?.value || '',
+    aspect: $('#videoAspect')?.value || '16:9',
+    theme: $('#videoTheme')?.value || 'warm',
+    ending: $('#videoEndingText')?.value || '',
+    musicName: $('#videoMusicFile')?.files[0]?.name || '',
+    scenes: studio.scenes.map(({ file, src, ...scene }) => ({ ...scene, src: src?.startsWith('data:') ? src : '' })),
+  };
+}
+
+function stateSnapshot() {
+  return JSON.stringify({ project: serializableProject(), selected: studio.selected, currentTime: studio.currentTime });
+}
+
+function updateHistoryButtons() {
+  $('#videoUndoButton').disabled = studio.historyIndex <= 0;
+  $('#videoRedoButton').disabled = studio.historyIndex < 0 || studio.historyIndex >= studio.history.length - 1;
+}
+
+function saveProjectState({ history = true } = {}) {
+  const snapshot = stateSnapshot();
+  try { localStorage.setItem(STORAGE_KEY, snapshot); } catch { /* storage can be disabled in private browsing */ }
+  $('#videoSaveState').textContent = `자동 저장됨 · ${new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}`;
+  if (!history) return;
+  if (studio.history[studio.historyIndex] === snapshot) return;
+  studio.history = studio.history.slice(0, studio.historyIndex + 1);
+  studio.history.push(snapshot);
+  if (studio.history.length > 80) studio.history.shift();
+  studio.historyIndex = studio.history.length - 1;
+  updateHistoryButtons();
+}
+
+function scheduleSave() {
+  clearTimeout(studio.historyTimer);
+  $('#videoSaveState').textContent = '저장 중…';
+  studio.historyTimer = setTimeout(() => saveProjectState(), 160);
+}
+
+function restoreSnapshot(snapshot) {
+  if (!snapshot) return;
+  const parsed = JSON.parse(snapshot);
+  const project = parsed.project || parsed;
+  for (const scene of studio.scenes) if (scene.src?.startsWith('blob:')) URL.revokeObjectURL(scene.src);
+  studio.sourceCache.clear();
+  $('#videoProjectTitle').value = project.title || '';
+  $('#videoOrgName').value = project.organization || '';
+  $('#videoEventDate').value = project.eventDate || '';
+  $('#videoAspect').value = project.aspect || '16:9';
+  $('#videoTheme').value = project.theme || 'warm';
+  $('#videoEndingText').value = project.ending || '';
+  studio.scenes = (project.scenes || []).filter((scene) => scene.src).map((scene) => ({ ...scene, file: null }));
+  studio.selected = parsed.selected || studio.scenes[0]?.id || null;
+  studio.currentTime = Math.min(Number(parsed.currentTime) || 0, timelineDuration());
+  updateCanvasSize();
+  renderSceneList();
+  seekTimeline(studio.currentTime, { draw: true });
+}
+
+function undo() {
+  if (studio.historyIndex <= 0) return;
+  studio.historyIndex -= 1;
+  restoreSnapshot(studio.history[studio.historyIndex]);
+  updateHistoryButtons();
+  $('#videoSaveState').textContent = '되돌린 상태';
+}
+
+function redo() {
+  if (studio.historyIndex >= studio.history.length - 1) return;
+  studio.historyIndex += 1;
+  restoreSnapshot(studio.history[studio.historyIndex]);
+  updateHistoryButtons();
+  $('#videoSaveState').textContent = '다시 실행한 상태';
+}
 
 const sampleScenes = [
   { name: '함께 준비한 시간', caption: '함께 준비한 시간이 시작되었습니다.', color: '#ffe7d6' },
@@ -78,6 +174,36 @@ function addScene(file, sample = null) {
 
 function selectedScene() {
   return studio.scenes.find((scene) => scene.id === studio.selected) || null;
+}
+
+function sceneAtTime(time) {
+  let cursor = 0;
+  for (const scene of studio.scenes) {
+    const end = cursor + Number(scene.duration || 0);
+    if (time < end || scene === studio.scenes.at(-1)) return { scene, offset: Math.max(0, time - cursor), start: cursor, end };
+    cursor = end;
+  }
+  return null;
+}
+
+function updatePlayhead() {
+  const timeline = $('#videoTimeline');
+  const playhead = $('#videoPlayhead');
+  const duration = timelineDuration();
+  if (!timeline || !playhead) return;
+  playhead.style.left = `${84 + Math.max(0, Math.min(1, studio.currentTime / Math.max(duration, 1))) * Math.max(480, timeline.clientWidth - 100)}px`;
+  $('#videoCurrentTime').textContent = formatTime(studio.currentTime);
+}
+
+async function seekTimeline(time, { draw = true } = {}) {
+  studio.currentTime = Math.max(0, Math.min(timelineDuration(), Number(time) || 0));
+  const target = sceneAtTime(studio.currentTime);
+  if (target && target.scene.id !== studio.selected) {
+    studio.selected = target.scene.id;
+    renderSceneList();
+  }
+  updatePlayhead();
+  if (draw && target) await drawScene(target.scene, target.offset / Math.max(Number(target.scene.duration) || 1, .1));
 }
 
 function renderSceneList() {
@@ -177,16 +303,26 @@ function renderTimeline() {
   const videoTrack = $('#videoTimelineVideo');
   const captionTrack = $('#videoTimelineCaption');
   if (!videoTrack || !captionTrack) return;
-  videoTrack.innerHTML = studio.scenes.length ? studio.scenes.map((scene, index) => `<button type="button" class="timeline-clip${scene.id === studio.selected ? ' is-selected' : ''}" data-scene-id="${esc(scene.id)}" style="--clip-width:${Math.max(112, scene.duration * 76 * scale)}px"><span>${index + 1}</span><b>${esc(scene.name || '장면')}</b><small>${Number(scene.duration).toFixed(1)}s</small></button>`).join('') : '<span class="timeline-empty">장면을 넣으면 타임라인에 표시됩니다.</span>';
-  captionTrack.innerHTML = studio.scenes.length ? studio.scenes.map((scene) => `<button type="button" class="timeline-caption-clip${scene.id === studio.selected ? ' is-selected' : ''}" data-scene-id="${esc(scene.id)}" style="--clip-width:${Math.max(112, scene.duration * 76 * scale)}px">${esc(scene.caption || '자막 없음')}</button>`).join('') : '';
+  const widthFor = (scene) => Math.max(112, scene.duration * 76 * scale);
+  videoTrack.innerHTML = studio.scenes.length ? studio.scenes.map((scene, index) => `<button type="button" class="timeline-clip${scene.id === studio.selected ? ' is-selected' : ''}" data-scene-id="${esc(scene.id)}" style="--clip-width:${widthFor(scene)}px"><span>${index + 1}</span><b>${esc(scene.name || '장면')}</b><small>${Number(scene.duration).toFixed(1)}s</small><i class="timeline-handle timeline-handle-start" data-trim="start" aria-label="시작 조절"></i><i class="timeline-handle timeline-handle-end" data-trim="end" aria-label="끝 조절"></i></button>`).join('') : '<span class="timeline-empty">장면을 넣으면 타임라인에 표시됩니다.</span>';
+  captionTrack.innerHTML = studio.scenes.length ? studio.scenes.map((scene) => `<button type="button" class="timeline-caption-clip${scene.id === studio.selected ? ' is-selected' : ''}" data-scene-id="${esc(scene.id)}" style="--clip-width:${widthFor(scene)}px">${esc(scene.caption || '자막 없음')}</button>`).join('') : '';
+  const ruler = $('#videoTimelineRuler');
+  if (ruler) {
+    const duration = timelineDuration();
+    const marks = Array.from({ length: 6 }, (_, index) => formatTime(duration * index / 5));
+    ruler.innerHTML = marks.map((mark) => `<span>${mark}</span>`).join('');
+  }
+  updatePlayhead();
 }
 
 async function sourceForScene(scene, progress = 0) {
   if (!scene?.src) return null;
   if (scene.type !== 'video') {
+    if (studio.sourceCache.has(scene.src)) return studio.sourceCache.get(scene.src);
     const image = new Image();
     image.src = scene.src;
     await new Promise((resolve) => { image.onload = resolve; image.onerror = resolve; });
+    studio.sourceCache.set(scene.src, image);
     return image;
   }
   const video = document.createElement('video');
@@ -238,20 +374,22 @@ function syncSceneEditor() {
   scene.captionStyle = $('#videoCaptionStyle').value;
   scene.reviewed = $('#videoSceneReviewed').checked;
   renderSceneList();
+  scheduleSave();
 }
 
-function selectScene(id) { studio.selected = id; renderSceneList(); }
+function selectScene(id) { studio.selected = id; const target = sceneAtTime(studio.currentTime); if (!target || target.scene.id !== id) studio.currentTime = studio.scenes.slice(0, studio.scenes.findIndex((scene) => scene.id === id)).reduce((sum, scene) => sum + Number(scene.duration || 0), 0); renderSceneList(); seekTimeline(studio.currentTime); scheduleSave(); }
 
 function addSamples() {
   for (const sample of sampleScenes) addScene(null, sample);
   studio.selected = studio.scenes[studio.scenes.length - sampleScenes.length]?.id;
   renderSceneList();
+  saveProjectState();
   window.dispatchEvent(new CustomEvent('dawith-toast', { detail: '예시 장면 3개를 넣었습니다. 문구와 개인정보 검토 상태를 확인하세요.' }));
 }
 
 function clearScenes() {
   for (const scene of studio.scenes) if (scene.src.startsWith('blob:')) URL.revokeObjectURL(scene.src);
-  studio.urls.clear(); studio.scenes = []; studio.selected = null; renderSceneList(); drawSelected();
+  studio.urls.clear(); studio.sourceCache.clear(); studio.scenes = []; studio.selected = null; studio.currentTime = 0; renderSceneList(); drawSelected(); saveProjectState();
 }
 
 function reorder(fromId, toId) {
@@ -261,6 +399,7 @@ function reorder(fromId, toId) {
   const [scene] = studio.scenes.splice(from, 1);
   studio.scenes.splice(to, 0, scene);
   renderSceneList();
+  saveProjectState();
 }
 
 function moveSelected(delta) {
@@ -269,6 +408,7 @@ function moveSelected(delta) {
   if (index < 0 || target < 0 || target >= studio.scenes.length) return;
   [studio.scenes[index], studio.scenes[target]] = [studio.scenes[target], studio.scenes[index]];
   renderSceneList();
+  saveProjectState();
 }
 
 function splitSelected() {
@@ -278,22 +418,28 @@ function splitSelected() {
   const first = { ...scene, id: `${scene.id}-a`, name: `${scene.name} · 앞`, duration: Math.max(1, Number((scene.duration / 2).toFixed(1))), trimEnd: (scene.trimStart + scene.trimEnd) / 2 };
   const second = { ...scene, id: `${scene.id}-b`, name: `${scene.name} · 뒤`, duration: Math.max(1, Number((scene.duration / 2).toFixed(1))), trimStart: (scene.trimStart + scene.trimEnd) / 2 };
   studio.scenes.splice(index, 1, first, second); studio.selected = first.id; renderSceneList(); toast('선택한 장면을 두 개로 분할했습니다.');
+  saveProjectState();
 }
 
 async function previewAll() {
   if (!studio.scenes.length || studio.playing) return;
-  studio.playing = true; $('#videoPlayButton').disabled = true; $('#videoPlayButton').textContent = '■ 재생 중…';
-  for (const scene of studio.scenes) {
-    if (!studio.playing) break;
-    studio.selected = scene.id; renderSceneList();
-    const started = performance.now();
-    while (studio.playing && performance.now() - started < scene.duration * 1000) {
-      await drawScene(scene, (performance.now() - started) / (scene.duration * 1000));
-      await new Promise((resolve) => requestAnimationFrame(resolve));
-    }
+  studio.playing = true; studio.playbackToken += 1; const token = studio.playbackToken; $('#videoPlayButton').disabled = true; $('#videoPlayButton').textContent = '■ 재생 중…';
+  const startedAt = performance.now() - studio.currentTime * 1000;
+  while (studio.playing && token === studio.playbackToken && studio.currentTime < timelineDuration()) {
+    await seekTimeline((performance.now() - startedAt) / 1000);
+    await new Promise((resolve) => requestAnimationFrame(resolve));
   }
   studio.playing = false; $('#videoPlayButton').disabled = false; $('#videoPlayButton').textContent = '▶ 미리보기';
-  drawSelected();
+  if (studio.currentTime >= timelineDuration()) studio.currentTime = 0;
+  seekTimeline(studio.currentTime);
+}
+
+function stopPreview() {
+  studio.playing = false;
+  studio.playbackToken += 1;
+  $('#videoPlayButton').disabled = false;
+  $('#videoPlayButton').textContent = '▶ 미리보기';
+  seekTimeline(0);
 }
 
 function downloadBlob(blob, name) {
@@ -302,21 +448,23 @@ function downloadBlob(blob, name) {
 }
 
 function projectPayload() {
-  return { version: 1, title: $('#videoProjectTitle').value, organization: $('#videoOrgName').value, eventDate: $('#videoEventDate').value, aspect: $('#videoAspect').value, theme: $('#videoTheme').value, ending: $('#videoEndingText').value, musicName: $('#videoMusicFile').files[0]?.name || '', scenes: studio.scenes.map(({ file, src, ...scene }) => scene) };
+  return { ...serializableProject(), currentTime: studio.currentTime };
 }
 
 function exportProject() {
   downloadBlob(new Blob([JSON.stringify(projectPayload(), null, 2)], { type: 'application/json' }), `${($('#videoProjectTitle').value.trim() || 'dawith-video-project').replace(/[^\w가-힣-]+/g, '-').slice(0, 60)}.json`);
 }
 
-async function exportVideo() {
+async function exportVideo(format = 'webm') {
   if (!studio.scenes.length) return toast('사진이나 영상을 하나 이상 넣어 주세요.');
   if (!$('#videoConsentCheck').checked || !$('#videoPrivacyCheck').checked) return toast('동의·개인정보 확인을 마친 뒤 저장해 주세요.');
   if (studio.scenes.some((scene) => !scene.reviewed)) return toast('아직 개인정보를 검토하지 않은 장면이 있어요.');
   const musicFile = $('#videoMusicFile').files[0];
   if (musicFile && !$('#videoCreditCheck').checked) return toast('음악 출처 확인을 체크해 주세요.');
   if (!window.MediaRecorder || !$('#videoCanvas').captureStream) return toast('이 브라우저는 로컬 영상 저장을 지원하지 않습니다. Chrome 또는 Windows EXE에서 다시 시도해 주세요.');
-  const button = $('#videoExportButton'); button.disabled = true; button.textContent = '영상 저장 중…';
+  const button = format === 'mp4' ? $('#videoMp4Button') : $('#videoExportButton');
+  button.disabled = true; button.textContent = format === 'mp4' ? 'MP4 변환 중…' : '영상 저장 중…';
+  $('#videoExportStatus').textContent = format === 'mp4' ? '로컬 FFmpeg가 영상을 변환하고 있습니다. 파일은 이 PC 밖으로 전송되지 않습니다.' : '브라우저 렌더러가 프레임을 기록하고 있습니다.';
   const canvas = $('#videoCanvas'); const stream = canvas.captureStream(30); let audioContext; let audio;
   try {
     if (musicFile) {
@@ -336,41 +484,91 @@ async function exportVideo() {
     const ending = { name: '끝 화면', caption: $('#videoEndingText').value.trim() || '함께해 주셔서 고맙습니다.', captionStyle: 'center', duration: 2, type: 'image', src: '' };
     await drawScene(ending); await new Promise((resolve) => setTimeout(resolve, ending.duration * 1000)); recorder.stop(); await stopped;
     const title = ($('#videoProjectTitle').value.trim() || 'dawith-welfare-video').replace(/[^\w가-힣-]+/g, '-').slice(0, 60);
-    downloadBlob(new Blob(chunks, { type: 'video/webm' }), `${title}.webm`); toast('영상을 이 PC에 저장했습니다.');
+    const webmBlob = new Blob(chunks, { type: 'video/webm' });
+    if (format === 'mp4') {
+      const response = await fetch('/api/video/convert', { method: 'POST', headers: { 'Content-Type': 'video/webm' }, body: webmBlob });
+      if (!response.ok) { const detail = await response.json().catch(() => ({})); throw new Error(detail.error === 'ffmpeg_unavailable' ? '이 PC에 FFmpeg가 설치되어 있지 않습니다.' : detail.error || 'MP4 변환에 실패했습니다.'); }
+      downloadBlob(await response.blob(), `${title}.mp4`); toast('MP4 영상을 이 PC에 저장했습니다.');
+    } else {
+      downloadBlob(webmBlob, `${title}.webm`); toast('WebM 영상을 이 PC에 저장했습니다.');
+    }
+    $('#videoExportStatus').textContent = `${format.toUpperCase()} 저장 완료 · 로컬 파일로 내려받았습니다.`;
   } catch (error) { toast(`영상을 저장하지 못했습니다: ${error.message || '알 수 없는 오류'}`); }
-  finally { stream.getTracks().forEach((track) => track.stop()); if (audio) { audio.pause(); audio.src = ''; } if (audioContext) await audioContext.close(); button.disabled = false; button.innerHTML = '영상으로 저장하기 <span>→</span>'; }
+  finally { stream.getTracks().forEach((track) => track.stop()); if (audio) { audio.pause(); audio.src = ''; } if (audioContext) await audioContext.close(); button.disabled = false; button.innerHTML = format === 'mp4' ? 'MP4로 변환 저장' : '영상으로 저장하기 · WebM <span>→</span>'; }
 }
 
 function toast(message) { window.dispatchEvent(new CustomEvent('dawith-toast', { detail: message })); const target = $('#toast'); if (target) { target.textContent = message; target.classList.add('show'); setTimeout(() => target.classList.remove('show'), 2600); } }
 
 function bind() {
-  $('#videoMediaFile').addEventListener('change', (event) => { [...event.target.files].slice(0, 200 - studio.scenes.length).forEach((file) => addScene(file)); renderSceneList(); event.target.value = ''; });
-  $('#videoMusicFile').addEventListener('change', (event) => { $('#videoMusicName').textContent = event.target.files[0]?.name || '선택하지 않으면 무음으로 저장합니다.'; });
-  $('#videoMusicVolume').addEventListener('input', (event) => { $('#videoMusicVolumeValue').textContent = `${event.target.value}%`; });
-  $('#videoAspect').addEventListener('change', updateCanvasSize); $('#videoTheme').addEventListener('change', drawSelected);
-  $('#videoSampleButton').addEventListener('click', addSamples); $('#videoClearButton').addEventListener('click', clearScenes); $('#videoPlayButton').addEventListener('click', () => { if (studio.playing) studio.playing = false; else previewAll(); });
-  $('#videoExportButton').addEventListener('click', exportVideo); $('#videoProjectExportButton').addEventListener('click', exportProject);
-  ['videoProjectTitle', 'videoOrgName', 'videoEventDate', 'videoEndingText'].forEach((id) => $(`#${id}`).addEventListener('input', drawSelected));
-  ['videoSceneName', 'videoSceneCaption', 'videoSceneDuration', 'videoCaptionStyle', 'videoSceneReviewed'].forEach((id) => $(`#${id}`).addEventListener('input', syncSceneEditor));
-  $('#videoMoveUp').addEventListener('click', () => moveSelected(-1)); $('#videoMoveDown').addEventListener('click', () => moveSelected(1)); $('#videoRemoveScene').addEventListener('click', () => { studio.scenes = studio.scenes.filter((scene) => scene.id !== studio.selected); studio.selected = studio.scenes[0]?.id || null; renderSceneList(); });
+  $('#videoMediaFile').addEventListener('change', (event) => { [...event.target.files].slice(0, 200 - studio.scenes.length).forEach((file) => addScene(file)); renderSceneList(); saveProjectState(); event.target.value = ''; });
+  $('#videoMusicFile').addEventListener('change', (event) => { $('#videoMusicName').textContent = event.target.files[0]?.name || '선택하지 않으면 무음으로 저장합니다.'; $('#videoAudioTrackLabel').textContent = event.target.files[0] ? `배경음악 · ${event.target.files[0].name}` : '배경음악 · 선택한 파일'; scheduleSave(); });
+  $('#videoMusicVolume').addEventListener('input', (event) => { $('#videoMusicVolumeValue').textContent = `${event.target.value}%`; if (studio.audioPreview) studio.audioPreview.volume = Number(event.target.value) / 100; scheduleSave(); });
+  $('#videoAspect').addEventListener('change', () => { updateCanvasSize(); scheduleSave(); }); $('#videoTheme').addEventListener('change', () => { drawSelected(); scheduleSave(); });
+  $('#videoSampleButton').addEventListener('click', addSamples); $('#videoClearButton').addEventListener('click', clearScenes);
+  $('#videoPlayButton').addEventListener('click', () => { if (studio.playing) stopPreview(); else previewAll(); });
+  $('#videoStopButton').addEventListener('click', stopPreview);
+  $('#videoPreviousButton').addEventListener('click', () => { const index = Math.max(0, studio.scenes.findIndex((scene) => scene.id === studio.selected) - 1); if (studio.scenes[index]) selectScene(studio.scenes[index].id); });
+  $('#videoNextButton').addEventListener('click', () => { const index = Math.min(studio.scenes.length - 1, studio.scenes.findIndex((scene) => scene.id === studio.selected) + 1); if (studio.scenes[index]) selectScene(studio.scenes[index].id); });
+  $('#videoStepButton').addEventListener('click', () => seekTimeline(studio.currentTime + 1 / 30));
+  $('#videoExportButton').addEventListener('click', () => exportVideo('webm')); $('#videoMp4Button').addEventListener('click', () => exportVideo('mp4')); $('#videoProjectExportButton').addEventListener('click', exportProject);
+  $('#videoUndoButton').addEventListener('click', undo); $('#videoRedoButton').addEventListener('click', redo);
+  ['videoProjectTitle', 'videoOrgName', 'videoEventDate', 'videoEndingText'].forEach((id) => $(`#${id}`).addEventListener('input', () => { drawSelected(); scheduleSave(); }));
+  ['videoConsentCheck', 'videoPrivacyCheck', 'videoCreditCheck'].forEach((id) => $(`#${id}`).addEventListener('change', scheduleSave));
+  ['videoSceneName', 'videoSceneCaption', 'videoSceneDuration', 'videoCaptionStyle', 'videoSceneReviewed', 'videoTrimStart', 'videoTrimEnd', 'videoTransition'].forEach((id) => $(`#${id}`).addEventListener('input', syncSceneEditor));
+  $('#videoMoveUp').addEventListener('click', () => moveSelected(-1)); $('#videoMoveDown').addEventListener('click', () => moveSelected(1));
+  $('#videoRemoveScene').addEventListener('click', () => { studio.scenes = studio.scenes.filter((scene) => scene.id !== studio.selected); studio.selected = studio.scenes[0]?.id || null; studio.currentTime = 0; renderSceneList(); saveProjectState(); });
   const splitButton = document.createElement('button'); splitButton.id = 'videoSplitScene'; splitButton.className = 'secondary-button'; splitButton.type = 'button'; splitButton.textContent = '✂ 분할'; $('#videoRemoveScene').before(splitButton); splitButton.addEventListener('click', splitSelected);
   $('#videoSceneList').addEventListener('click', (event) => { const item = event.target.closest('[data-scene-id]'); if (item) selectScene(item.dataset.sceneId); });
-  $('#videoTimeline').addEventListener('click', (event) => { const item = event.target.closest('[data-scene-id]'); if (item) selectScene(item.dataset.sceneId); });
+  $('#videoTimeline').addEventListener('click', (event) => {
+    if (event.target.closest('.timeline-handle')) return;
+    const item = event.target.closest('[data-scene-id]');
+    if (item) return selectScene(item.dataset.sceneId);
+    const track = $('#videoTimelineVideo');
+    const rect = track.getBoundingClientRect();
+    if (rect.width) seekTimeline(((event.clientX - rect.left) / rect.width) * timelineDuration());
+  });
   $('#videoTimelineScale').addEventListener('change', renderTimeline);
   let dragged = null;
   $('#videoSceneList').addEventListener('dragstart', (event) => { dragged = event.target.closest('[data-scene-id]')?.dataset.sceneId || null; });
   $('#videoSceneList').addEventListener('dragover', (event) => { if (dragged) event.preventDefault(); });
   $('#videoSceneList').addEventListener('drop', (event) => { event.preventDefault(); const target = event.target.closest('[data-scene-id]')?.dataset.sceneId; if (dragged && target) reorder(dragged, target); dragged = null; });
+  let trimDrag = null;
+  $('#videoTimeline').addEventListener('pointerdown', (event) => {
+    const handle = event.target.closest('.timeline-handle');
+    if (!handle) return;
+    const clip = handle.closest('[data-scene-id]'); const scene = studio.scenes.find((item) => item.id === clip?.dataset.sceneId);
+    if (!scene) return;
+    trimDrag = { scene, type: handle.dataset.trim, startX: event.clientX, startValue: Number(handle.dataset.trim === 'start' ? scene.trimStart : scene.trimEnd), scale: Number($('#videoTimelineScale').value) / 100 };
+    event.preventDefault();
+  });
+  document.addEventListener('pointermove', (event) => {
+    if (!trimDrag) return;
+    const delta = (event.clientX - trimDrag.startX) / (76 * trimDrag.scale);
+    const value = Math.max(0, Math.min(1, trimDrag.startValue + delta / Math.max(trimDrag.scene.duration, 1)));
+    if (trimDrag.type === 'start') trimDrag.scene.trimStart = Math.min(value, trimDrag.scene.trimEnd - .05);
+    else trimDrag.scene.trimEnd = Math.max(value, trimDrag.scene.trimStart + .05);
+    renderSceneEditor(); renderTimeline();
+  });
+  document.addEventListener('pointerup', () => { if (trimDrag) { trimDrag = null; saveProjectState(); } });
   document.addEventListener('click', (event) => { if (event.target.closest('[data-nav="video"]')) { setTimeout(() => { $('.view.active')?.classList.remove('active'); $('#videoView').classList.add('active'); }, 0); } });
   window.addEventListener('dawith-toast', (event) => { const target = $('#toast'); if (target) { target.textContent = event.detail; target.classList.add('show'); setTimeout(() => target.classList.remove('show'), 2600); } });
   document.addEventListener('keydown', (event) => {
     if (!$('#videoView')?.classList.contains('active')) return;
-    if (event.code === 'Space' && !['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName)) { event.preventDefault(); if (studio.playing) studio.playing = false; else previewAll(); }
-    if (event.key === 'Delete' && !['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName) && selectedScene()) { studio.scenes = studio.scenes.filter((scene) => scene.id !== studio.selected); studio.selected = studio.scenes[0]?.id || null; renderSceneList(); }
+    const editing = ['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName);
+    const command = event.ctrlKey || event.metaKey;
+    if (command && event.key.toLowerCase() === 'z') { event.preventDefault(); event.shiftKey ? redo() : undo(); return; }
+    if (event.code === 'Space' && !editing) { event.preventDefault(); if (studio.playing) stopPreview(); else previewAll(); }
+    if (event.key.toLowerCase() === 's' && !editing && selectedScene()) { event.preventDefault(); splitSelected(); }
+    if (event.key === 'Delete' && !editing && selectedScene()) { studio.scenes = studio.scenes.filter((scene) => scene.id !== studio.selected); studio.selected = studio.scenes[0]?.id || null; renderSceneList(); saveProjectState(); }
     if (event.altKey && event.key === 'ArrowUp') moveSelected(-1);
     if (event.altKey && event.key === 'ArrowDown') moveSelected(1);
+    if (event.key === 'ArrowLeft' && !editing) seekTimeline(studio.currentTime - (event.shiftKey ? 1 : 1 / 30));
+    if (event.key === 'ArrowRight' && !editing) seekTimeline(studio.currentTime + (event.shiftKey ? 1 : 1 / 30));
   });
+  const saved = localStorage.getItem(STORAGE_KEY);
+  if (saved) { try { restoreSnapshot(saved); } catch { localStorage.removeItem(STORAGE_KEY); } }
   renderSceneList(); updateCanvasSize();
+  studio.history = [stateSnapshot()]; studio.historyIndex = 0; updateHistoryButtons();
 }
 
 bind();

@@ -3,6 +3,7 @@ import http from 'node:http';
 import os from 'node:os';
 import path from 'node:path';
 import crypto from 'node:crypto';
+import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { buildDrafts, buildOllamaPrompt, parseOllamaDraft } from './src/processing.mjs';
 import { openStore } from './src/storage.mjs';
@@ -49,6 +50,39 @@ const body = async (request, limit = 8 * 1024 * 1024) => {
   return JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}');
 };
 
+const binaryBody = async (request, limit = 512 * 1024 * 1024) => {
+  const chunks = [];
+  let size = 0;
+  for await (const chunk of request) {
+    size += chunk.length;
+    if (size > limit) throw new Error('payload_too_large');
+    chunks.push(chunk);
+  }
+  return Buffer.concat(chunks);
+};
+
+function convertWebmToMp4(input) {
+  return new Promise((resolve, reject) => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'dawith-video-'));
+    const inputPath = path.join(tempDir, 'input.webm');
+    const outputPath = path.join(tempDir, 'output.mp4');
+    fs.writeFileSync(inputPath, input, { mode: 0o600 });
+    const cleanup = () => { try { fs.rmSync(tempDir, { recursive: true, force: true }); } catch { /* best effort cleanup */ } };
+    const ffmpeg = spawn(process.env.FFMPEG_BIN || 'ffmpeg', [
+      '-hide_banner', '-loglevel', 'error', '-i', inputPath,
+      '-c:v', 'libx264', '-preset', 'medium', '-crf', '18', '-pix_fmt', 'yuv420p',
+      '-c:a', 'aac', '-b:a', '192k', '-movflags', '+faststart', '-y', outputPath,
+    ], { stdio: ['ignore', 'ignore', 'pipe'] });
+    const errors = [];
+    ffmpeg.stderr.on('data', (chunk) => errors.push(chunk));
+    ffmpeg.on('error', (error) => { cleanup(); reject(error); });
+    ffmpeg.on('close', (code) => {
+      if (code !== 0) { cleanup(); reject(new Error(Buffer.concat(errors).toString('utf8').trim() || `ffmpeg_exit_${code}`)); return; }
+      try { const output = fs.readFileSync(outputPath); cleanup(); resolve(output); } catch (error) { cleanup(); reject(error); }
+    });
+  });
+}
+
 const safeJson = (value) => (typeof value === 'object' && value !== null ? value : {});
 const routeParam = (value) => {
   try { return decodeURIComponent(value); } catch { return value; }
@@ -60,7 +94,7 @@ async function ollamaDraft(input, timeoutMs = defaultOllamaTimeoutMs) {
     headers: { 'content-type': 'application/json' },
     signal: AbortSignal.timeout(timeoutMs),
     body: JSON.stringify({
-      model: input.model || 'gemma2:9b',
+      model: input.model || 'qwen2.5:7b',
       stream: false,
       format: 'json',
       messages: [
@@ -72,6 +106,19 @@ async function ollamaDraft(input, timeoutMs = defaultOllamaTimeoutMs) {
   if (!response.ok) throw new Error(`ollama_http_${response.status}`);
   const payload = await response.json();
   return payload.message?.content || '';
+}
+
+const allowedOllamaModels = new Set(['qwen2.5:3b', 'qwen2.5:7b', 'qwen2.5:14b', 'qwen2.5:32b', 'gemma2:2b', 'gemma2:9b', 'llama3.2:1b', 'llama3.2:3b']);
+
+async function pullOllamaModel(model) {
+  const response = await fetch('http://127.0.0.1:11434/api/pull', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    signal: AbortSignal.timeout(Number(process.env.OLLAMA_PULL_TIMEOUT_MS || 20 * 60 * 1000)),
+    body: JSON.stringify({ model, stream: false }),
+  });
+  if (!response.ok) throw new Error(`ollama_http_${response.status}`);
+  return response.json();
 }
 
 function sendFile(response, filePath) {
@@ -199,7 +246,31 @@ export function createServer({ dataDir = defaultDataDir, ollamaTimeoutMs = defau
         const user = requireUser(request, response, requestRole(request, url));
         if (!user) return;
       }
+      if (url.pathname === '/api/video/convert' && request.method === 'POST') {
+        const input = await binaryBody(request);
+        if (!input.length) return json(response, 400, { error: 'video_payload_empty' });
+        try {
+          const output = await convertWebmToMp4(input);
+          response.writeHead(200, { 'Content-Type': 'video/mp4', 'Content-Length': output.length, 'Content-Disposition': 'attachment; filename="dawith-video.mp4"', 'Cache-Control': 'no-store' });
+          return response.end(output);
+        } catch (error) {
+          if (error.code === 'ENOENT') return json(response, 501, { error: 'ffmpeg_unavailable', message: '이 PC에 FFmpeg가 설치되어 있지 않습니다.' });
+          return json(response, 422, { error: 'video_conversion_failed', message: error.message || 'MP4 변환에 실패했습니다.' });
+        }
+      }
       if (url.pathname === '/api/capabilities' && request.method === 'GET') return json(response, 200, await getCapabilities(store));
+      if (url.pathname === '/api/ollama/pull' && request.method === 'POST') {
+        const input = safeJson(await body(request, 32 * 1024));
+        const model = String(input.model || '');
+        if (!allowedOllamaModels.has(model)) return json(response, 400, { error: 'ollama_model_not_allowed', message: 'Dawith가 추천하는 로컬 모델만 설치할 수 있습니다.' });
+        try {
+          await pullOllamaModel(model);
+          return json(response, 200, { ok: true, model, transfer: { external: false, destination: '127.0.0.1:11434' } });
+        } catch (error) {
+          const reason = error.name === 'TimeoutError' || error.name === 'AbortError' ? 'ollama_pull_timeout' : String(error.message || '').startsWith('ollama_http_') ? error.message : 'ollama_unavailable';
+          return json(response, 503, { error: reason, message: 'Ollama가 실행 중인지 확인한 뒤 다시 시도하세요.' });
+        }
+      }
       if (url.pathname === '/api/auth/users' && request.method === 'GET') return json(response, 200, { users: store.listUsers() });
       if (url.pathname === '/api/auth/users' && request.method === 'POST') {
         const input = safeJson(await body(request, 32 * 1024));
