@@ -26,8 +26,8 @@ function platformLabel() {
 
 function recommendOllamaModel(memoryGB, cpuCores) {
   if (memoryGB < 8 || cpuCores < 4) return { model: 'qwen2.5:3b', label: '가벼운 작업용', reason: '메모리와 CPU 부담을 낮춘 3B 모델을 추천합니다.', fit: '권장' };
-  if (memoryGB < 16) return { model: 'qwen2.5:7b', label: '복지 기록 기본형', reason: '상담·회의록 정리와 속도의 균형이 좋은 기본 모델입니다.', fit: '권장' };
-  if (memoryGB < 32) return { model: 'qwen2.5:14b', label: '긴 맥락 분석형', reason: '긴 상담 기록과 문서 맥락을 더 안정적으로 다룹니다.', fit: '권장' };
+  if (memoryGB < 24) return { model: 'qwen2.5:7b', label: '복지 기록 기본형', reason: '일반적인 8~16GB 장치에서 속도와 품질의 균형이 좋은 기본 모델입니다.', fit: '권장' };
+  if (memoryGB < 48) return { model: 'qwen2.5:14b', label: '긴 맥락 분석형', reason: '메모리 여유가 있는 장치에서 긴 상담 기록을 더 안정적으로 다룹니다.', fit: '권장' };
   return { model: 'qwen2.5:32b', label: '고품질 분석형', reason: '충분한 메모리에서 긴 맥락과 재작성 품질을 우선합니다.', fit: '권장' };
 }
 

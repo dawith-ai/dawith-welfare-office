@@ -1,4 +1,4 @@
-# Dawith Welfare Office 0.4.4
+# Dawith Welfare Office 0.4.5
 
 사회복지기관의 상담 메모·회의 메모·녹취를 기관 PC 또는 기관 내부망에서 정리하는 Dawith Welfare Office입니다. 웹 데모와 Windows 설치형 EXE가 같은 로컬 API와 SQLite 저장소를 사용합니다.
 
@@ -20,7 +20,7 @@
 - 초안 생성 뒤 추출된 관계·주제·일정·후속 단서 확인
 - JSON·Markdown·HTML 로컬 내보내기 및 인쇄용 문서 생성
 - 기관 문서 스튜디오: 사업기획서·사업보고서·회의록 템플릿
-- Ollama 연결 도우미: 장치 메모리·CPU 기반 모델 추천, OS별 공식 설치 파일, 추천 모델 로컬 원클릭 pull
+- Ollama 연결 도우미: 장치 메모리·CPU 기반 모델 추천, 설치·연결·모델 준비 3단계 안내, 추천 모델 로컬 원클릭 pull
 - 행사 결과 영상 스튜디오: 사진·영상 장면, 자막·트림 핸들·장면 분할·페이드 전환, 플레이헤드·스크럽·Undo/Redo·자동 저장·단축키, VIDEO/CAPTION/AUDIO 타임라인, 로컬 음악, Dawith CI 끝 화면, WebM 저장 및 로컬 FFmpeg MP4 변환
 - 저장된 상담·회의 기록을 문서 초안 입력값으로 연결
 - 담당자 검토 후 문서 초안 저장 및 DOCX·Markdown·인쇄용 HTML 내보내기

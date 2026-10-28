@@ -105,6 +105,17 @@ function renderOllamaSetup() {
   const recommendation = c.ollama.recommendation || { model: 'qwen2.5:7b', label: '복지 기록 기본형', reason: '상담·회의록 정리에 적합한 기본 모델입니다.' };
   const models = (c.ollama.models || []).filter((model) => !model.toLowerCase().includes('embed'));
   const hasRecommendedModel = models.includes(recommendation.model);
+  const available = Boolean(c.ollama.available);
+  const setStep = (id, stateName) => { const step = $(`#${id}`); if (!step) return; step.classList.toggle('is-current', stateName === 'current'); step.classList.toggle('is-done', stateName === 'done'); step.classList.toggle('is-blocked', stateName === 'blocked'); };
+  setStep('ollamaStepInstall', available ? 'done' : 'current');
+  setStep('ollamaStepConnect', available ? 'done' : 'blocked');
+  setStep('ollamaStepModel', hasRecommendedModel ? 'done' : available ? 'current' : 'blocked');
+  const installText = $('#ollamaStepInstallText');
+  if (installText) installText.textContent = available ? '설치되어 있습니다.' : '공식 설치 파일을 한 번 실행합니다.';
+  const connectText = $('#ollamaStepConnectText');
+  if (connectText) connectText.textContent = available ? '이 PC의 Ollama에 연결되었습니다.' : 'Ollama를 설치한 뒤 상태 확인을 누르세요.';
+  const modelText = $('#ollamaStepModelText');
+  if (modelText) modelText.textContent = hasRecommendedModel ? `${recommendation.model}이 준비되어 있습니다.` : available ? `${recommendation.model}을 이 PC에 준비합니다.` : '먼저 Ollama 연결을 확인하세요.';
   const title = $('#ollamaRecommendationTitle');
   if (title) title.textContent = `${recommendation.model} · ${recommendation.label}`;
   const reason = $('#ollamaRecommendationReason');
@@ -118,11 +129,13 @@ function renderOllamaSetup() {
   const command = $('#ollamaCommand');
   if (command) command.textContent = `ollama pull ${recommendation.model}`;
   const button = $('#ollamaPullButton');
-  if (button) { button.disabled = !c.ollama.available || hasRecommendedModel; button.textContent = hasRecommendedModel ? '추천 모델 설치됨' : c.ollama.available ? '추천 모델 원클릭 설치' : 'Ollama 설치 후 사용'; }
+  if (button) { button.disabled = !available || hasRecommendedModel; button.textContent = hasRecommendedModel ? '준비 완료' : available ? '모델 준비' : '연결 후 사용'; }
   const download = $('#ollamaDownloadLink');
   if (download) { download.href = c.ollama.install?.downloadUrl || c.ollama.install?.url || 'https://ollama.com/download'; download.textContent = c.system.platform === 'linux' ? '공식 설치 안내 열기 ↗' : `${c.system.platformLabel} 설치 파일 받기 ↗`; }
   const status = $('#ollamaSetupStatus');
-  if (status) status.textContent = !c.ollama.available ? 'Ollama를 설치한 뒤 상태를 다시 확인하세요.' : hasRecommendedModel ? `추천 모델 ${recommendation.model}을(를) 사용할 수 있습니다.` : '버튼을 누르면 이 PC의 Ollama로 모델을 내려받습니다.';
+  if (status) status.textContent = !available ? '지금 할 일: 공식 설치 파일을 열고 Ollama를 설치한 뒤 “상태 확인”을 누르세요.' : hasRecommendedModel ? `준비 완료: ${recommendation.model}을 선택해 상담·회의록을 시작할 수 있습니다.` : `지금 할 일: “모델 준비”를 누르면 ${recommendation.model}이 이 PC에 저장됩니다.`;
+  const useButton = $('#ollamaUseButton');
+  if (useButton) useButton.classList.toggle('hidden', !hasRecommendedModel);
 }
 function renderCapabilities() { const c = state.capabilities; if (!c) return; renderRuntime(); const models = (c.ollama.models || []).filter((model) => !model.toLowerCase().includes('embed')); const ollamaValue = c.ollama.available ? (models.length ? `${models.length}개 모델 준비됨` : 'Ollama 실행됨 · 모델 필요') : '설치 또는 실행 필요'; const items = [['규칙 처리', c.rules.available ? '지금 사용 가능' : '불가'], ['Ollama 로컬 모델', ollamaValue], ['whisper.cpp 전사', c.whisper.available ? '모델 준비됨' : '모델 경로 필요']]; const summary = $('#capabilitySummary'); if (summary) summary.innerHTML = items.map(([name, value]) => `<div class="capability ${value.includes('사용 가능') || value.includes('준비됨') ? '' : 'off'}"><span>${name}</span><span>${value}</span></div>`).join(''); const modelSelect = $('#ollamaModel'); if (modelSelect) modelSelect.innerHTML = models.map((model) => `<option value="${escapeHtml(model)}">${escapeHtml(model)}</option>`).join(''); const option = $('#ollamaOption'); if (option) { option.classList.toggle('disabled', !models.length); option.querySelector('input').disabled = !models.length; } const hint = $('#ollamaHint'); if (hint) hint.textContent = models.length ? `${models.length}개 로컬 모델 · 127.0.0.1` : '설치 후 모델을 준비하면 선택할 수 있습니다'; const settingsStatus = $('#ollamaSettingsStatus'); if (settingsStatus) settingsStatus.textContent = c.ollama.available ? (models.length ? '연결됨' : '실행됨 · 모델 필요') : '연결되지 않음'; const settingsModels = $('#ollamaSettingsModels'); if (settingsModels) settingsModels.textContent = models.length ? `사용 가능한 모델 ${models.length}개` : '모델을 설치하면 여기에 표시됩니다'; const settingsDot = $('#ollamaSettingsDot'); if (settingsDot) settingsDot.classList.toggle('active', Boolean(c.ollama.available && models.length)); const action = $('#ollamaStatusAction'); if (action) action.textContent = c.ollama.available && models.length ? 'Ollama 모델 다시 확인' : 'Ollama 설치·연결 안내'; renderOllamaSetup(); }
 function renderCases() { const select = $('#caseSelect'); if (!select) return; select.innerHTML = state.cases.map((item) => `<option value="${escapeHtml(item.id)}">${escapeHtml(item.label)}</option>`).join(''); if (state.caseId && state.cases.some((item) => item.id === state.caseId)) select.value = state.caseId; else if (state.cases[0]) { state.caseId = state.cases[0].id; select.value = state.caseId; } }
@@ -214,6 +227,7 @@ function openOllamaSetup() { $('#ollamaDialog').showModal(); renderOllamaSetup()
 function closeOllamaSetup() { $('#ollamaDialog').close(); }
 async function refreshCapabilities() { if (DEMO_MODE) return showToast('공개 데모에서는 Ollama를 연결하지 않습니다. 기관용 EXE 또는 로컬 서버에서 사용하세요.'); try { state.capabilities = await fetch('/api/capabilities').then((response) => response.json()); renderCapabilities(); showToast(state.capabilities.ollama.available ? 'Ollama 상태를 확인했습니다.' : 'Ollama가 아직 감지되지 않습니다. 설치 후 다시 확인하세요.'); } catch { showToast('로컬 AI 상태를 확인하지 못했습니다.'); } }
 async function pullOllamaModel() { if (DEMO_MODE) return showToast('공개 데모에서는 Ollama를 연결하지 않습니다.'); const model = state.capabilities?.ollama?.recommendation?.model || 'qwen2.5:7b'; const button = $('#ollamaPullButton'); const status = $('#ollamaSetupStatus'); if (button) { button.disabled = true; button.textContent = '모델 다운로드 중…'; } if (status) status.textContent = `${model}을(를) 127.0.0.1에서 준비하고 있습니다. 모델 크기에 따라 시간이 걸릴 수 있습니다.`; try { const response = await fetch('/api/ollama/pull', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ model }) }); const result = await response.json(); if (!response.ok) throw new Error(result.message || result.error || 'ollama_pull_failed'); await refreshCapabilities(); if (status) status.textContent = `${model} 설치가 끝났습니다. 이제 로컬 모델을 선택해 초안을 만들 수 있습니다.`; } catch (error) { if (status) status.textContent = error.message || '모델 설치에 실패했습니다.'; showToast('모델을 설치하지 못했습니다. Ollama 실행 상태를 확인하세요.'); renderOllamaSetup(); } }
+function useRecommendedOllama() { const option = $('#ollamaOption input'); if (option?.disabled) return showToast('상담 작업을 먼저 열어주세요.'); option.checked = true; closeOllamaSetup(); if (!$('#workspaceView')?.classList.contains('active')) openTask('counseling'); showToast('추천 로컬 모델을 선택했습니다. 원문을 입력하고 초안을 만들어보세요.'); }
 async function copyOllamaCommand() { const command = $('#ollamaCommand').textContent; try { await navigator.clipboard.writeText(command); showToast('Ollama 명령을 복사했습니다.'); } catch { showToast(`복사할 명령: ${command}`); } }
 function quickStart() { openTask('counseling'); $('#rawText').value = samples.counseling; updateCharCount(); updateWorkflow(2); showToast('상담 예시를 넣었습니다. 초안 만들기를 눌러보세요.'); }
 function currentProvider() { return document.querySelector('input[name="provider"]:checked').value; }
@@ -323,6 +337,7 @@ document.addEventListener('click', (event) => {
   if (action === 'copyOllamaCommand') copyOllamaCommand();
   if (action === 'refreshCapabilities') refreshCapabilities();
   if (action === 'pullOllamaModel') pullOllamaModel();
+  if (action === 'useRecommendedOllama') useRecommendedOllama();
   if (action === 'logout') logout();
   if (action === 'closePrivacy') $('#privacyDialog').close();
   if (action === 'searchRecords') refreshRecords();
