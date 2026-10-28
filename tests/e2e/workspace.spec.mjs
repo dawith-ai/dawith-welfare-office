@@ -27,6 +27,23 @@ test('social-work meeting workflow can be completed locally', async ({ page }) =
   await expect(page.locator('#allRecords .record-item')).toHaveCount(1);
 });
 
+test('first launch explains the runtime and local Ollama setup', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.locator('#runtimePillText')).toHaveText('브라우저 로컬 모드');
+  await expect(page.getByRole('button', { name: /상담 예시로 시작/ })).toBeVisible();
+  await page.getByRole('button', { name: /상담 예시로 시작/ }).click();
+  await expect(page.locator('#workspaceView')).toHaveClass(/active/);
+  await expect(page.locator('#rawText')).toHaveValue(/친모는 7월에 이혼/);
+  await page.getByRole('button', { name: /업무 선택/ }).click();
+  await page.locator('[data-action="ollamaSetup"]').first().click();
+  await expect(page.locator('#ollamaDialog')).toBeVisible();
+  await expect(page.locator('#ollamaDownloadLink')).toHaveAttribute('href', 'https://ollama.com/download');
+  await expect(page.locator('#ollamaCommand')).toHaveText('ollama pull qwen2.5:7b');
+  await page.getByRole('button', { name: '×' }).last().click();
+  await page.goto('/?desktop=1');
+  await expect(page.locator('#runtimePillText')).toHaveText('Dawith 데스크톱 EXE');
+});
+
 test('a record can be assigned to a locally created case', async ({ page }) => {
   await page.goto('/');
   await page.getByRole('button', { name: /상담 내용 정리/ }).click();

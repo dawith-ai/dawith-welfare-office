@@ -1,6 +1,6 @@
 {
   "name": "dawith-welfare-office",
-  "version": "0.3.5",
+  "version": "0.4.0",
   "private": true,
   "type": "module",
   "description": "Dawith local-first welfare record workspace with no cloud LLM path",
@@ -17,7 +17,8 @@
     "dist:win": "npm run dist:win:setup && npm run dist:win:portable",
     "dist:win:setup": "electron-builder --win nsis --x64 --publish never",
     "dist:win:portable": "electron-builder --win portable --x64 --config.compression=store --publish never",
-    "dist:dir": "electron-builder --dir"
+    "dist:dir": "electron-builder --dir",
+    "dist:mac": "electron-builder --mac dmg --arm64 --publish never"
   },
   "main": "desktop/main.mjs",
   "devDependencies": {

@@ -52,7 +52,9 @@ async function createWindow() {
     },
   });
 
-  await mainWindow.loadURL(localServer.url);
+  const desktopUrl = new URL(localServer.url);
+  desktopUrl.searchParams.set('desktop', '1');
+  await mainWindow.loadURL(desktopUrl.toString());
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
     if (url.startsWith('http://127.0.0.1:')) return { action: 'allow' };
     shell.openExternal(url);
