@@ -24,11 +24,11 @@ function platformLabel() {
   return { darwin: 'macOS', win32: 'Windows', linux: 'Linux' }[process.platform] || process.platform;
 }
 
-function recommendOllamaModel(memoryGB, cpuCores) {
-  if (memoryGB < 8 || cpuCores < 4) return { model: 'qwen2.5:3b', label: '가벼운 작업용', reason: '메모리와 CPU 부담을 낮춘 3B 모델을 추천합니다.', fit: '권장' };
-  if (memoryGB < 24) return { model: 'qwen2.5:7b', label: '복지 기록 기본형', reason: '일반적인 8~16GB 장치에서 속도와 품질의 균형이 좋은 기본 모델입니다.', fit: '권장' };
-  if (memoryGB < 48) return { model: 'qwen2.5:14b', label: '긴 맥락 분석형', reason: '메모리 여유가 있는 장치에서 긴 상담 기록을 더 안정적으로 다룹니다.', fit: '권장' };
-  return { model: 'qwen2.5:32b', label: '고품질 분석형', reason: '충분한 메모리에서 긴 맥락과 재작성 품질을 우선합니다.', fit: '권장' };
+export function recommendOllamaModel(memoryGB, cpuCores) {
+  if (memoryGB < 8 || cpuCores < 4) return { model: 'qwen2.5:3b', label: '가벼운 작업용', reason: '이 PC에서는 가벼운 모델이 멈춤 없이 사용하는 데 유리합니다.', workload: '짧은 상담 메모·정형 요약', experience: '가벼운 편', download: '부담 낮음', fit: '권장' };
+  if (memoryGB < 24) return { model: 'qwen2.5:7b', label: '복지 기록 기본형', reason: '일반 사무용 PC에서 상담·회의록 품질과 속도의 균형이 가장 좋습니다.', workload: '상담일지·회의록·후속조치', experience: '무난한 편', download: '보통', fit: '권장' };
+  if (memoryGB < 48) return { model: 'qwen2.5:14b', label: '긴 맥락 분석형', reason: '메모리 여유가 있어 긴 상담 기록과 여러 문단의 맥락을 더 안정적으로 다룹니다.', workload: '긴 상담 기록·문서 재작성', experience: '조금 느릴 수 있음', download: '큼', fit: '권장' };
+  return { model: 'qwen2.5:32b', label: '고품질 분석형', reason: '충분한 메모리에서 긴 맥락과 재작성 품질을 우선할 수 있습니다.', workload: '긴 문서·복합 사례 분석', experience: '품질 우선·처리시간 김', download: '매우 큼', fit: '권장' };
 }
 
 export function localRuntime() {

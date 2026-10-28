@@ -599,6 +599,10 @@ dialog::backdrop { background: rgba(25,49,39,.45); }
 .ollama-device-label { display: block; color: #6f8493; font: 800 9px ui-monospace, monospace; letter-spacing: .1em; text-transform: uppercase; }
 .ollama-device-card strong { display: block; margin-top: 6px; color: #294b62; font-size: 16px; letter-spacing: -.04em; }
 .ollama-device-card p { margin: 5px 0 0; color: #71818a; font-size: 10px; line-height: 1.5; }
+.ollama-recommendation-meta { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 7px; margin-top: 12px; }
+.ollama-recommendation-meta span { display: grid; gap: 3px; min-width: 0; padding: 7px 8px; border-radius: 8px; background: rgba(255,255,255,.7); }
+.ollama-recommendation-meta b { color: #789087; font-size: 8px; font-weight: 800; }
+.ollama-recommendation-meta em { color: #315b49; font-size: 9px; font-style: normal; font-weight: 800; line-height: 1.35; }
 .ollama-device-specs { display: grid; align-content: center; gap: 5px; min-width: 92px; color: #557188; font-size: 10px; font-weight: 800; text-align: right; }
 .ollama-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 15px; }
 .ollama-actions .primary-small, .ollama-actions .secondary-button { min-height: 34px; }
@@ -624,6 +628,9 @@ dialog::backdrop { background: rgba(25,49,39,.45); }
 .ollama-steps li.is-current b { color: #145f48; }
 .ollama-steps span:not(.ollama-step-marker) { margin-top: 2px; color: #7e8c84; font-size: 9px; line-height: 1.45; }
 .ollama-steps a { color: #2c7256; font-size: 9px; font-weight: 850; white-space: nowrap; }
+.ollama-steps a.is-primary { padding: 7px 9px; border-radius: 7px; background: #17694f; color: #fff; box-shadow: 0 4px 10px rgba(23, 105, 79, .14); }
+.ollama-steps a.is-ready { color: #39785b; pointer-events: none; }
+.ollama-steps .step-action:disabled { cursor: default; opacity: .72; }
 .ollama-steps .step-action { min-height: 26px; padding: 5px 8px; font-size: 9px; white-space: nowrap; }
 .ollama-steps .step-action.text-button { padding-inline: 3px; color: #2c7256; }
 .copy-command { margin-left: 5px; padding: 7px 8px; border: 1px solid #d5e2ec; border-radius: 7px; background: #fff; color: #4c6e89; font-size: 9px; font-weight: 800; }
@@ -642,6 +649,7 @@ dialog::backdrop { background: rgba(25,49,39,.45); }
   .engine-help { align-items: flex-start; flex-direction: column; }
   .ollama-device-card { grid-template-columns: 1fr; }
   .ollama-device-specs { grid-template-columns: repeat(3, 1fr); min-width: 0; text-align: left; }
+  .ollama-recommendation-meta { grid-template-columns: 1fr; }
   .ollama-actions > * { flex: 1 1 auto; text-align: center; }
 }
 

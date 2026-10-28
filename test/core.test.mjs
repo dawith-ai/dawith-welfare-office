@@ -11,6 +11,7 @@ import { parseWhisperJson, sha256 } from '../src/transcription.mjs';
 import { buildDocumentDraft } from '../src/documents.mjs';
 import { documentToDocx } from '../src/document-export.mjs';
 import { openStore } from '../src/storage.mjs';
+import { recommendOllamaModel } from '../src/capabilities.mjs';
 import { analyzeTemplate, renderTemplate } from '../src/template-engine.mjs';
 import { createServer, startServer } from '../server.mjs';
 
@@ -46,6 +47,14 @@ test('invalid local-model output never bypasses deterministic fallback', () => {
   const fallback = buildDrafts({ kind: 'meeting', rawText: '회의에서 주거 지원을 논의함.' });
   assert.equal(parseOllamaDraft('not-json', fallback), fallback);
   assert.equal(parseOllamaDraft(JSON.stringify({ counselingLog: 'only one field' }), fallback), fallback);
+});
+
+test('Ollama recommendation stays usable across common office hardware tiers', () => {
+  assert.equal(recommendOllamaModel(4, 2).model, 'qwen2.5:3b');
+  assert.equal(recommendOllamaModel(16, 8).model, 'qwen2.5:7b');
+  assert.equal(recommendOllamaModel(32, 8).model, 'qwen2.5:14b');
+  assert.equal(recommendOllamaModel(64, 12).model, 'qwen2.5:32b');
+  assert.match(recommendOllamaModel(16, 8).workload, /상담|회의록/);
 });
 
 test('document studio builds welfare templates and a valid Word document locally', async () => {

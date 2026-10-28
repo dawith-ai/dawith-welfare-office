@@ -120,6 +120,12 @@ function renderOllamaSetup() {
   if (title) title.textContent = `${recommendation.model} · ${recommendation.label}`;
   const reason = $('#ollamaRecommendationReason');
   if (reason) reason.textContent = hasRecommendedModel ? '이미 설치되어 바로 선택할 수 있습니다.' : recommendation.reason;
+  const workload = $('#ollamaRecommendationWorkload');
+  if (workload) workload.textContent = recommendation.workload || '상담·회의록 정리';
+  const experience = $('#ollamaRecommendationExperience');
+  if (experience) experience.textContent = recommendation.experience || '무난한 편';
+  const downloadLoad = $('#ollamaRecommendationDownload');
+  if (downloadLoad) downloadLoad.textContent = recommendation.download || '보통';
   const platform = $('#ollamaSystemPlatform');
   if (platform) platform.textContent = `${c.system.platformLabel} ${c.system.arch}`;
   const memory = $('#ollamaSystemMemory');
@@ -131,7 +137,9 @@ function renderOllamaSetup() {
   const button = $('#ollamaPullButton');
   if (button) { button.disabled = !available || hasRecommendedModel; button.textContent = hasRecommendedModel ? '준비 완료' : available ? '모델 준비' : '연결 후 사용'; }
   const download = $('#ollamaDownloadLink');
-  if (download) { download.href = c.ollama.install?.downloadUrl || c.ollama.install?.url || 'https://ollama.com/download'; download.textContent = c.system.platform === 'linux' ? '공식 설치 안내 열기 ↗' : `${c.system.platformLabel} 설치 파일 받기 ↗`; }
+  if (download) { download.href = c.ollama.install?.downloadUrl || c.ollama.install?.url || 'https://ollama.com/download'; download.textContent = available ? '설치됨 ✓' : c.system.platform === 'linux' ? '공식 설치 안내 열기 ↗' : `${c.system.platformLabel} 설치 파일 받기 ↗`; download.classList.toggle('is-ready', available); download.classList.toggle('is-primary', !available); download.setAttribute('aria-disabled', String(available)); }
+  const connectButton = $('#ollamaStepConnect button');
+  if (connectButton) { connectButton.disabled = available; connectButton.textContent = available ? '연결됨 ✓' : '상태 확인'; }
   const status = $('#ollamaSetupStatus');
   if (status) status.textContent = !available ? '지금 할 일: 공식 설치 파일을 열고 Ollama를 설치한 뒤 “상태 확인”을 누르세요.' : hasRecommendedModel ? `준비 완료: ${recommendation.model}을 선택해 상담·회의록을 시작할 수 있습니다.` : `지금 할 일: “모델 준비”를 누르면 ${recommendation.model}이 이 PC에 저장됩니다.`;
   const useButton = $('#ollamaUseButton');
