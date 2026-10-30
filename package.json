@@ -31,6 +31,10 @@
     "appId": "site.welfarehub.dawith.welfareoffice",
     "productName": "Dawith Welfare Office",
     "asar": true,
+    "electronLanguages": [
+      "en-US",
+      "ko"
+    ],
     "files": [
       "desktop/**/*",
       "public/**/*",
