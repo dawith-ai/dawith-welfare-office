@@ -3,8 +3,10 @@ const $$ = (selector) => [...document.querySelectorAll(selector)];
 
 const studio = {
   scenes: [],
+  brolls: [],
   overlays: [],
   selected: null,
+  selectedBroll: null,
   selectedOverlay: null,
   selectedMosaic: null,
   playing: false,
@@ -18,6 +20,7 @@ const studio = {
   audioPreview: null,
   sourceCache: new Map(),
   videoCache: new Map(),
+  brollVideoCache: new Map(),
   brandImage: null,
 };
 
@@ -25,8 +28,9 @@ const STORAGE_KEY = 'dawith.video-studio.project.v2';
 
 function timelineDuration() {
   const sceneDuration = studio.scenes.reduce((sum, scene) => sum + Math.max(0, Number(scene.duration) || 0), 0) + (studio.scenes.length ? 2 : 0);
+  const brollDuration = studio.brolls.reduce((max, broll) => Math.max(max, Number(broll.start || 0) + Number(broll.duration || 0)), 0);
   const overlayDuration = studio.overlays.reduce((max, overlay) => Math.max(max, Number(overlay.start || 0) + Number(overlay.duration || 0)), 0);
-  return Math.max(sceneDuration, overlayDuration);
+  return Math.max(sceneDuration, brollDuration, overlayDuration);
 }
 
 function formatTime(value) {
@@ -36,7 +40,7 @@ function formatTime(value) {
 
 function serializableProject() {
   return {
-    version: 3,
+    version: 4,
     title: $('#videoProjectTitle')?.value || '',
     organization: $('#videoOrgName')?.value || '',
     eventDate: $('#videoEventDate')?.value || '',
@@ -47,13 +51,14 @@ function serializableProject() {
     voiceName: $('#videoVoiceFile')?.files[0]?.name || '',
     musicVolume: Number($('#videoMusicVolume')?.value || 35),
     voiceVolume: Number($('#videoVoiceVolume')?.value || 100),
+    brolls: studio.brolls.map(({ file, src, ...broll }) => ({ ...broll, src: src?.startsWith('data:') ? src : '' })),
     overlays: studio.overlays.map(({ ...overlay }) => ({ ...overlay })),
     scenes: studio.scenes.map(({ file, src, ...scene }) => ({ ...scene, src: src?.startsWith('data:') ? src : '' })),
   };
 }
 
 function stateSnapshot() {
-  return JSON.stringify({ project: serializableProject(), selected: studio.selected, currentTime: studio.currentTime });
+  return JSON.stringify({ project: serializableProject(), selected: studio.selected, selectedBroll: studio.selectedBroll, currentTime: studio.currentTime });
 }
 
 function updateHistoryButtons() {
@@ -85,8 +90,10 @@ function restoreSnapshot(snapshot) {
   const parsed = JSON.parse(snapshot);
   const project = parsed.project || parsed;
   for (const scene of studio.scenes) if (scene.src?.startsWith('blob:')) URL.revokeObjectURL(scene.src);
+  for (const broll of studio.brolls) if (broll.src?.startsWith('blob:')) URL.revokeObjectURL(broll.src);
   studio.sourceCache.clear();
   studio.videoCache.clear();
+  studio.brollVideoCache.clear();
   $('#videoProjectTitle').value = project.title || '';
   $('#videoOrgName').value = project.organization || '';
   $('#videoEventDate').value = project.eventDate || '';
@@ -104,7 +111,15 @@ function restoreSnapshot(snapshot) {
     x: Number(overlay.x ?? 50), y: Number(overlay.y ?? 22), size: Number(overlay.size ?? 42),
     style: overlay.style || 'title', animation: overlay.animation || 'fade', color: overlay.color || '#ffffff', source: overlay.source || '',
   }));
+  studio.brolls = (project.brolls || []).map((broll) => ({
+    id: broll.id || `broll-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+    name: broll.name || 'B-roll 레이어', type: broll.type || 'image', src: broll.src || '', file: null, fileName: broll.fileName || '',
+    start: Math.max(0, Number(broll.start) || 0), duration: Math.max(.2, Number(broll.duration) || 3),
+    x: Number(broll.x ?? 60), y: Number(broll.y ?? 12), width: Number(broll.width ?? 30), height: Number(broll.height ?? 30),
+    opacity: Number(broll.opacity ?? 100), framing: broll.framing || 'cover', trimStart: Number(broll.trimStart ?? 0), trimEnd: Number(broll.trimEnd ?? 1),
+  }));
   studio.selected = parsed.selected || studio.scenes[0]?.id || null;
+  studio.selectedBroll = parsed.selectedBroll || studio.brolls[0]?.id || null;
   studio.selectedOverlay = parsed.selectedOverlay || studio.overlays[0]?.id || null;
   studio.selectedMosaic = null;
   studio.currentTime = Math.min(Number(parsed.currentTime) || 0, timelineDuration());
@@ -215,6 +230,24 @@ function addScene(file, sample = null) {
   return scene;
 }
 
+function addBroll(file) {
+  if (!file) return;
+  const src = URL.createObjectURL(file);
+  const broll = {
+    id: `broll-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+    name: file.name.replace(/\.[^.]+$/, '').slice(0, 60), type: file.type.startsWith('video/') ? 'video' : 'image',
+    src, file, fileName: file.name, start: 0, duration: 3, x: 60, y: 12, width: 30, height: 30,
+    opacity: 100, framing: 'cover', trimStart: 0, trimEnd: 1,
+  };
+  studio.urls.add(src);
+  studio.brolls.push(broll);
+  studio.selectedBroll = broll.id;
+  renderTimeline();
+  renderBrollEditor();
+  drawSelected();
+  saveProjectState();
+}
+
 function addOverlay() {
   if (!studio.scenes.length) return toast('타이틀을 넣기 전에 장면을 하나 이상 추가해 주세요.');
   const overlay = {
@@ -234,15 +267,20 @@ function selectedOverlay() {
   return studio.overlays.find((overlay) => overlay.id === studio.selectedOverlay) || null;
 }
 
+function selectedBroll() {
+  return studio.brolls.find((broll) => broll.id === studio.selectedBroll) || null;
+}
+
 function selectedScene() {
   return studio.scenes.find((scene) => scene.id === studio.selected) || null;
 }
 
 function sceneAtTime(time) {
   let cursor = 0;
-  for (const scene of studio.scenes) {
+  for (let index = 0; index < studio.scenes.length; index += 1) {
+    const scene = studio.scenes[index];
     const end = cursor + Number(scene.duration || 0);
-    if (time < end || scene === studio.scenes.at(-1)) return { scene, offset: Math.max(0, time - cursor), start: cursor, end };
+    if (time < end || scene === studio.scenes.at(-1)) return { scene, index, offset: Math.max(0, time - cursor), start: cursor, end };
     cursor = end;
   }
   return null;
@@ -265,7 +303,10 @@ async function seekTimeline(time, { draw = true } = {}) {
     renderSceneList();
   }
   updatePlayhead();
-  if (draw && target) await drawScene(target.scene, target.offset / Math.max(Number(target.scene.duration) || 1, .1));
+  if (draw && target) {
+    const previousScene = target.index > 0 ? studio.scenes[target.index - 1] : null;
+    await drawScene(target.scene, target.offset / Math.max(Number(target.scene.duration) || 1, .1), studio.currentTime, previousScene, 1);
+  }
 }
 
 function renderSceneList() {
@@ -279,6 +320,7 @@ function renderSceneList() {
     $('#videoDurationSummary').value = '총 0초';
     renderTimeline();
     renderOverlayEditor();
+    renderBrollEditor();
     renderMosaicEditor();
     return;
   }
@@ -353,6 +395,25 @@ function renderOverlayEditor() {
   $('#videoOverlayX').value = overlay.x;
   $('#videoOverlayY').value = overlay.y;
   $('#videoOverlaySize').value = overlay.size;
+}
+
+function renderBrollEditor() {
+  const broll = selectedBroll();
+  const form = $('#videoBrollForm');
+  if (!form) return;
+  form.classList.toggle('video-disabled', !broll);
+  $('#videoRemoveBroll').disabled = !broll;
+  if (!broll) return;
+  $('#videoBrollName').value = broll.name;
+  $('#videoBrollStart').value = broll.start;
+  $('#videoBrollDuration').value = broll.duration;
+  $('#videoBrollX').value = broll.x;
+  $('#videoBrollY').value = broll.y;
+  $('#videoBrollWidth').value = broll.width;
+  $('#videoBrollHeight').value = broll.height;
+  $('#videoBrollOpacity').value = broll.opacity;
+  $('#videoBrollOpacityValue').textContent = `${broll.opacity}%`;
+  $('#videoBrollFraming').value = broll.framing;
 }
 
 function roundedRect(ctx, x, y, width, height, radius) {
@@ -511,11 +572,13 @@ function drawMosaics(ctx, scene, canvas) {
 function renderTimeline() {
   const scale = Number($('#videoTimelineScale')?.value || 100) / 100;
   const videoTrack = $('#videoTimelineVideo');
+  const brollTrack = $('#videoTimelineBroll');
   const captionTrack = $('#videoTimelineCaption');
   const overlayTrack = $('#videoTimelineOverlay');
-  if (!videoTrack || !captionTrack || !overlayTrack) return;
+  if (!videoTrack || !brollTrack || !captionTrack || !overlayTrack) return;
   const widthFor = (scene) => Math.max(112, scene.duration * 76 * scale);
   videoTrack.innerHTML = studio.scenes.length ? studio.scenes.map((scene, index) => `<button type="button" class="timeline-clip${scene.id === studio.selected ? ' is-selected' : ''}" data-scene-id="${esc(scene.id)}" style="--clip-width:${widthFor(scene)}px"><span>${index + 1}</span><b>${esc(scene.name || '장면')}</b><small>${Number(scene.duration).toFixed(1)}s</small><i class="timeline-handle timeline-handle-start" data-trim="start" aria-label="시작 조절"></i><i class="timeline-handle timeline-handle-end" data-trim="end" aria-label="끝 조절"></i></button>`).join('') : '<span class="timeline-empty">장면을 넣으면 타임라인에 표시됩니다.</span>';
+  brollTrack.innerHTML = studio.brolls.length ? studio.brolls.map((broll) => `<button type="button" class="timeline-broll-clip${broll.id === studio.selectedBroll ? ' is-selected' : ''}" data-broll-id="${esc(broll.id)}" style="--clip-offset:${Math.max(0, Number(broll.start) || 0) * 76 * scale}px;--clip-width:${Math.max(44, Number(broll.duration || 3) * 76 * scale)}px">${esc(broll.name || 'B-roll')}</button>`).join('') : '<span class="timeline-empty">＋ 레이어 가져오기로 V2 영상을 추가하세요.</span>';
   captionTrack.innerHTML = studio.scenes.length ? studio.scenes.map((scene) => `<button type="button" class="timeline-caption-clip${scene.id === studio.selected ? ' is-selected' : ''}" data-scene-id="${esc(scene.id)}" style="--clip-width:${widthFor(scene)}px">${esc(scene.caption || '자막 없음')}</button>`).join('') : '';
   overlayTrack.innerHTML = studio.overlays.length ? studio.overlays.map((overlay) => `<button type="button" class="timeline-overlay-clip${overlay.id === studio.selectedOverlay ? ' is-selected' : ''}" data-overlay-id="${esc(overlay.id)}" style="--clip-offset:${Math.max(0, Number(overlay.start) || 0) * 76 * scale}px;--clip-width:${Math.max(44, Number(overlay.duration || 3) * 76 * scale)}px">${esc(overlay.text || '타이틀')}</button>`).join('') : '<span class="timeline-empty">＋ 타이틀 버튼으로 독립 그래픽을 추가하세요.</span>';
   const ruler = $('#videoTimelineRuler');
@@ -526,6 +589,7 @@ function renderTimeline() {
   }
   updatePlayhead();
   renderOverlayEditor();
+  renderBrollEditor();
 }
 
 async function sourceForScene(scene, progress = 0) {
@@ -559,7 +623,68 @@ async function sourceForScene(scene, progress = 0) {
   return video;
 }
 
-async function drawScene(scene, progress = 0, timelineTime = studio.currentTime) {
+async function sourceForBroll(broll, progress = 0) {
+  if (!broll?.src) return null;
+  if (broll.type !== 'video') {
+    const key = `broll:${broll.src}`;
+    if (studio.sourceCache.has(key)) return studio.sourceCache.get(key);
+    const image = new Image();
+    image.src = broll.src;
+    await new Promise((resolve) => { image.onload = resolve; image.onerror = resolve; });
+    studio.sourceCache.set(key, image);
+    return image;
+  }
+  let video = studio.brollVideoCache.get(broll.id);
+  if (!video) {
+    video = document.createElement('video');
+    video.src = broll.src;
+    video.muted = true;
+    video.preload = 'auto';
+    video.playsInline = true;
+    studio.brollVideoCache.set(broll.id, video);
+    await new Promise((resolve) => { video.onloadeddata = resolve; video.onerror = resolve; });
+  }
+  if (video.duration) {
+    const start = Math.max(0, Math.min(.9, Number(broll.trimStart || 0)));
+    const end = Math.max(start + .1, Math.min(1, Number(broll.trimEnd || 1)));
+    const nextTime = Math.min(video.duration - .05, video.duration * (start + progress * (end - start)));
+    if (Math.abs(video.currentTime - nextTime) > .04) {
+      await new Promise((resolve) => { video.addEventListener('seeked', resolve, { once: true }); video.currentTime = nextTime; setTimeout(resolve, 120); });
+    }
+  }
+  return video;
+}
+
+async function drawBrolls(ctx, time, canvas) {
+  for (const broll of studio.brolls) {
+    const start = Number(broll.start) || 0;
+    const duration = Math.max(.2, Number(broll.duration) || 3);
+    if (time < start || time >= start + duration) continue;
+    const source = await sourceForBroll(broll, (time - start) / duration);
+    if (!source) continue;
+    const sourceWidth = source.videoWidth || source.naturalWidth || source.width;
+    const sourceHeight = source.videoHeight || source.naturalHeight || source.height;
+    if (!sourceWidth || !sourceHeight) continue;
+    const boxX = Math.max(0, Math.min(100, Number(broll.x ?? 60))) / 100 * canvas.width;
+    const boxY = Math.max(0, Math.min(100, Number(broll.y ?? 12))) / 100 * canvas.height;
+    const boxWidth = Math.max(1, Math.min(100, Number(broll.width ?? 30))) / 100 * canvas.width;
+    const boxHeight = Math.max(1, Math.min(100, Number(broll.height ?? 30))) / 100 * canvas.height;
+    const fitScale = broll.framing === 'contain'
+      ? Math.min(boxWidth / sourceWidth, boxHeight / sourceHeight)
+      : Math.max(boxWidth / sourceWidth, boxHeight / sourceHeight);
+    const drawWidth = sourceWidth * fitScale;
+    const drawHeight = sourceHeight * fitScale;
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(boxX, boxY, boxWidth, boxHeight);
+    ctx.clip();
+    ctx.globalAlpha = Math.max(0, Math.min(1, Number(broll.opacity ?? 100) / 100));
+    ctx.drawImage(source, boxX + (boxWidth - drawWidth) / 2, boxY + (boxHeight - drawHeight) / 2, drawWidth, drawHeight);
+    ctx.restore();
+  }
+}
+
+async function drawScene(scene, progress = 0, timelineTime = studio.currentTime, previousScene = null, previousProgress = 1) {
   const canvas = $('#videoCanvas');
   if (!canvas) return;
   const ctx = canvas.getContext('2d');
@@ -570,7 +695,21 @@ async function drawScene(scene, progress = 0, timelineTime = studio.currentTime)
   ctx.fillStyle = gradient; ctx.fillRect(0, 0, canvas.width, canvas.height);
   if (scene) {
     const source = await sourceForScene(scene, progress);
-    if (source) { ctx.save(); ctx.globalAlpha = .92; drawCover(ctx, source, canvas, scene, progress); ctx.restore(); ctx.fillStyle = 'rgba(18, 27, 24, .22)'; ctx.fillRect(0, 0, canvas.width, canvas.height); drawMosaics(ctx, scene, canvas); }
+    const crossfade = scene.transition === 'crossfade' && previousScene && progress < .22;
+    const previousSource = crossfade ? await sourceForScene(previousScene, previousProgress) : null;
+    if (previousSource) {
+      ctx.save();
+      ctx.globalAlpha = .92 * (1 - progress / .22);
+      drawCover(ctx, previousSource, canvas, previousScene, previousProgress);
+      ctx.restore();
+      ctx.fillStyle = 'rgba(18, 27, 24, .22)'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+      drawMosaics(ctx, previousScene, canvas);
+    }
+    if (source) {
+      ctx.save(); ctx.globalAlpha = crossfade ? .92 * Math.min(1, progress / .22) : .92; drawCover(ctx, source, canvas, scene, progress); ctx.restore();
+      ctx.fillStyle = 'rgba(18, 27, 24, .22)'; ctx.fillRect(0, 0, canvas.width, canvas.height); drawMosaics(ctx, scene, canvas);
+    }
+    await drawBrolls(ctx, Number(timelineTime) || 0, canvas);
     ctx.fillStyle = textColor;
     ctx.textAlign = 'left'; ctx.font = `700 ${Math.max(18, Math.round(canvas.width / 43))}px sans-serif`;
     ctx.fillText($('#videoOrgName').value.trim() || '우리 기관', 28, 42);
@@ -583,7 +722,14 @@ async function drawScene(scene, progress = 0, timelineTime = studio.currentTime)
   drawOverlays(ctx, Number(timelineTime) || 0, canvas);
 }
 
-async function drawSelected() { await drawScene(selectedScene(), 0, studio.currentTime); }
+async function drawSelected() {
+  const scene = selectedScene();
+  if (!scene) return drawScene(null, 0, studio.currentTime);
+  const target = sceneAtTime(studio.currentTime);
+  const index = studio.scenes.findIndex((item) => item.id === scene.id);
+  const progress = target?.scene.id === scene.id ? target.offset / Math.max(Number(scene.duration) || 1, .1) : 0;
+  await drawScene(scene, progress, studio.currentTime, index > 0 ? studio.scenes[index - 1] : null, 1);
+}
 
 function syncSceneEditor() {
   const scene = selectedScene();
@@ -639,6 +785,31 @@ function syncMosaicEditor() {
   $('#videoMosaicAmountValue').textContent = mosaic.amount;
   drawSelected();
   scheduleSave();
+}
+
+function syncBrollEditor() {
+  const broll = selectedBroll();
+  if (!broll) return;
+  broll.name = $('#videoBrollName').value.trim().slice(0, 60) || 'B-roll 레이어';
+  broll.start = Math.max(0, Math.min(120, Number($('#videoBrollStart').value) || 0));
+  broll.duration = Math.max(.2, Math.min(120, Number($('#videoBrollDuration').value) || 3));
+  broll.x = Math.max(0, Math.min(100, Number($('#videoBrollX').value) || 0));
+  broll.y = Math.max(0, Math.min(100, Number($('#videoBrollY').value) || 0));
+  broll.width = Math.max(1, Math.min(100, Number($('#videoBrollWidth').value) || 1));
+  broll.height = Math.max(1, Math.min(100, Number($('#videoBrollHeight').value) || 1));
+  broll.opacity = Math.max(0, Math.min(100, Number($('#videoBrollOpacity').value) || 0));
+  broll.framing = $('#videoBrollFraming').value;
+  $('#videoBrollOpacityValue').textContent = `${broll.opacity}%`;
+  renderTimeline();
+  drawSelected();
+  scheduleSave();
+}
+
+function selectBroll(id) {
+  studio.selectedBroll = id;
+  renderBrollEditor();
+  renderTimeline();
+  drawSelected();
 }
 
 function addMosaic() {
@@ -704,7 +875,7 @@ function addSamples() {
 
 function clearScenes() {
   for (const scene of studio.scenes) if (scene.src.startsWith('blob:')) URL.revokeObjectURL(scene.src);
-  studio.urls.clear(); studio.sourceCache.clear(); studio.scenes = []; studio.overlays = []; studio.selected = null; studio.selectedOverlay = null; studio.selectedMosaic = null; studio.currentTime = 0; renderSceneList(); drawSelected(); saveProjectState();
+  studio.urls.clear(); studio.sourceCache.clear(); studio.brollVideoCache.clear(); studio.scenes = []; studio.brolls = []; studio.overlays = []; studio.selected = null; studio.selectedBroll = null; studio.selectedOverlay = null; studio.selectedMosaic = null; studio.currentTime = 0; renderSceneList(); drawSelected(); saveProjectState();
 }
 
 function reorder(fromId, toId) {
@@ -881,9 +1052,10 @@ async function exportVideo(format = 'webm') {
     recorder.ondataavailable = (event) => { if (event.data.size) chunks.push(event.data); };
     const stopped = new Promise((resolve) => { recorder.onstop = resolve; }); recorder.start(250);
     let timelineCursor = 0;
-    for (const scene of studio.scenes) {
+    for (let index = 0; index < studio.scenes.length; index += 1) {
+      const scene = studio.scenes[index];
       const started = performance.now();
-      while (performance.now() - started < scene.duration * 1000) { const elapsed = (performance.now() - started) / 1000; await drawScene(scene, elapsed / scene.duration, timelineCursor + elapsed); await new Promise((resolve) => requestAnimationFrame(resolve)); }
+      while (performance.now() - started < scene.duration * 1000) { const elapsed = (performance.now() - started) / 1000; await drawScene(scene, elapsed / scene.duration, timelineCursor + elapsed, index > 0 ? studio.scenes[index - 1] : null, 1); await new Promise((resolve) => requestAnimationFrame(resolve)); }
       timelineCursor += Number(scene.duration) || 0;
     }
     const ending = { name: '끝 화면', caption: $('#videoEndingText').value.trim() || '함께해 주셔서 고맙습니다.', captionStyle: 'center', duration: 2, type: 'image', src: '' };
@@ -906,6 +1078,7 @@ function toast(message) { window.dispatchEvent(new CustomEvent('dawith-toast', {
 
 function bind() {
   $('#videoMediaFile').addEventListener('change', (event) => { [...event.target.files].slice(0, 200 - studio.scenes.length).forEach((file) => addScene(file)); renderSceneList(); saveProjectState(); event.target.value = ''; });
+  $('#videoBrollFile').addEventListener('change', (event) => { addBroll(event.target.files[0]); event.target.value = ''; });
   $('#videoProjectImportFile').addEventListener('change', (event) => { importProjectFile(event.target.files[0]); event.target.value = ''; });
   $('#videoMusicFile').addEventListener('change', (event) => { const file = event.target.files[0]; $('#videoMusicName').textContent = file?.name || '선택하지 않으면 무음으로 저장합니다.'; $('#videoAudioTrackLabel').textContent = file ? `배경음악 · ${file.name}` : '배경음악 · 선택한 파일'; renderAudioWaveform(file, '#videoAudioWaveform'); scheduleSave(); });
   $('#videoVoiceFile').addEventListener('change', (event) => { const file = event.target.files[0]; $('#videoVoiceName').textContent = file?.name || '두 번째 오디오 트랙을 추가할 수 있습니다.'; $('#videoVoiceTrackLabel').textContent = file ? `내레이션 · ${file.name}` : '내레이션 · 선택한 파일'; renderAudioWaveform(file, '#videoVoiceWaveform'); scheduleSave(); });
@@ -925,12 +1098,14 @@ function bind() {
   $('#videoRemoveOverlay').addEventListener('click', () => { if (!selectedOverlay()) return; studio.overlays = studio.overlays.filter((overlay) => overlay.id !== studio.selectedOverlay); studio.selectedOverlay = studio.overlays[0]?.id || null; renderTimeline(); drawSelected(); saveProjectState(); });
   $('#videoAddMosaic').addEventListener('click', addMosaic);
   $('#videoRemoveMosaic').addEventListener('click', () => { const scene = selectedScene(); if (!scene?.mosaics) return; scene.mosaics = scene.mosaics.filter((mosaic) => mosaic.id !== studio.selectedMosaic); studio.selectedMosaic = scene.mosaics[0]?.id || null; renderMosaicEditor(); drawSelected(); saveProjectState(); });
+  $('#videoRemoveBroll').addEventListener('click', () => { const broll = selectedBroll(); if (!broll) return; if (broll.src?.startsWith('blob:')) URL.revokeObjectURL(broll.src); studio.brolls = studio.brolls.filter((item) => item.id !== broll.id); studio.selectedBroll = studio.brolls[0]?.id || null; renderTimeline(); drawSelected(); saveProjectState(); });
   $('#videoUndoButton').addEventListener('click', undo); $('#videoRedoButton').addEventListener('click', redo);
   ['videoProjectTitle', 'videoOrgName', 'videoEventDate', 'videoEndingText'].forEach((id) => $(`#${id}`).addEventListener('input', () => { drawSelected(); scheduleSave(); }));
   ['videoConsentCheck', 'videoPrivacyCheck', 'videoCreditCheck'].forEach((id) => $(`#${id}`).addEventListener('change', scheduleSave));
   ['videoSceneName', 'videoSceneCaption', 'videoSceneDuration', 'videoCaptionStyle', 'videoSceneReviewed', 'videoTrimStart', 'videoTrimEnd', 'videoTransition', 'videoEffect', 'videoMotion', 'videoEffectAmount', 'videoSceneScaleStart', 'videoSceneScaleEnd', 'videoScenePositionX', 'videoScenePositionY', 'videoFraming'].forEach((id) => { $(`#${id}`).addEventListener('input', syncSceneEditor); $(`#${id}`).addEventListener('change', syncSceneEditor); });
   ['videoOverlayText', 'videoOverlayStart', 'videoOverlayDuration', 'videoOverlayStyle', 'videoOverlayAnimation', 'videoOverlayX', 'videoOverlayY', 'videoOverlaySize'].forEach((id) => { $(`#${id}`).addEventListener('input', syncOverlayEditor); $(`#${id}`).addEventListener('change', syncOverlayEditor); });
   ['videoMosaicX', 'videoMosaicY', 'videoMosaicWidth', 'videoMosaicHeight', 'videoMosaicAmount'].forEach((id) => { $(`#${id}`).addEventListener('input', syncMosaicEditor); $(`#${id}`).addEventListener('change', syncMosaicEditor); });
+  ['videoBrollName', 'videoBrollStart', 'videoBrollDuration', 'videoBrollX', 'videoBrollY', 'videoBrollWidth', 'videoBrollHeight', 'videoBrollOpacity', 'videoBrollFraming'].forEach((id) => { $(`#${id}`).addEventListener('input', syncBrollEditor); $(`#${id}`).addEventListener('change', syncBrollEditor); });
   $('#videoMoveUp').addEventListener('click', () => moveSelected(-1)); $('#videoMoveDown').addEventListener('click', () => moveSelected(1));
   $('#videoRemoveScene').addEventListener('click', () => { studio.scenes = studio.scenes.filter((scene) => scene.id !== studio.selected); studio.selected = studio.scenes[0]?.id || null; studio.selectedMosaic = null; studio.currentTime = 0; renderSceneList(); saveProjectState(); });
   const splitButton = document.createElement('button'); splitButton.id = 'videoSplitScene'; splitButton.className = 'secondary-button'; splitButton.type = 'button'; splitButton.textContent = '✂ 분할'; $('#videoRemoveScene').before(splitButton); splitButton.addEventListener('click', splitSelected);
@@ -939,6 +1114,8 @@ function bind() {
     if (event.target.closest('.timeline-handle')) return;
     const overlayItem = event.target.closest('[data-overlay-id]');
     if (overlayItem) return selectOverlay(overlayItem.dataset.overlayId);
+    const brollItem = event.target.closest('[data-broll-id]');
+    if (brollItem) return selectBroll(brollItem.dataset.brollId);
     const item = event.target.closest('[data-scene-id]');
     if (item) return selectScene(item.dataset.sceneId);
     const track = $('#videoTimelineVideo');

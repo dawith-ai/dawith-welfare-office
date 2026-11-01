@@ -290,3 +290,22 @@ test('장면별 개인정보 모자이크 영역이 프로젝트와 캔버스 �
   await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('dawith.video-studio.project.v2')).project.scenes[0].mosaics[0].width)).toBe(25);
   await expect(page.locator('#videoRemoveMosaic')).toBeEnabled();
 });
+
+test('V2 B-roll 레이어와 크로스 디졸브 전환이 타임라인과 프로젝트에 저장된다', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: /행사 결과 영상 만들기/ }).click();
+  await page.getByRole('button', { name: '예시 장면 넣기' }).click();
+  await page.locator('#videoBrollFile').setInputFiles({ name: 'supporting-shot.svg', mimeType: 'image/svg+xml', buffer: Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" width="200" height="120"><circle cx="60" cy="60" r="50" fill="#2b7c58"/></svg>') });
+  await expect(page.locator('#videoTimelineBroll .timeline-broll-clip')).toHaveCount(1);
+  await page.locator('#videoBrollStart').fill('1.2');
+  await page.locator('#videoBrollDuration').fill('2.4');
+  await page.locator('#videoBrollX').fill('55');
+  await page.locator('#videoBrollOpacity').fill('72');
+  await page.locator('#videoSceneList .video-scene-item').nth(1).click();
+  await page.locator('#videoTransition').selectOption('crossfade');
+  await expect(page.locator('#videoTransition')).toHaveValue('crossfade');
+  await expect.poll(() => page.evaluate(() => {
+    const project = JSON.parse(localStorage.getItem('dawith.video-studio.project.v2')).project;
+    return `${project.brolls[0].start}:${project.brolls[0].opacity}:${project.scenes[1].transition}`;
+  })).toBe('1.2:72:crossfade');
+});
