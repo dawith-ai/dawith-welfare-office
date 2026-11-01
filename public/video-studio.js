@@ -191,6 +191,31 @@ function updateCanvasSize() {
   drawSelected();
 }
 
+function loadImage(url, file = null) {
+  return new Promise((resolve) => {
+    const image = new Image();
+    let settled = false;
+    const finish = () => {
+      if (settled) return;
+      settled = true;
+      resolve(image);
+    };
+    image.onload = finish;
+    image.onerror = async () => {
+      if (!file) return finish();
+      const reader = new FileReader();
+      reader.onload = () => {
+        image.onload = finish;
+        image.onerror = finish;
+        image.src = reader.result;
+      };
+      reader.onerror = finish;
+      reader.readAsDataURL(file);
+    };
+    image.src = url;
+  });
+}
+
 function makeSampleDataUrl(sample) {
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800" viewBox="0 0 1200 800"><rect width="1200" height="800" fill="${sample.color}"/><circle cx="950" cy="190" r="150" fill="#ffffff" opacity=".45"/><circle cx="250" cy="650" r="220" fill="#ffffff" opacity=".3"/><path d="M0 560 C250 430 350 720 570 560 S950 390 1200 510 V800 H0Z" fill="#ffffff" opacity=".35"/><text x="80" y="150" fill="#2f403a" font-family="sans-serif" font-weight="700" font-size="42">Dawith Welfare Office</text><text x="80" y="250" fill="#2f403a" font-family="sans-serif" font-weight="700" font-size="76">${sample.name}</text><text x="80" y="330" fill="#536861" font-family="sans-serif" font-size="30">${sample.caption}</text><text x="80" y="710" fill="#536861" font-family="sans-serif" font-size="22">로컬 영상 스튜디오 예시 장면</text></svg>`;
   return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
@@ -596,9 +621,7 @@ async function sourceForScene(scene, progress = 0) {
   if (!scene?.src) return null;
   if (scene.type !== 'video') {
     if (studio.sourceCache.has(scene.src)) return studio.sourceCache.get(scene.src);
-    const image = new Image();
-    image.src = scene.src;
-    await new Promise((resolve) => { image.onload = resolve; image.onerror = resolve; });
+    const image = await loadImage(scene.src, scene.file);
     studio.sourceCache.set(scene.src, image);
     return image;
   }
@@ -628,9 +651,7 @@ async function sourceForBroll(broll, progress = 0) {
   if (broll.type !== 'video') {
     const key = `broll:${broll.src}`;
     if (studio.sourceCache.has(key)) return studio.sourceCache.get(key);
-    const image = new Image();
-    image.src = broll.src;
-    await new Promise((resolve) => { image.onload = resolve; image.onerror = resolve; });
+    const image = await loadImage(broll.src, broll.file);
     studio.sourceCache.set(key, image);
     return image;
   }

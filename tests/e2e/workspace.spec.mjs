@@ -295,12 +295,31 @@ test('V2 B-roll 레이어와 크로스 디졸브 전환이 타임라인과 프�
   await page.goto('/');
   await page.getByRole('button', { name: /행사 결과 영상 만들기/ }).click();
   await page.getByRole('button', { name: '예시 장면 넣기' }).click();
-  await page.locator('#videoBrollFile').setInputFiles({ name: 'supporting-shot.svg', mimeType: 'image/svg+xml', buffer: Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" width="200" height="120"><circle cx="60" cy="60" r="50" fill="#2b7c58"/></svg>') });
+  const supportingPng = await page.evaluate(() => {
+    const source = document.createElement('canvas');
+    source.width = 16;
+    source.height = 16;
+    const context = source.getContext('2d');
+    context.fillStyle = '#12b981';
+    context.fillRect(0, 0, source.width, source.height);
+    return source.toDataURL('image/png').split(',')[1];
+  });
+  await page.locator('#videoBrollFile').setInputFiles({ name: 'supporting-shot.png', mimeType: 'image/png', buffer: Buffer.from(supportingPng, 'base64') });
   await expect(page.locator('#videoTimelineBroll .timeline-broll-clip')).toHaveCount(1);
-  await page.locator('#videoBrollStart').fill('1.2');
+  await page.locator('#videoBrollStart').fill('0');
   await page.locator('#videoBrollDuration').fill('2.4');
   await page.locator('#videoBrollX').fill('55');
   await page.locator('#videoBrollOpacity').fill('72');
+  await expect.poll(() => page.locator('#videoCanvas').evaluate((canvas) => {
+    const context = canvas.getContext('2d');
+    let greenCount = 0;
+    for (let y = 80; y < 240; y += 8) for (let x = 480; x < 850; x += 8) {
+      const pixel = context.getImageData(x, y, 1, 1).data;
+      if (pixel[1] > pixel[0] + 15 && pixel[1] > pixel[2] + 5) greenCount += 1;
+    }
+    return greenCount;
+  })).toBeGreaterThan(20);
+  await page.locator('#videoBrollStart').fill('1.2');
   await page.locator('#videoSceneList .video-scene-item').nth(1).click();
   await page.locator('#videoTransition').selectOption('crossfade');
   await expect(page.locator('#videoTransition')).toHaveValue('crossfade');
