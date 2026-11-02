@@ -1,4 +1,5 @@
-import { app, BrowserWindow, safeStorage, shell } from 'electron';
+import { app, BrowserWindow, ipcMain, safeStorage, shell } from 'electron';
+import { autoUpdater } from 'electron-updater';
 import fs from 'node:fs';
 import crypto from 'node:crypto';
 import path from 'node:path';
@@ -8,6 +9,24 @@ import { startServer } from '../server.mjs';
 const here = path.dirname(fileURLToPath(import.meta.url));
 let localServer;
 let mainWindow;
+
+function sendUpdateStatus(status, payload = {}) {
+  mainWindow?.webContents.send('dawith:update-status', { status, ...payload });
+}
+
+function configureAutoUpdates() {
+  autoUpdater.autoDownload = false;
+  autoUpdater.autoInstallOnAppQuit = true;
+  autoUpdater.on('checking-for-update', () => sendUpdateStatus('checking'));
+  autoUpdater.on('update-available', (info) => sendUpdateStatus('available', { version: info.version }));
+  autoUpdater.on('update-not-available', () => sendUpdateStatus('current'));
+  autoUpdater.on('download-progress', (progress) => sendUpdateStatus('downloading', { version: autoUpdater.updateInfo?.version || '', progress: Math.round(progress.percent) }));
+  autoUpdater.on('update-downloaded', (info) => sendUpdateStatus('downloaded', { version: info.version }));
+  autoUpdater.on('error', (error) => sendUpdateStatus('error', { message: error.message }));
+  ipcMain.handle('dawith:update-check', async () => { if (!app.isPackaged) return { status: 'disabled', version: app.getVersion() }; await autoUpdater.checkForUpdates(); return { status: 'checking', version: app.getVersion() }; });
+  ipcMain.handle('dawith:update-download', async () => { await autoUpdater.downloadUpdate(); return { status: 'downloading' }; });
+  ipcMain.handle('dawith:update-install', () => { autoUpdater.quitAndInstall(); return { status: 'installing' }; });
+}
 
 async function loadProtectedDatabaseKey(dataDir) {
   if (!(await safeStorage.isAsyncEncryptionAvailable())) throw new Error('os_key_storage_unavailable');
@@ -49,6 +68,7 @@ async function createWindow() {
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true,
+      preload: path.join(here, 'preload.mjs'),
     },
   });
 
@@ -64,7 +84,9 @@ async function createWindow() {
 
 app.whenReady().then(async () => {
   try {
+    configureAutoUpdates();
     await createWindow();
+    if (app.isPackaged) void autoUpdater.checkForUpdates().catch((error) => console.warn('dawith_update_check_failed', error.message));
   } catch (error) {
     console.error('Dawith Welfare Office failed to start:', error);
     try {

@@ -31,6 +31,21 @@
       <div class="topbar-footer"><div class="runtime-pill"><span class="runtime-icon">⌘</span><span id="runtimePillText">브라우저 로컬 모드</span></div><div class="security-pill"><span class="dot"></span><span id="securityText">로컬 전용 · 외부 전송 차단</span></div><button class="ghost-button" data-action="privacy">개인정보 처리 경계</button><button class="ghost-button hidden" id="logoutButton" data-action="logout">로그아웃</button></div>
     </header>
 
+    <div class="app-tabbar" aria-label="열린 Dawith 작업">
+      <button class="app-tab active" data-nav="home" type="button"><span class="app-tab-icon">⌂</span><span>Dawith 홈</span></button>
+      <button class="app-tab" data-nav="documents" type="button"><span class="app-tab-icon">▣</span><span>기관 문서</span></button>
+      <button class="app-tab" data-nav="video" type="button"><span class="app-tab-icon">▶</span><span>행사 영상</span></button>
+      <span class="app-tabbar-fill"></span>
+      <span class="app-tabbar-status"><i></i> 로컬 작업 공간</span>
+    </div>
+
+    <section id="updateBar" class="update-bar hidden" role="status" aria-live="polite">
+      <span class="update-mark">↻</span>
+      <span id="updateBarText">새 Dawith 업데이트가 준비되었습니다.</span>
+      <button class="update-action" data-action="applyUpdate" type="button">지금 업데이트</button>
+      <button class="update-dismiss" data-action="dismissUpdate" type="button" aria-label="업데이트 알림 닫기">나중에</button>
+    </section>
+
     <main>
       <section id="homeView" class="view active">
         <div class="home-header"><div class="home-header-copy"><div class="home-ci-lockup"><img src="./dawith-ci.svg" alt="다빛 CI" /><div><p class="home-ci-name">Dawith <span>다빛</span></p><p class="home-ci-tagline">사람을 잇고, 기록을 밝히는 복지 업무 공간</p></div></div><p class="eyebrow">DAWITH WELFARE OFFICE</p><h1>오늘 해야 할 기록을<br />바로 시작하세요.</h1><p class="home-subtitle">상담 메모, 사례회의, 녹취, 기관 문서를 업무에 맞는 화면에서 정리합니다. 원문은 기본적으로 이 PC 안에만 머뭅니다.</p></div><button class="privacy-link" data-action="privacy">데이터 경계 보기 <span>→</span></button></div>

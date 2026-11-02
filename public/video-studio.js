@@ -775,7 +775,10 @@ function syncSceneEditor() {
   $('#videoEffectAmountValue').textContent = `${scene.effectAmount}%`;
   scene.reviewed = $('#videoSceneReviewed').checked;
   renderSceneList();
-  scheduleSave();
+  // Scene edits are the most common undo/redo action. Commit the snapshot
+  // immediately so a quick edit followed by Undo never races the debounce
+  // timer and drops the previous scene state.
+  saveProjectState();
 }
 
 function syncOverlayEditor() {

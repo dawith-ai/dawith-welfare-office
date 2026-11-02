@@ -57,6 +57,19 @@ test('first launch explains the runtime and local Ollama setup', async ({ page }
   await expect(page.locator('#runtimePillText')).toHaveText('Dawith 데스크톱 EXE');
 });
 
+test('web update notice can be dismissed without interrupting local work', async ({ page }) => {
+  await page.route('**/update-manifest.json*', async (route) => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({ version: '0.4.8', releaseUrl: 'https://github.com/dawith-ai/dawith-welfare-office/releases/latest' }),
+  }));
+  await page.goto('/');
+  await expect(page.locator('#updateBar')).toBeVisible();
+  await expect(page.locator('#updateBarText')).toContainText('0.4.8');
+  await page.locator('#updateBar [data-action="dismissUpdate"]').click();
+  await expect(page.locator('#updateBar')).toBeHidden();
+});
+
 test('a record can be assigned to a locally created case', async ({ page }) => {
   await page.goto('/');
   await page.getByRole('button', { name: /상담 내용 정리/ }).click();
