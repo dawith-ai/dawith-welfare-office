@@ -1,10 +1,12 @@
 import { app, BrowserWindow, ipcMain, safeStorage, shell } from 'electron';
-import { autoUpdater } from 'electron-updater';
+import electronUpdater from 'electron-updater';
 import fs from 'node:fs';
 import crypto from 'node:crypto';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { startServer } from '../server.mjs';
+
+const { autoUpdater } = electronUpdater;
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 let localServer;

@@ -1,4 +1,4 @@
-# Dawith Welfare Office 0.4.7
+# Dawith Welfare Office 0.4.8
 
 사회복지기관의 상담 메모·회의 메모·녹취를 기관 PC 또는 기관 내부망에서 정리하는 Dawith Welfare Office입니다. 웹 데모와 Windows 설치형 EXE가 같은 로컬 API와 SQLite 저장소를 사용합니다.
 
