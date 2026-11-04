@@ -177,7 +177,7 @@ function themeColors() {
 function getBrandImage() {
   if (!studio.brandImage) {
     studio.brandImage = new Image();
-    studio.brandImage.src = './dawith-ci.svg';
+    studio.brandImage.src = './dawith-ci.png';
   }
   return studio.brandImage;
 }
@@ -351,7 +351,7 @@ function renderSceneList() {
   }
   $('#videoStageEmpty').hidden = true;
   $('#videoSceneEditor').classList.remove('video-disabled');
-  list.innerHTML = studio.scenes.map((scene, index) => `<button class="video-scene-item${scene.id === studio.selected ? ' is-selected' : ''}" type="button" draggable="true" data-scene-id="${esc(scene.id)}"><img class="video-scene-thumb" src="${esc(scene.src || './dawith-ci.svg')}" alt="" /><span><b>${index + 1}. ${esc(scene.name || '이름 없는 장면')}</b><small>${scene.type === 'video' ? '영상' : '사진'} · ${Number(scene.duration).toFixed(1)}초${scene.caption ? ` · ${esc(scene.caption)}` : ''}</small></span><i class="video-scene-status${scene.src ? '' : ' is-missing'}">${scene.src ? (scene.reviewed ? '✓' : '!') : '↗'}</i></button>`).join('');
+    list.innerHTML = studio.scenes.map((scene, index) => `<button class="video-scene-item${scene.id === studio.selected ? ' is-selected' : ''}" type="button" draggable="true" data-scene-id="${esc(scene.id)}"><img class="video-scene-thumb" src="${esc(scene.src || './dawith-ci.png')}" alt="" /><span><b>${index + 1}. ${esc(scene.name || '이름 없는 장면')}</b><small>${scene.type === 'video' ? '영상' : '사진'} · ${Number(scene.duration).toFixed(1)}초${scene.caption ? ` · ${esc(scene.caption)}` : ''}</small></span><i class="video-scene-status${scene.src ? '' : ' is-missing'}">${scene.src ? (scene.reviewed ? '✓' : '!') : '↗'}</i></button>`).join('');
   const total = studio.scenes.reduce((sum, scene) => sum + Number(scene.duration || 0), 0);
   $('#videoDurationSummary').value = `총 ${total.toFixed(1)}초`;
   renderSceneEditor();

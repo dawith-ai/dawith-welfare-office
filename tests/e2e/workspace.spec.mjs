@@ -36,7 +36,7 @@ test('social-work meeting workflow can be completed locally', async ({ page }) =
 test('first launch explains the runtime and local Ollama setup', async ({ page }) => {
   await page.goto('/');
   await expect(page.locator('#runtimePillText')).toHaveText('브라우저 로컬 모드');
-  await expect(page.locator('.home-ci-lockup img')).toHaveAttribute('src', './dawith-ci.svg');
+  await expect(page.locator('.home-ci-lockup img')).toHaveAttribute('src', './dawith-ci.png');
   await expect(page.locator('.brand-logo').first()).toHaveAttribute('alt', '다빛 CI');
   await expect(page.getByRole('button', { name: /상담 예시로 시작/ })).toBeVisible();
   await page.getByRole('button', { name: /상담 예시로 시작/ }).click();
