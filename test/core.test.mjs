@@ -57,6 +57,85 @@ test('local AI assist prompt and parser keep the model output bounded', () => {
   assert.equal(parseOllamaAssist('{"result": ""}'), '');
 });
 
+test('subscription bridge exposes provider status without reading login files', async () => {
+  const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'dawith-welfare-subscription-'));
+  const runtime = await startServer({ port: 0, dataDir });
+  try {
+    const status = await fetch(`${runtime.url}/api/ai/subscription/status`).then((response) => response.json());
+    assert.deepEqual(Object.keys(status.providers).sort(), ['claude-code', 'codex']);
+    assert.equal(status.policy, 'explicit-user-choice');
+    for (const provider of Object.values(status.providers)) {
+      assert.ok(['ready', 'signed-out', 'not-installed', 'unknown', 'error'].includes(provider.state));
+      assert.equal('accountEmail' in provider, false);
+    }
+    const blocked = await fetch(`${runtime.url}/api/ai/subscription/assist`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ provider: 'codex', task: 'text-clean', text: '합성 문장', confirmExternal: false }) });
+    assert.equal(blocked.status, 400);
+    assert.equal((await blocked.json()).error, 'external_transfer_confirmation_required');
+  } finally {
+    await new Promise((resolve) => runtime.server.close(resolve));
+    fs.rmSync(dataDir, { recursive: true, force: true });
+  }
+});
+
+test('subscription bridge sends only after explicit confirmation and uses the CLI directly', async () => {
+  const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'dawith-welfare-subscription-fake-'));
+  const binDir = fs.mkdtempSync(path.join(os.tmpdir(), 'dawith-welfare-subscription-bin-'));
+  const fakeClaude = path.join(binDir, 'claude');
+  fs.writeFileSync(fakeClaude, `#!/usr/bin/env node
+import fs from 'node:fs';
+if (process.argv.includes('auth')) { process.stdout.write(JSON.stringify({ loggedIn: true, authMethod: 'claude.ai', apiProvider: 'firstParty', subscriptionType: 'pro' })); process.exit(0); }
+process.stdin.resume(); process.stdin.on('end', () => process.stdout.write('합성 구독 결과'));
+`);
+  fs.chmodSync(fakeClaude, 0o755);
+  const previousPath = process.env.PATH;
+  process.env.PATH = `${binDir}${path.delimiter}${path.dirname(process.execPath)}`;
+  const runtime = await startServer({ port: 0, dataDir });
+  try {
+    const status = await fetch(`${runtime.url}/api/ai/subscription/status`).then((response) => response.json());
+    assert.equal(status.providers['claude-code'].state, 'ready');
+    const response = await fetch(`${runtime.url}/api/ai/subscription/assist`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ provider: 'claude-code', task: 'text-clean', text: '합성 원문', confirmExternal: true }) });
+    const payload = await response.json();
+    assert.equal(response.status, 200);
+    assert.equal(payload.result, '합성 구독 결과');
+    assert.deepEqual(payload.transfer, { external: true, destination: 'claude-code', userInitiated: true });
+  } finally {
+    await new Promise((resolve) => runtime.server.close(resolve));
+    process.env.PATH = previousPath;
+    fs.rmSync(dataDir, { recursive: true, force: true });
+    fs.rmSync(binDir, { recursive: true, force: true });
+  }
+});
+
+test('subscription bridge supports the Codex app-server one-shot flow', async () => {
+  const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'dawith-welfare-codex-fake-'));
+  const binDir = fs.mkdtempSync(path.join(os.tmpdir(), 'dawith-welfare-codex-bin-'));
+  const fakeCodex = path.join(binDir, 'codex');
+  fs.writeFileSync(fakeCodex, `#!/usr/bin/env node
+import readline from 'node:readline';
+const args = process.argv.slice(2);
+if (args[0] === 'login' && args[1] === 'status') { process.stdout.write('Logged in using ChatGPT\\n'); process.exit(0); }
+const input = readline.createInterface({ input: process.stdin });
+input.on('line', (line) => { let message; try { message = JSON.parse(line); } catch { return; } if (message.id !== undefined) process.stdout.write(JSON.stringify({ id: message.id, result: message.method === 'thread/start' ? { thread: { id: 'thread-test' } } : {} }) + '\\n'); if (message.method === 'turn/start') process.stdout.write(JSON.stringify({ method: 'turn/completed', params: { turn: { items: [{ type: 'agentMessage', text: '합성 Codex 결과' }] } } }) + '\\n'); });
+`);
+  fs.chmodSync(fakeCodex, 0o755);
+  const previousPath = process.env.PATH;
+  process.env.PATH = `${binDir}${path.delimiter}${path.dirname(process.execPath)}`;
+  const runtime = await startServer({ port: 0, dataDir });
+  try {
+    const status = await fetch(`${runtime.url}/api/ai/subscription/status`).then((response) => response.json());
+    assert.equal(status.providers.codex.state, 'ready');
+    const response = await fetch(`${runtime.url}/api/ai/subscription/assist`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ provider: 'codex', task: 'text-clean', text: '합성 원문', confirmExternal: true }) });
+    const payload = await response.json();
+    assert.equal(response.status, 200);
+    assert.equal(payload.result, '합성 Codex 결과');
+  } finally {
+    await new Promise((resolve) => runtime.server.close(resolve));
+    process.env.PATH = previousPath;
+    fs.rmSync(dataDir, { recursive: true, force: true });
+    fs.rmSync(binDir, { recursive: true, force: true });
+  }
+});
+
 test('Ollama recommendation stays usable across common office hardware tiers', () => {
   assert.equal(recommendOllamaModel(4, 2).model, 'qwen2.5:3b');
   assert.equal(recommendOllamaModel(16, 8).model, 'qwen2.5:7b');

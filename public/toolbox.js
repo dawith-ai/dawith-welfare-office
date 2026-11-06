@@ -16,7 +16,7 @@ const toolCatalog = [
   { id: 'date-calculator', category: 'calculator', mark: 'D+', name: '날짜·기간 계산', description: '두 날짜 사이 기간과 기준일을 계산합니다.', keywords: '날짜 기간 일수 d-day', label: 'CALCULATOR' },
   { id: 'attendance', category: 'field', mark: '✓', name: '인원 체크', description: '식사·프로그램 명단을 로컬에서 체크하고 CSV로 저장합니다.', keywords: '인원 출석 신규 종결 대기 수령 명단 현황 csv', label: 'FIELD' },
   { id: 'duty-schedule', category: 'field', mark: 'CAL', name: '당직 일정', description: '직원 순서를 기준으로 당직표를 만들고 CSV로 저장합니다.', keywords: '당직 근무 일정 스케줄 직원 배치 csv', label: 'FIELD' },
-  { id: 'ai-setup', category: 'ai', mark: 'AI', name: '로컬 AI 보조 설정', description: '이 PC 사양에 맞는 Ollama 모델을 안내하고 기능별 로컬 AI를 연결합니다.', keywords: 'ollama 로컬 llm ai 모델 다운로드 상담 회의록 문서', label: 'LOCAL AI' },
+  { id: 'ai-setup', category: 'ai', mark: 'AI', name: 'AI 보조·연결 센터', description: '로컬 모델과 사용자의 Claude·Codex 구독을 구분해 연결합니다.', keywords: 'ollama 로컬 llm ai 모델 다운로드 상담 회의록 문서 claude codex 구독', label: 'AI CONTROL' },
 ];
 
 const state = { category: 'all', search: '', activeTool: null, pdfFiles: [], imageFile: null, imageUrl: '', imageInfo: null, textMode: 'mask' };
@@ -114,7 +114,7 @@ function renderImageWorkspace(tool) {
 }
 
 function renderTextWorkspace(tool) {
-  return `${toolHeader(tool, '텍스트를 정리하고 가리기', '치환·마스킹·목록 정리를 이 기기에서 바로 처리합니다.')}<div class="tool-layout text-layout text-tool-layout"><section class="tool-panel text-editor"><div class="panel-heading"><div><h2>원문</h2><p>상담 메모나 문장을 붙여 넣으세요.</p></div><span id="textCount" class="muted-text">0자</span></div><div class="text-toolbar"><button class="tool-chip active" data-text-mode="mask" type="button">개인정보 마스킹</button><button class="tool-chip" data-text-mode="replace" type="button">찾아 바꾸기</button><button class="tool-chip" data-text-mode="clean" type="button">공백 정리</button><button class="tool-chip" data-text-mode="number" type="button">목록 정리</button><button class="tool-chip" data-text-mode="plain" type="button">서식 지우기</button></div><div id="maskOptions" class="text-options"><div class="text-options-heading"><b>가릴 항목</b><span>필요한 것만 선택</span></div><div class="text-option-list"><label><input id="maskResident" type="checkbox" checked /> 주민등록번호</label><label><input id="maskPhone" type="checkbox" checked /> 전화번호</label><label><input id="maskEmail" type="checkbox" checked /> 이메일</label><label><input id="maskAccount" type="checkbox" checked /> 계좌번호</label></div></div><div id="replaceOptions" class="text-options hidden"><div class="text-options-heading"><b>찾아 바꾸기</b><span>입력 즉시 적용</span></div><div class="replace-grid"><label>찾을 내용<input id="replaceFind" type="text" placeholder="예: 홍길동" /></label><label>바꿀 내용<input id="replaceWith" type="text" placeholder="예: 대상자" /></label></div><label class="text-check"><input id="replaceIgnoreCase" type="checkbox" /> 대소문자 구분 없이 바꾸기</label></div><textarea id="textInput" placeholder="여기에 텍스트를 붙여 넣으세요."></textarea><div class="text-footer"><span id="textPrivacy">입력 내용은 이 기기 안에서만 처리됩니다.</span><button id="textClear" class="icon-text-button" type="button">지우기</button></div></section><section class="tool-panel text-result"><div class="panel-heading"><div><h2>결과</h2><p id="textResultLabel">개인정보 마스킹 결과</p></div><div class="panel-actions"><button id="textAiAssist" class="secondary-button" type="button">로컬 AI로 다듬기</button><button id="textCopy" class="secondary-button" type="button">복사</button></div></div><div id="textOutput" class="result-content empty">원문을 입력하면 결과가 여기에 표시됩니다.</div><div class="text-result-meta"><span id="textResultCount">결과 0자</span><span id="textResultBytes">UTF-8 0 byte</span></div><div class="tool-actions"><button id="textAiApply" class="secondary-button hidden" type="button">AI 결과를 원문에 적용</button><button id="textDownload" class="primary-button" type="button" disabled>TXT로 저장 →</button></div></section></div>`;
+  return `${toolHeader(tool, '텍스트를 정리하고 가리기', '치환·마스킹·목록 정리를 이 기기에서 바로 처리합니다.')}<div class="tool-layout text-layout text-tool-layout"><section class="tool-panel text-editor"><div class="panel-heading"><div><h2>원문</h2><p>상담 메모나 문장을 붙여 넣으세요.</p></div><span id="textCount" class="muted-text">0자</span></div><div class="text-toolbar"><button class="tool-chip active" data-text-mode="mask" type="button">개인정보 마스킹</button><button class="tool-chip" data-text-mode="replace" type="button">찾아 바꾸기</button><button class="tool-chip" data-text-mode="clean" type="button">공백 정리</button><button class="tool-chip" data-text-mode="number" type="button">목록 정리</button><button class="tool-chip" data-text-mode="plain" type="button">서식 지우기</button></div><div id="maskOptions" class="text-options"><div class="text-options-heading"><b>가릴 항목</b><span>필요한 것만 선택</span></div><div class="text-option-list"><label><input id="maskResident" type="checkbox" checked /> 주민등록번호</label><label><input id="maskPhone" type="checkbox" checked /> 전화번호</label><label><input id="maskEmail" type="checkbox" checked /> 이메일</label><label><input id="maskAccount" type="checkbox" checked /> 계좌번호</label></div></div><div id="replaceOptions" class="text-options hidden"><div class="text-options-heading"><b>찾아 바꾸기</b><span>입력 즉시 적용</span></div><div class="replace-grid"><label>찾을 내용<input id="replaceFind" type="text" placeholder="예: 홍길동" /></label><label>바꿀 내용<input id="replaceWith" type="text" placeholder="예: 대상자" /></label></div><label class="text-check"><input id="replaceIgnoreCase" type="checkbox" /> 대소문자 구분 없이 바꾸기</label></div><textarea id="textInput" placeholder="여기에 텍스트를 붙여 넣으세요."></textarea><div class="text-footer"><span id="textPrivacy">입력 내용은 이 기기 안에서만 처리됩니다.</span><button id="textClear" class="icon-text-button" type="button">지우기</button></div></section><section class="tool-panel text-result"><div class="panel-heading"><div><h2>결과</h2><p id="textResultLabel">개인정보 마스킹 결과</p></div><div class="panel-actions"><button id="textAiAssist" class="secondary-button" type="button">로컬 AI로 다듬기</button><button id="textSubscriptionAssist" class="secondary-button external-ai-button" type="button">구독 AI 사용</button><button id="textCopy" class="secondary-button" type="button">복사</button></div></div><div id="textOutput" class="result-content empty">원문을 입력하면 결과가 여기에 표시됩니다.</div><div class="text-result-meta"><span id="textResultCount">결과 0자</span><span id="textResultBytes">UTF-8 0 byte</span></div><div class="tool-actions"><button id="textAiApply" class="secondary-button hidden" type="button">AI 결과를 원문에 적용</button><button id="textDownload" class="primary-button" type="button" disabled>TXT로 저장 →</button></div></section></div>`;
 }
 
 function renderAgeWorkspace(tool) {
@@ -130,7 +130,7 @@ function renderDateWorkspace(tool) {
 }
 
 function renderAiSetup(tool) {
-  return `${toolHeader(tool, '이 PC에 로컬 AI 준비하기', '상담·회의록·문장 정리에 사용할 모델을 이 PC 사양에 맞춰 안내합니다.')}<div class="ai-setup-layout"><section class="tool-panel ai-setup-main"><div class="panel-heading"><div><h2>준비 상태</h2><p>원문은 Ollama가 실행 중인 이 PC 밖으로 전송되지 않습니다.</p></div><span id="aiSetupStatus" class="local-note">확인 전</span></div><div class="ai-device-summary"><div><span>현재 기기</span><b id="aiSystemSpec">확인 중…</b></div><div><span>추천 모델</span><b id="aiRecommendation">확인 중…</b></div></div><ol class="ai-setup-steps"><li><span>1</span><div><b>Ollama 설치</b><small>공식 설치 파일을 열어 한 번 설치합니다.</small></div><a id="aiInstallLink" href="https://ollama.com/download" target="_blank" rel="noreferrer">공식 설치 열기 ↗</a></li><li><span>2</span><div><b>연결 확인</b><small>Ollama가 실행 중인지 확인하고 이 PC에 맞는 모델을 고릅니다.</small></div><button id="aiRefresh" class="secondary-button" type="button">상태 다시 확인</button></li><li><span>3</span><div><b>추천 모델 준비</b><small id="aiModelHelp">모델을 준비하면 기능 화면에서 바로 로컬 AI를 사용할 수 있습니다.</small></div><div class="ai-model-action"><select id="aiModelSelect" class="wide-input" aria-label="로컬 AI 모델 선택"></select><button id="aiPullModel" class="primary-button" type="button" disabled>모델 준비</button></div></li></ol><div id="aiSetupNotice" class="notice" hidden></div><div class="ai-privacy-note"><b>처리 경계</b><span>상담 원문·문서 내용은 Dawith 서버나 클라우드로 보내지 않습니다.</span><span>모델 다운로드 때만 Ollama 공식 저장소와 통신합니다.</span><span>AI 결과는 초안이며 담당자가 원문과 대조해 확정해야 합니다.</span></div></section><aside class="tool-panel ai-setup-side"><p class="overline">LOCAL AI ASSIST</p><h2>어디에 쓸 수 있나요?</h2><div class="ai-use-list"><div><b>텍스트 정리</b><span>문장 다듬기·사실 보존형 재작성</span></div><div><b>기관 양식</b><span>회의록·사업 문서 초안 정리</span></div><div><b>상담 기록</b><span>원문을 상담일지 구조로 정리</span></div></div><p class="field-hint">저사양 PC에서는 3B~4B 모델, 일반 사무용 PC에서는 7B급 모델을 우선 추천합니다. 모델이 없으면 기존 규칙 기반 기능은 계속 사용할 수 있습니다.</p></aside></div>`;
+  return `${toolHeader(tool, 'AI 보조 연결 센터', '원문을 어디에서 처리할지 먼저 고르고, 선택한 방식만 사용합니다.')}<div class="ai-control-layout"><section class="tool-panel ai-setup-main"><div class="panel-heading"><div><h2>이 PC 안에서 처리</h2><p>Ollama 로컬 모델은 상담 원문을 외부로 보내지 않습니다.</p></div><span id="aiSetupStatus" class="local-note">확인 전</span></div><div class="ai-device-summary"><div><span>현재 기기</span><b id="aiSystemSpec">확인 중…</b></div><div><span>추천 모델</span><b id="aiRecommendation">확인 중…</b></div></div><ol class="ai-setup-steps"><li><span>1</span><div><b>Ollama 설치</b><small>공식 설치 파일을 한 번 설치하고 실행합니다.</small></div><a id="aiInstallLink" href="https://ollama.com/download" target="_blank" rel="noreferrer">공식 설치 열기 ↗</a></li><li><span>2</span><div><b>연결 확인</b><small>현재 PC의 RAM·CPU를 읽어 모델을 추천합니다.</small></div><button id="aiRefresh" class="secondary-button" type="button">상태 다시 확인</button></li><li><span>3</span><div><b>추천 모델 준비</b><small id="aiModelHelp">모델이 없으면 규칙 기반 기능만으로도 계속 사용할 수 있습니다.</small></div><div class="ai-model-action"><select id="aiModelSelect" class="wide-input" aria-label="로컬 AI 모델 선택"></select><button id="aiPullModel" class="primary-button" type="button" disabled>모델 준비</button></div></li></ol><div id="aiSetupNotice" class="notice" hidden></div><div class="ai-privacy-note"><b>처리 경계</b><span>상담 원문·문서 내용은 Dawith 서버나 클라우드로 보내지 않습니다.</span><span>모델 다운로드 때만 Ollama 공식 저장소와 통신합니다.</span><span>AI 결과는 초안이며 담당자가 원문과 대조해 확정해야 합니다.</span></div></section><section class="tool-panel subscription-panel"><div class="panel-heading"><div><h2>내 구독 AI 연결</h2><p>설치되어 로그인된 Claude 또는 Codex 프로그램을 직접 사용합니다.</p></div><button id="subscriptionRefresh" class="secondary-button" type="button">상태 확인</button></div><div class="subscription-warning"><b>중요: 이 경로는 외부 전송입니다.</b><span>버튼을 눌러 동의한 텍스트만 선택한 회사의 구독 프로그램으로 전달됩니다. Dawith 서버에는 저장하지 않습니다.</span></div><div id="subscriptionCards" class="subscription-cards"><p class="muted-text">상태를 확인하는 중…</p></div><div class="subscription-test"><label for="subscriptionText">선택 전송 테스트</label><textarea id="subscriptionText" class="subscription-input" placeholder="개인정보가 없는 짧은 문장으로 먼저 테스트하세요."></textarea><div class="subscription-actions"><select id="subscriptionProvider" class="wide-input" aria-label="구독 provider"><option value="claude-code">Claude</option><option value="codex">Codex</option></select><button id="subscriptionAssist" class="primary-button" type="button">선택한 구독으로 정리</button></div><p id="subscriptionNotice" class="field-hint">상태 확인만으로는 원문이 전송되지 않습니다.</p></div></section></div>`;
 }
 
 function renderHwpWorkspace(tool) {
@@ -373,6 +373,34 @@ function bindText() {
       button.textContent = '로컬 AI로 다듬기';
     }
   });
+  $('#textSubscriptionAssist').addEventListener('click', async () => {
+    if (!input.value.trim()) return showNotice('#textPrivacy', '원문을 먼저 입력해 주세요.', true);
+    const status = await fetchSubscriptionStatus().catch(() => null);
+    const available = Object.values(status?.providers || {}).filter((item) => item.state === 'ready');
+    if (!available.length) return showNotice('#textPrivacy', '로그인된 Claude·Codex 구독을 찾지 못했습니다. AI 보조·연결 센터에서 상태를 확인하세요.', true);
+    const provider = available[0].provider;
+    const providerLabel = provider === 'codex' ? 'Codex' : 'Claude';
+    if (!window.confirm(`${providerLabel} 구독으로 원문을 외부 전송합니다. 기관 승인과 개인정보 보호 기준을 확인했습니까?`)) return;
+    const button = $('#textSubscriptionAssist');
+    button.disabled = true;
+    button.textContent = '구독 AI 처리 중…';
+    try {
+      aiResult = await runSubscriptionAi({ provider, task: 'text-clean', text: input.value });
+      output.textContent = aiResult;
+      output.classList.remove('empty');
+      $('#textResultLabel').textContent = `${providerLabel} 구독 AI 결과 · 외부 전송 · 검토 필요`;
+      $('#textResultCount').textContent = `결과 ${aiResult.length.toLocaleString()}자`;
+      $('#textResultBytes').textContent = `UTF-8 ${new TextEncoder().encode(aiResult).length.toLocaleString()} byte`;
+      $('#textDownload').disabled = false;
+      $('#textAiApply').classList.remove('hidden');
+      showNotice('#textPrivacy', `${providerLabel} 구독 AI 초안입니다. 외부 전송 결과이므로 원문과 대조한 뒤 적용하세요.`);
+    } catch (error) {
+      showNotice('#textPrivacy', subscriptionErrorMessage(error), true);
+    } finally {
+      button.disabled = false;
+      button.textContent = '구독 AI 사용';
+    }
+  });
   $('#textAiApply').addEventListener('click', () => { if (!aiResult) return; input.value = aiResult; aiResult = ''; update(); input.focus(); showNotice('#textPrivacy', 'AI 결과를 원문에 적용했습니다.'); });
   updateOptions();
   update();
@@ -474,7 +502,72 @@ function bindAiSetup() {
       button.textContent = '모델 준비';
     }
   });
+  $('#subscriptionRefresh').addEventListener('click', refreshSubscriptionCards);
+  $('#subscriptionAssist').addEventListener('click', async () => {
+    const text = $('#subscriptionText').value.trim();
+    if (!text) return showSubscriptionNotice('개인정보가 없는 짧은 문장으로 먼저 테스트하세요.', true);
+    if (!window.confirm('입력한 텍스트를 선택한 구독 AI 회사로 전송합니다. 계속할까요?')) return;
+    const button = $('#subscriptionAssist');
+    button.disabled = true;
+    button.textContent = '처리 중…';
+    try {
+      const result = await runSubscriptionAi({ provider: $('#subscriptionProvider').value, task: 'text-clean', text });
+      showSubscriptionNotice(`결과를 받았습니다. ${result.slice(0, 240)}${result.length > 240 ? '…' : ''}`);
+    } catch (error) {
+      showSubscriptionNotice(subscriptionErrorMessage(error), true);
+    } finally {
+      button.disabled = false;
+      button.textContent = '선택한 구독으로 정리';
+    }
+  });
   void refresh();
+  void refreshSubscriptionCards();
+}
+
+async function fetchSubscriptionStatus() {
+  const response = await fetch('./api/ai/subscription/status', { cache: 'no-store' });
+  if (!response.ok) throw new Error(`subscription_status_http_${response.status}`);
+  return response.json();
+}
+
+function subscriptionStateLabel(state) {
+  return { ready: '사용 가능', 'not-installed': '설치 필요', 'signed-out': '로그인 필요', unknown: '확인 필요', error: '확인 실패' }[state] || '확인 중';
+}
+
+function renderSubscriptionCards(payload) {
+  const providers = Object.values(payload?.providers || {});
+  $('#subscriptionCards').innerHTML = providers.length ? providers.map((item) => `<div class="subscription-card"><div><b>${escapeHtml(item.label)}</b><span>${item.installed ? '프로그램 발견' : '프로그램 없음'}</span></div><strong class="subscription-state-${escapeHtml(item.state)}">${subscriptionStateLabel(item.state)}</strong><small>${item.state === 'ready' ? '이 PC의 로그인 상태를 확인했습니다.' : item.state === 'not-installed' ? '공식 설치 후 다시 상태를 확인하세요.' : '구독 프로그램에서 로그인 상태를 확인하세요.'}</small>${item.state === 'not-installed' ? `<a href="${escapeHtml(item.installUrl)}" target="_blank" rel="noreferrer">공식 설치 안내 ↗</a>` : ''}</div>`).join('') : '<p class="muted-text">구독 상태를 읽지 못했습니다.</p>';
+}
+
+async function refreshSubscriptionCards() {
+  const button = $('#subscriptionRefresh');
+  if (!button) return;
+  button.disabled = true;
+  try { renderSubscriptionCards(await fetchSubscriptionStatus()); }
+  catch { $('#subscriptionCards').innerHTML = '<p class="muted-text">로컬 EXE 또는 localhost에서만 구독 상태를 확인할 수 있습니다.</p>'; }
+  finally { button.disabled = false; }
+}
+
+async function runSubscriptionAi(input) {
+  const response = await fetch('./api/ai/subscription/assist', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ...input, confirmExternal: true }) });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(payload.error || `subscription_assist_http_${response.status}`);
+  return payload.result;
+}
+
+function showSubscriptionNotice(message, error = false) {
+  const target = $('#subscriptionNotice');
+  if (!target) return;
+  target.textContent = message;
+  target.className = error ? 'field-hint error-text' : 'field-hint';
+}
+
+function subscriptionErrorMessage(error) {
+  const message = String(error?.message || error || '');
+  if (message.includes('not_installed')) return '선택한 구독 프로그램이 설치되어 있지 않습니다.';
+  if (message.includes('timeout')) return '구독 프로그램 응답 시간이 초과되었습니다.';
+  if (message.includes('signed')) return '구독 프로그램에 로그인한 뒤 다시 시도하세요.';
+  return '구독 AI 결과를 받지 못했습니다. 프로그램 로그인 상태와 설치를 확인하세요.';
 }
 
 function bindTemplateStudio() {
@@ -564,6 +657,9 @@ $('#closePrivacy').addEventListener('click', () => $('#privacyDialog').close());
 $('#toolSearch').addEventListener('input', (event) => { state.search = event.target.value; renderToolGrid(); });
 $$('.category-button').forEach((button) => button.addEventListener('click', () => { state.category = button.dataset.category; state.search = ''; $('#toolSearch').value = ''; $$('.category-button').forEach((item) => item.classList.toggle('active', item === button)); showHome(); }));
 renderToolGrid();
+
+const initialTool = new URLSearchParams(window.location.search).get('tool');
+if (initialTool && toolCatalog.some((tool) => tool.id === initialTool)) openTool(initialTool);
 
 let deferredInstallPrompt;
 window.addEventListener('beforeinstallprompt', (event) => { event.preventDefault(); deferredInstallPrompt = event; $('#installButton')?.classList.remove('hidden'); });

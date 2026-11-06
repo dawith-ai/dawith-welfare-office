@@ -33,6 +33,14 @@ test('홈에서 비AI 로컬 도구를 검색하고 분류할 수 있다', async
   await page.locator('#closePrivacy').click();
 });
 
+test('제품 안내 페이지에서 시작 흐름과 데이터 경계를 확인할 수 있다', async ({ page }) => {
+  await page.goto('/guide.html');
+  await expect(page).toHaveTitle(/사용 안내/);
+  await expect(page.locator('h1')).toContainText('기록은 가까이');
+  await expect(page.locator('#boundary')).toContainText('외부 전송 없음');
+  await expect(page.locator('.nav-cta')).toHaveAttribute('href', './');
+});
+
 test('작업 화면에서도 왼쪽 메뉴가 즉시 목록으로 전환된다', async ({ page }) => {
   await page.goto('/');
   await page.locator('.tool-card[data-tool="pdf-merge"]').click();
@@ -206,6 +214,33 @@ test('기관 양식과 텍스트 화면에 로컬 AI 보조 진입점이 있다'
   await page.locator('[data-action="home"]').click();
   await page.locator('.tool-card[data-tool="template-studio"]').click();
   await expect(page.locator('#templateAiAssist')).toBeVisible();
+});
+
+test('AI 연결 센터는 로컬 모델과 구독 AI 경계를 분리해 보여준다', async ({ page }) => {
+  await page.route('**/api/ai/subscription/status', async (route) => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({ providers: { 'claude-code': { provider: 'claude-code', label: 'Claude 구독', installed: true, state: 'signed-out' }, codex: { provider: 'codex', label: 'Codex 구독', installed: true, state: 'ready' } } }),
+  }));
+  await page.goto('/');
+  await page.locator('.tool-card[data-tool="ai-setup"]').click();
+  await expect(page.locator('.subscription-panel')).toBeVisible();
+  await expect(page.locator('.subscription-warning')).toContainText('외부 전송');
+  await expect(page.locator('.subscription-card')).toHaveCount(2);
+  await page.locator('#subscriptionText').fill('개인정보 없는 합성 문장입니다.');
+  await expect(page.locator('#subscriptionAssist')).toBeEnabled();
+});
+
+test('텍스트 도구에는 구독 AI를 명시적으로 선택하는 경로가 있다', async ({ page }) => {
+  await page.route('**/api/ai/subscription/status', async (route) => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({ providers: { codex: { provider: 'codex', label: 'Codex 구독', state: 'ready' } } }),
+  }));
+  await page.goto('/');
+  await page.locator('.tool-card[data-tool="text-tools"]').click();
+  await expect(page.locator('#textSubscriptionAssist')).toBeVisible();
+  await expect(page.locator('.external-ai-button')).toContainText('구독 AI');
 });
 
 test('텍스트 로컬 AI 보조는 외부가 아닌 로컬 API 결과를 화면에 반영한다', async ({ page }) => {

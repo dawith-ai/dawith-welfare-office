@@ -13,6 +13,7 @@ import { documentToDocx, documentToHtml, documentToMarkdown } from './src/docume
 import { analyzeTemplate, isUploadedTemplateId, renderTemplate, uploadedTemplateId } from './src/template-engine.mjs';
 import { transcribeAudio } from './src/transcription.mjs';
 import { authPolicy, can, createSession, hashPassword, publicUser, roles, validatePassword, validateUsername, verifyPassword } from './src/auth.mjs';
+import { createSubscriptionBridge } from './src/subscription.mjs';
 
 const root = path.dirname(fileURLToPath(import.meta.url));
 const defaultPort = Number(process.env.PORT || 4387);
@@ -162,6 +163,7 @@ export function createServer({ dataDir = defaultDataDir, ollamaTimeoutMs = defau
   const store = openStore(dataDir, { encryptionKey });
   const sessions = new Map();
   const loginFailures = new Map();
+  const subscription = createSubscriptionBridge();
   const sessionUser = (request) => {
     const token = parseCookies(request.headers.cookie).dawith_session;
     if (!token) return null;
@@ -313,6 +315,20 @@ export function createServer({ dataDir = defaultDataDir, ollamaTimeoutMs = defau
             ? 'ollama_timeout'
             : String(error.message || '').startsWith('ollama_http_') ? error.message : 'ollama_unavailable';
           return json(response, 503, { error: reason, message: 'Ollama가 실행 중이고 선택한 모델이 준비되어 있는지 확인하세요.' });
+        }
+      }
+      if (url.pathname === '/api/ai/subscription/status' && request.method === 'GET') {
+        return json(response, 200, await subscription.status());
+      }
+      if (url.pathname === '/api/ai/subscription/assist' && request.method === 'POST') {
+        const input = safeJson(await body(request, 2 * 1024 * 1024));
+        if (input.confirmExternal !== true) return json(response, 400, { error: 'external_transfer_confirmation_required', message: '외부 전송 동의가 필요합니다.' });
+        try {
+          return json(response, 200, await subscription.assist(input));
+        } catch (error) {
+          const known = new Set(['assist_text_required', 'assist_text_too_large', 'subscription_provider_invalid', 'subscription_not_installed', 'subscription_empty_result', 'subscription_request_failed', 'subscription_process_timeout']);
+          const status = known.has(error.message) ? (error.message === 'subscription_not_installed' ? 409 : 400) : 502;
+          return json(response, status, { error: error.message || 'subscription_assist_failed', message: error.message === 'subscription_not_installed' ? '선택한 구독 프로그램이 설치되어 있지 않습니다.' : '구독 프로그램에서 결과를 받지 못했습니다.' });
         }
       }
       if (url.pathname === '/api/auth/users' && request.method === 'GET') return json(response, 200, { users: store.listUsers() });
@@ -485,7 +501,7 @@ export function createServer({ dataDir = defaultDataDir, ollamaTimeoutMs = defau
       return json(response, status, { error: error.message || 'internal_error' });
     }
   });
-  server.on('close', () => { sessions.clear(); loginFailures.clear(); store.close(); });
+  server.on('close', () => { sessions.clear(); loginFailures.clear(); subscription.close(); store.close(); });
   return { server, store };
 }
 
