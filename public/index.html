@@ -4,8 +4,10 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#f6f6f3" />
+    <meta name="description" content="사회복지 현장을 위한 로컬 문서·PDF 작업공간" />
     <title>Dawith Local Tools · 복지 업무 도구</title>
     <link rel="icon" href="./favicon.svg" type="image/svg+xml" />
+    <link rel="manifest" href="./manifest.webmanifest" />
     <link rel="stylesheet" href="./styles-tools.css" />
   </head>
   <body>
@@ -18,6 +20,7 @@
         <div class="topbar-meta">
           <span class="local-status"><i></i> 이 PC에서 처리</span>
           <button class="plain-button" id="privacyButton" type="button">데이터 경계</button>
+          <button class="plain-button install-button hidden" id="installButton" type="button">앱으로 설치</button>
         </div>
       </header>
 
@@ -52,7 +55,7 @@
             <div class="search-line">
               <label for="toolSearch">도구 찾기</label>
               <input id="toolSearch" type="search" placeholder="PDF 합치기, 이미지 크기, 만나이…" autocomplete="off" />
-              <span id="toolCount">도구 12개</span>
+              <span id="toolCount">도구 13개</span>
             </div>
 
             <section class="recommendation-row" aria-label="추천 도구">
@@ -60,6 +63,11 @@
               <button class="recommendation-item" data-tool="pdf-merge" type="button"><span>01</span><b>PDF 합치기</b><small>붙임 서류를 한 파일로</small><i>→</i></button>
               <button class="recommendation-item" data-tool="image-resize" type="button"><span>02</span><b>이미지 크기</b><small>게시판 규격에 맞추기</small><i>→</i></button>
               <button class="recommendation-item" data-tool="age-calculator" type="button"><span>03</span><b>만나이 계산</b><small>서비스 기준 확인</small><i>→</i></button>
+            </section>
+
+            <section class="workspace-callout" aria-label="기관 양식 작업공간">
+              <div class="workspace-callout-copy"><p class="overline">MY WORKSPACE</p><h2>기관 양식을 한 번 저장하고<br /><em>매번 다시 쓰지 마세요.</em></h2><p>기관명·담당자·자주 쓰는 문장과 양식을 이 PC에 저장해 사업계획서·회의록·결과보고서 초안을 빠르게 만듭니다.</p></div>
+              <button class="workspace-callout-action" data-tool="template-studio" type="button"><span>내 양식 작업공간 열기</span><b>→</b></button>
             </section>
 
             <div class="directory-heading">
@@ -83,6 +91,7 @@
       <div class="boundary-list">
         <div><span>PDF·이미지·텍스트</span><b>이 기기</b></div>
         <div><span>만나이·금액 계산</span><b>이 기기</b></div>
+        <div><span>기관 양식·초안</span><b>이 기기</b></div>
         <div><span>외부 AI·클라우드</span><b>사용하지 않음</b></div>
       </div>
       <p class="dialog-footnote">인터넷이 끊겨도 기본 도구는 계속 사용할 수 있습니다. 파일을 업로드하는 대신 이 PC에서만 읽고 결과를 다운로드합니다.</p>

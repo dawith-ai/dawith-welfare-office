@@ -1,6 +1,8 @@
-# Dawith Local Tools 0.6.5
+# Dawith Welfare Office 0.7.0
 
 사회복지 현장에서 반복되는 파일·이미지·텍스트·계산 업무를 가볍게 처리하는 로컬 도구 모음입니다. 기본 화면에는 클라우드 LLM을 넣지 않았고, 선택한 파일과 입력 내용은 브라우저 또는 설치된 앱 안에서만 처리합니다.
+
+기관 양식 작업공간에서는 기관 기본정보와 사용자가 만든 문서 양식을 이 기기에 저장하고, 회의록·사업계획서·결과보고서·상담일지 초안을 로컬에서 작성할 수 있습니다. 웹앱은 PWA로 설치해 오프라인 작업공간처럼 사용할 수 있습니다.
 
 ## 포함 도구
 
@@ -16,6 +18,7 @@
 - 날짜·기간 계산: 상담 후속일과 사업 기간 확인
 - 인원 체크: 명단 상태를 로컬 저장하고 현황을 CSV로 저장
 - 당직 일정: 직원 순환 당직표를 만들고 CSV로 저장
+- 기관 양식 작업공간: 기관 정보·사용자 양식 저장, 행정문서 초안 생성
 
 ## 데이터 경계
 
@@ -46,8 +49,8 @@ npm run test:e2e
 npm run dist:win
 ```
 
-- `dist/Dawith-Welfare-Office-0.6.5-x64-Setup.exe`
-- `dist/Dawith-Welfare-Office-0.6.5-x64-Portable.exe`
+- `dist/Dawith-Welfare-Office-0.7.0-x64-Setup.exe`
+- `dist/Dawith-Welfare-Office-0.7.0-x64-Portable.exe`
 
 Electron 런타임 자체 때문에 설치 파일은 수십 MB가 되지만, AI 모델은 포함하지 않습니다. 모델 다운로드나 Ollama 설치 없이도 위 도구들은 바로 사용할 수 있습니다.
 

@@ -10,7 +10,7 @@ async function pdfBuffer() {
 test('홈에서 비AI 로컬 도구를 검색하고 분류할 수 있다', async ({ page }) => {
   await page.goto('/');
   await expect(page).toHaveTitle(/Dawith Local Tools/);
-  await expect(page.locator('.tool-card')).toHaveCount(12);
+  await expect(page.locator('.tool-card')).toHaveCount(13);
   await page.locator('#toolSearch').fill('만나이');
   await expect(page.locator('.tool-card')).toHaveCount(1);
   await expect(page.locator('.tool-card')).toContainText('만나이 계산기');
@@ -100,6 +100,25 @@ test('당직표는 직원 순서대로 날짜를 편성한다', async ({ page })
   await expect(page.locator('.duty-assignee').first()).toHaveValue('김담당');
   await expect(page.locator('.duty-assignee').nth(1)).toHaveValue('이사회복지사');
   await expect(page.locator('#dutyCsv')).toBeEnabled();
+});
+
+test('기관 양식 작업공간은 기관 정보와 문서 초안을 로컬에서 만든다', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('.tool-card[data-tool="template-studio"]').click();
+  await page.locator('#profileOrganization').fill('다위종합사회복지관');
+  await page.locator('#profileManager').fill('김담당');
+  await page.locator('#profileSave').click();
+  await page.locator('#templateProject').fill('주거취약가구 지원사업');
+  await page.locator('#templatePurpose').fill('지역 내 주거 불안 가구를 지원하기 위해 작성함');
+  await page.locator('#templateContent').fill('임대주택 신청 안내와 서류 확인을 진행함');
+  await page.locator('#templateDecisions').fill('다음 상담에서 신청서류를 확인하기로 함');
+  await expect(page.locator('#templatePreview')).toContainText('다위종합사회복지관');
+  await expect(page.locator('#templatePreview')).toContainText('주거취약가구 지원사업');
+  await expect(page.locator('#templatePreview')).toContainText('다음 상담에서 신청서류를 확인하기로 함');
+  await page.locator('#templateName').fill('우리 기관 회의록');
+  await page.locator('#templateBody').fill('기관: {{기관명}}\n사업: {{사업명}}\n내용: {{내용}}');
+  await page.locator('#templateSave').click();
+  await expect(page.locator('#templateNotice')).toContainText('저장했습니다');
 });
 
 test('작은 화면에서도 도구 작업대가 가로로 넘치지 않는다', async ({ page }) => {

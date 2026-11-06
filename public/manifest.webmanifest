@@ -1,0 +1,13 @@
+{
+  "name": "Dawith Welfare Office",
+  "short_name": "Dawith 복지업무",
+  "description": "사회복지 현장을 위한 로컬 문서·PDF 작업공간",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#f6f6f3",
+  "theme_color": "#315d45",
+  "lang": "ko-KR",
+  "icons": [
+    { "src": "./favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
