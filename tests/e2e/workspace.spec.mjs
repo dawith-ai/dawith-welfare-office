@@ -133,6 +133,27 @@ test('사진 정보 제거 도구는 결과 파일을 다운로드할 수 있다
   await expect(page.locator('#imageNotice')).toContainText('메타데이터');
 });
 
+test('이미지 압축·회전과 날짜 기간 계산이 결과를 만든다', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('.tool-card[data-tool="image-compress"]').click();
+  await page.locator('#imageInput').setInputFiles('public/dawith-ci.png');
+  await page.locator('#imageQuality').fill('60');
+  let download = page.waitForEvent('download');
+  await page.locator('#imageDownload').click();
+  expect((await download).suggestedFilename()).toMatch(/compressed/);
+  await page.locator('[data-action="home"]').click();
+  await page.locator('.tool-card[data-tool="image-rotate"]').click();
+  await page.locator('#imageInput').setInputFiles('public/dawith-ci.png');
+  download = page.waitForEvent('download');
+  await page.locator('#imageDownload').click();
+  expect((await download).suggestedFilename()).toMatch(/edited/);
+  await page.locator('[data-action="home"]').click();
+  await page.locator('.tool-card[data-tool="date-calculator"]').click();
+  await page.locator('#dateStart').fill('2026-11-01');
+  await page.locator('#dateEnd').fill('2026-11-07');
+  await expect(page.locator('#dateResult')).toContainText('7일');
+});
+
 test('인원 체크는 상태를 저장하고 현황을 갱신한다', async ({ page }) => {
   await page.goto('/');
   await page.locator('.tool-card[data-tool="attendance"]').click();
