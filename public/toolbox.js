@@ -16,6 +16,7 @@ const toolCatalog = [
   { id: 'date-calculator', category: 'calculator', mark: 'D+', name: '날짜·기간 계산', description: '두 날짜 사이 기간과 기준일을 계산합니다.', keywords: '날짜 기간 일수 d-day', label: 'CALCULATOR' },
   { id: 'attendance', category: 'field', mark: '✓', name: '인원 체크', description: '식사·프로그램 명단을 로컬에서 체크하고 CSV로 저장합니다.', keywords: '인원 출석 신규 종결 대기 수령 명단 현황 csv', label: 'FIELD' },
   { id: 'duty-schedule', category: 'field', mark: 'CAL', name: '당직 일정', description: '직원 순서를 기준으로 당직표를 만들고 CSV로 저장합니다.', keywords: '당직 근무 일정 스케줄 직원 배치 csv', label: 'FIELD' },
+  { id: 'ai-setup', category: 'ai', mark: 'AI', name: '로컬 AI 보조 설정', description: '이 PC 사양에 맞는 Ollama 모델을 안내하고 기능별 로컬 AI를 연결합니다.', keywords: 'ollama 로컬 llm ai 모델 다운로드 상담 회의록 문서', label: 'LOCAL AI' },
 ];
 
 const state = { category: 'all', search: '', activeTool: null, pdfFiles: [], imageFile: null, imageUrl: '', imageInfo: null, textMode: 'mask' };
@@ -97,6 +98,7 @@ function renderWorkspace(tool) {
   if (tool.id === 'date-calculator') return renderDateWorkspace(tool);
   if (tool.id === 'attendance') return renderAttendanceWorkspace(tool);
   if (tool.id === 'duty-schedule') return renderDutyWorkspace(tool);
+  if (tool.id === 'ai-setup') return renderAiSetup(tool);
   return '';
 }
 
@@ -112,7 +114,7 @@ function renderImageWorkspace(tool) {
 }
 
 function renderTextWorkspace(tool) {
-  return `${toolHeader(tool, '텍스트를 정리하고 가리기', '치환·마스킹·목록 정리를 이 기기에서 바로 처리합니다.')}<div class="tool-layout text-layout text-tool-layout"><section class="tool-panel text-editor"><div class="panel-heading"><div><h2>원문</h2><p>상담 메모나 문장을 붙여 넣으세요.</p></div><span id="textCount" class="muted-text">0자</span></div><div class="text-toolbar"><button class="tool-chip active" data-text-mode="mask" type="button">개인정보 마스킹</button><button class="tool-chip" data-text-mode="replace" type="button">찾아 바꾸기</button><button class="tool-chip" data-text-mode="clean" type="button">공백 정리</button><button class="tool-chip" data-text-mode="number" type="button">목록 정리</button><button class="tool-chip" data-text-mode="plain" type="button">서식 지우기</button></div><div id="maskOptions" class="text-options"><div class="text-options-heading"><b>가릴 항목</b><span>필요한 것만 선택</span></div><div class="text-option-list"><label><input id="maskResident" type="checkbox" checked /> 주민등록번호</label><label><input id="maskPhone" type="checkbox" checked /> 전화번호</label><label><input id="maskEmail" type="checkbox" checked /> 이메일</label><label><input id="maskAccount" type="checkbox" checked /> 계좌번호</label></div></div><div id="replaceOptions" class="text-options hidden"><div class="text-options-heading"><b>찾아 바꾸기</b><span>입력 즉시 적용</span></div><div class="replace-grid"><label>찾을 내용<input id="replaceFind" type="text" placeholder="예: 홍길동" /></label><label>바꿀 내용<input id="replaceWith" type="text" placeholder="예: 대상자" /></label></div><label class="text-check"><input id="replaceIgnoreCase" type="checkbox" /> 대소문자 구분 없이 바꾸기</label></div><textarea id="textInput" placeholder="여기에 텍스트를 붙여 넣으세요."></textarea><div class="text-footer"><span id="textPrivacy">입력 내용은 이 기기 안에서만 처리됩니다.</span><button id="textClear" class="icon-text-button" type="button">지우기</button></div></section><section class="tool-panel text-result"><div class="panel-heading"><div><h2>결과</h2><p id="textResultLabel">개인정보 마스킹 결과</p></div><button id="textCopy" class="secondary-button" type="button">복사</button></div><div id="textOutput" class="result-content empty">원문을 입력하면 결과가 여기에 표시됩니다.</div><div class="text-result-meta"><span id="textResultCount">결과 0자</span><span id="textResultBytes">UTF-8 0 byte</span></div><div class="tool-actions"><button id="textDownload" class="primary-button" type="button" disabled>TXT로 저장 →</button></div></section></div>`;
+  return `${toolHeader(tool, '텍스트를 정리하고 가리기', '치환·마스킹·목록 정리를 이 기기에서 바로 처리합니다.')}<div class="tool-layout text-layout text-tool-layout"><section class="tool-panel text-editor"><div class="panel-heading"><div><h2>원문</h2><p>상담 메모나 문장을 붙여 넣으세요.</p></div><span id="textCount" class="muted-text">0자</span></div><div class="text-toolbar"><button class="tool-chip active" data-text-mode="mask" type="button">개인정보 마스킹</button><button class="tool-chip" data-text-mode="replace" type="button">찾아 바꾸기</button><button class="tool-chip" data-text-mode="clean" type="button">공백 정리</button><button class="tool-chip" data-text-mode="number" type="button">목록 정리</button><button class="tool-chip" data-text-mode="plain" type="button">서식 지우기</button></div><div id="maskOptions" class="text-options"><div class="text-options-heading"><b>가릴 항목</b><span>필요한 것만 선택</span></div><div class="text-option-list"><label><input id="maskResident" type="checkbox" checked /> 주민등록번호</label><label><input id="maskPhone" type="checkbox" checked /> 전화번호</label><label><input id="maskEmail" type="checkbox" checked /> 이메일</label><label><input id="maskAccount" type="checkbox" checked /> 계좌번호</label></div></div><div id="replaceOptions" class="text-options hidden"><div class="text-options-heading"><b>찾아 바꾸기</b><span>입력 즉시 적용</span></div><div class="replace-grid"><label>찾을 내용<input id="replaceFind" type="text" placeholder="예: 홍길동" /></label><label>바꿀 내용<input id="replaceWith" type="text" placeholder="예: 대상자" /></label></div><label class="text-check"><input id="replaceIgnoreCase" type="checkbox" /> 대소문자 구분 없이 바꾸기</label></div><textarea id="textInput" placeholder="여기에 텍스트를 붙여 넣으세요."></textarea><div class="text-footer"><span id="textPrivacy">입력 내용은 이 기기 안에서만 처리됩니다.</span><button id="textClear" class="icon-text-button" type="button">지우기</button></div></section><section class="tool-panel text-result"><div class="panel-heading"><div><h2>결과</h2><p id="textResultLabel">개인정보 마스킹 결과</p></div><div class="panel-actions"><button id="textAiAssist" class="secondary-button" type="button">로컬 AI로 다듬기</button><button id="textCopy" class="secondary-button" type="button">복사</button></div></div><div id="textOutput" class="result-content empty">원문을 입력하면 결과가 여기에 표시됩니다.</div><div class="text-result-meta"><span id="textResultCount">결과 0자</span><span id="textResultBytes">UTF-8 0 byte</span></div><div class="tool-actions"><button id="textAiApply" class="secondary-button hidden" type="button">AI 결과를 원문에 적용</button><button id="textDownload" class="primary-button" type="button" disabled>TXT로 저장 →</button></div></section></div>`;
 }
 
 function renderAgeWorkspace(tool) {
@@ -125,6 +127,10 @@ function renderMoneyWorkspace(tool) {
 
 function renderDateWorkspace(tool) {
   return `${toolHeader(tool, '날짜와 기간을 계산하기', '상담 후속일, 사업 기간, 마감일을 빠르게 확인합니다.')}<div class="tool-layout calculator-layout"><section class="calculator-card"><h2>두 날짜 사이</h2><p>시작일과 종료일을 입력하면 기간을 계산합니다.</p><div class="control-group"><label for="dateStart">시작일</label><input id="dateStart" type="date" class="wide-input" /></div><div class="control-group" style="margin-top:14px"><label for="dateEnd">종료일</label><input id="dateEnd" type="date" class="wide-input" /></div><div id="dateResult" class="calculator-result"><span class="result-label">결과가 여기에 표시됩니다.</span></div></section><section class="calculator-reference"><h3>후속 일정에 활용하세요</h3><div class="reference-row"><b>상담 후 7일</b><span>초기 안부 확인·서류 보완 일정</span></div><div class="reference-row"><b>상담 후 30일</b><span>서비스 연계 및 변화 점검 일정</span></div><div class="reference-row"><b>사업 기간</b><span>시작일과 종료일을 모두 포함할지 기관 기준을 확인</span></div></section></div>`;
+}
+
+function renderAiSetup(tool) {
+  return `${toolHeader(tool, '이 PC에 로컬 AI 준비하기', '상담·회의록·문장 정리에 사용할 모델을 이 PC 사양에 맞춰 안내합니다.')}<div class="ai-setup-layout"><section class="tool-panel ai-setup-main"><div class="panel-heading"><div><h2>준비 상태</h2><p>원문은 Ollama가 실행 중인 이 PC 밖으로 전송되지 않습니다.</p></div><span id="aiSetupStatus" class="local-note">확인 전</span></div><div class="ai-device-summary"><div><span>현재 기기</span><b id="aiSystemSpec">확인 중…</b></div><div><span>추천 모델</span><b id="aiRecommendation">확인 중…</b></div></div><ol class="ai-setup-steps"><li><span>1</span><div><b>Ollama 설치</b><small>공식 설치 파일을 열어 한 번 설치합니다.</small></div><a id="aiInstallLink" href="https://ollama.com/download" target="_blank" rel="noreferrer">공식 설치 열기 ↗</a></li><li><span>2</span><div><b>연결 확인</b><small>Ollama가 실행 중인지 확인하고 이 PC에 맞는 모델을 고릅니다.</small></div><button id="aiRefresh" class="secondary-button" type="button">상태 다시 확인</button></li><li><span>3</span><div><b>추천 모델 준비</b><small id="aiModelHelp">모델을 준비하면 기능 화면에서 바로 로컬 AI를 사용할 수 있습니다.</small></div><div class="ai-model-action"><select id="aiModelSelect" class="wide-input" aria-label="로컬 AI 모델 선택"></select><button id="aiPullModel" class="primary-button" type="button" disabled>모델 준비</button></div></li></ol><div id="aiSetupNotice" class="notice" hidden></div><div class="ai-privacy-note"><b>처리 경계</b><span>상담 원문·문서 내용은 Dawith 서버나 클라우드로 보내지 않습니다.</span><span>모델 다운로드 때만 Ollama 공식 저장소와 통신합니다.</span><span>AI 결과는 초안이며 담당자가 원문과 대조해 확정해야 합니다.</span></div></section><aside class="tool-panel ai-setup-side"><p class="overline">LOCAL AI ASSIST</p><h2>어디에 쓸 수 있나요?</h2><div class="ai-use-list"><div><b>텍스트 정리</b><span>문장 다듬기·사실 보존형 재작성</span></div><div><b>기관 양식</b><span>회의록·사업 문서 초안 정리</span></div><div><b>상담 기록</b><span>원문을 상담일지 구조로 정리</span></div></div><p class="field-hint">저사양 PC에서는 3B~4B 모델, 일반 사무용 PC에서는 7B급 모델을 우선 추천합니다. 모델이 없으면 기존 규칙 기반 기능은 계속 사용할 수 있습니다.</p></aside></div>`;
 }
 
 function renderHwpWorkspace(tool) {
@@ -145,7 +151,7 @@ function getTemplateCatalog() {
 function renderTemplateStudio(tool) {
   const templates = getTemplateCatalog();
   const options = templates.map((template) => `<option value="${escapeHtml(template.id)}">${escapeHtml(template.title)}</option>`).join('');
-  return `${toolHeader(tool, '기관 양식 작업공간', '기관 정보와 자주 쓰는 문장을 이 PC에 저장하고 행정문서 초안을 만듭니다.')}<div class="template-layout"><aside class="tool-panel template-sidebar"><div class="panel-heading"><div><h2>내 양식</h2><p>저장한 양식은 이 기기에만 남습니다.</p></div></div><div class="control-group template-select-group"><label for="templateSelect">사용할 문서</label><select id="templateSelect" class="wide-input">${options}</select></div><div class="template-save-box"><label for="templateName">내 양식으로 저장</label><input id="templateName" class="wide-input" placeholder="예: 우리 기관 회의록" /><textarea id="templateBody" class="template-body-input" placeholder="{{기관명}}, {{사업명}} 같은 항목을 사용할 수 있습니다."></textarea><button id="templateSave" class="secondary-button" type="button">내 양식 저장</button><p id="templateNotice" class="field-hint">양식 안의 개인정보는 저장하지 마세요.</p></div><div class="template-help"><b>사용 가능한 항목</b><p>{{기관명}} · {{문서일}} · {{사업명}} · {{작성자}} · {{참석자}} · {{목적}} · {{내용}} · {{결정사항}} · {{후속조치}}</p></div></aside><section class="tool-panel template-editor-panel"><div class="panel-heading"><div><h2>초안 작성</h2><p>입력하는 즉시 오른쪽 결과에 반영됩니다.</p></div><span class="local-note">● 자동 저장 안 함</span></div><div class="profile-strip"><div><b>기관 기본정보</b><span>다음 작업에 다시 입력하지 않도록 이 PC에 저장합니다.</span></div><div class="profile-fields"><input id="profileOrganization" class="wide-input" placeholder="기관명" /><input id="profileManager" class="wide-input" placeholder="기본 작성자" /><button id="profileSave" class="secondary-button" type="button">저장</button></div></div><div class="template-fields"><div class="control-group"><label for="templateDate">문서일</label><input id="templateDate" type="date" class="wide-input" /></div><div class="control-group"><label for="templateProject">사업명·회의명</label><input id="templateProject" class="wide-input" placeholder="예: 2026년 주거취약가구 지원사업" /></div><div class="control-group"><label for="templateAuthor">작성자</label><input id="templateAuthor" class="wide-input" placeholder="담당자 이름" /></div><div class="control-group"><label for="templateAttendees">참석자</label><input id="templateAttendees" class="wide-input" placeholder="예: 김○○, 이○○" /></div><div class="control-group full-field"><label for="templatePurpose">목적·추진 배경</label><textarea id="templatePurpose" placeholder="왜 이 문서를 작성하는지 입력하세요."></textarea></div><div class="control-group full-field"><label for="templateContent">주요 내용</label><textarea id="templateContent" placeholder="논의 내용·추진 내용·상담 내용을 입력하세요."></textarea></div><div class="control-group"><label for="templateDecisions">성과·결정사항</label><textarea id="templateDecisions" placeholder="확인된 성과나 결정사항"></textarea></div><div class="control-group"><label for="templateActions">후속 조치·향후 계획</label><textarea id="templateActions" placeholder="담당자와 다음 일정을 입력하세요."></textarea></div></div><div class="template-preview-heading"><div><b>결과 미리보기</b><span>원문은 외부로 전송되지 않습니다.</span></div><div class="template-actions"><button id="templateCopy" class="secondary-button" type="button">복사</button><button id="templateDownload" class="primary-button" type="button">문서용 HTML 저장 →</button></div></div><pre id="templatePreview" class="template-preview">내용을 입력하면 초안이 여기에 표시됩니다.</pre></section></div>`;
+  return `${toolHeader(tool, '기관 양식 작업공간', '기관 정보와 자주 쓰는 문장을 이 PC에 저장하고 행정문서 초안을 만듭니다.')}<div class="template-layout"><aside class="tool-panel template-sidebar"><div class="panel-heading"><div><h2>내 양식</h2><p>저장한 양식은 이 기기에만 남습니다.</p></div></div><div class="control-group template-select-group"><label for="templateSelect">사용할 문서</label><select id="templateSelect" class="wide-input">${options}</select></div><div class="template-save-box"><label for="templateName">내 양식으로 저장</label><input id="templateName" class="wide-input" placeholder="예: 우리 기관 회의록" /><textarea id="templateBody" class="template-body-input" placeholder="{{기관명}}, {{사업명}} 같은 항목을 사용할 수 있습니다."></textarea><button id="templateSave" class="secondary-button" type="button">내 양식 저장</button><p id="templateNotice" class="field-hint">양식 안의 개인정보는 저장하지 마세요.</p></div><div class="template-help"><b>사용 가능한 항목</b><p>{{기관명}} · {{문서일}} · {{사업명}} · {{작성자}} · {{참석자}} · {{목적}} · {{내용}} · {{결정사항}} · {{후속조치}}</p></div></aside><section class="tool-panel template-editor-panel"><div class="panel-heading"><div><h2>초안 작성</h2><p>입력하는 즉시 오른쪽 결과에 반영됩니다.</p></div><span class="local-note">● 자동 저장 안 함</span></div><div class="profile-strip"><div><b>기관 기본정보</b><span>다음 작업에 다시 입력하지 않도록 이 PC에 저장합니다.</span></div><div class="profile-fields"><input id="profileOrganization" class="wide-input" placeholder="기관명" /><input id="profileManager" class="wide-input" placeholder="기본 작성자" /><button id="profileSave" class="secondary-button" type="button">저장</button></div></div><div class="template-fields"><div class="control-group"><label for="templateDate">문서일</label><input id="templateDate" type="date" class="wide-input" /></div><div class="control-group"><label for="templateProject">사업명·회의명</label><input id="templateProject" class="wide-input" placeholder="예: 2026년 주거취약가구 지원사업" /></div><div class="control-group"><label for="templateAuthor">작성자</label><input id="templateAuthor" class="wide-input" placeholder="담당자 이름" /></div><div class="control-group"><label for="templateAttendees">참석자</label><input id="templateAttendees" class="wide-input" placeholder="예: 김○○, 이○○" /></div><div class="control-group full-field"><label for="templatePurpose">목적·추진 배경</label><textarea id="templatePurpose" placeholder="왜 이 문서를 작성하는지 입력하세요."></textarea></div><div class="control-group full-field"><label for="templateContent">주요 내용</label><textarea id="templateContent" placeholder="논의 내용·추진 내용·상담 내용을 입력하세요."></textarea></div><div class="control-group"><label for="templateDecisions">성과·결정사항</label><textarea id="templateDecisions" placeholder="확인된 성과나 결정사항"></textarea></div><div class="control-group"><label for="templateActions">후속 조치·향후 계획</label><textarea id="templateActions" placeholder="담당자와 다음 일정을 입력하세요."></textarea></div></div><div class="template-preview-heading"><div><b>결과 미리보기</b><span>원문은 외부로 전송되지 않습니다.</span></div><div class="template-actions"><button id="templateAiAssist" class="secondary-button" type="button">로컬 AI로 초안 다듬기</button><button id="templateCopy" class="secondary-button" type="button">복사</button><button id="templateDownload" class="primary-button" type="button">문서용 HTML 저장 →</button></div></div><pre id="templatePreview" class="template-preview">내용을 입력하면 초안이 여기에 표시됩니다.</pre></section></div>`;
 }
 
 function renderAttendanceWorkspace(tool) {
@@ -175,6 +181,7 @@ function bindWorkspace(toolId) {
   if (toolId === 'attendance') bindAttendance();
   if (toolId === 'duty-schedule') bindDutySchedule();
   if (toolId === 'template-studio') bindTemplateStudio();
+  if (toolId === 'ai-setup') bindAiSetup();
 }
 
 let rhwpRuntimePromise;
@@ -287,9 +294,46 @@ function transformText(value, mode, options = {}) {
   return value.replace(/[*_`#>]/g, '');
 }
 
+function aiErrorMessage(error) {
+  const message = String(error?.message || error || '');
+  if (message.includes('ollama_unavailable') || message.includes('Failed to fetch')) return 'Ollama가 실행 중인지 확인하세요. 로컬 AI 보조 설정에서 설치·연결 상태를 먼저 확인해 주세요.';
+  if (message.includes('ollama_http_404')) return '선택한 모델이 아직 이 PC에 없습니다. 로컬 AI 보조 설정에서 모델을 준비해 주세요.';
+  if (message.includes('ollama_timeout')) return '모델 응답 시간이 초과되었습니다. 더 작은 모델을 선택하거나 입력을 줄여 다시 시도해 주세요.';
+  return message || '로컬 AI 작업을 완료하지 못했습니다.';
+}
+
+async function fetchLocalAiCapabilities() {
+  const response = await fetch('./api/capabilities', { cache: 'no-store' });
+  if (!response.ok) throw new Error(response.status === 401 ? '기관 로그인 후 로컬 AI 상태를 확인할 수 있습니다.' : `capabilities_http_${response.status}`);
+  const capabilities = await response.json();
+  state.aiCapabilities = capabilities;
+  return capabilities;
+}
+
+function preferredAiModel() {
+  return state.aiCapabilities?.ollama?.recommendation?.installedModel
+    || state.aiCapabilities?.ollama?.recommendation?.model
+    || 'qwen2.5:7b';
+}
+
+async function runLocalAi(task, text, contextText = '') {
+  if (!String(text || '').trim()) throw new Error('AI에 보낼 내용을 먼저 입력해 주세요.');
+  const capabilities = state.aiCapabilities || await fetchLocalAiCapabilities();
+  if (!capabilities.ollama?.available) throw new Error('ollama_unavailable');
+  const response = await fetch('./api/ai/assist', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ task, text, contextText, model: preferredAiModel() }),
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(payload.error || `ai_assist_http_${response.status}`);
+  return payload.result;
+}
+
 function bindText() {
   const input = $('#textInput');
   const output = $('#textOutput');
+  let aiResult = '';
   const update = () => {
     const value = transformText(input.value, state.textMode, { resident: $('#maskResident')?.checked, phone: $('#maskPhone')?.checked, email: $('#maskEmail')?.checked, account: $('#maskAccount')?.checked, find: $('#replaceFind')?.value, replaceWith: $('#replaceWith')?.value, ignoreCase: $('#replaceIgnoreCase')?.checked });
     $('#textCount').textContent = `${input.value.length.toLocaleString()}자`;
@@ -298,6 +342,7 @@ function bindText() {
     output.textContent = value || '원문을 입력하면 결과가 여기에 표시됩니다.';
     output.classList.toggle('empty', !value);
     $('#textDownload').disabled = !value;
+    if (!aiResult || value !== aiResult) $('#textAiApply').classList.add('hidden');
   };
   const updateOptions = () => { $('#maskOptions').classList.toggle('hidden', state.textMode !== 'mask'); $('#replaceOptions').classList.toggle('hidden', state.textMode !== 'replace'); };
   input.addEventListener('input', update);
@@ -306,6 +351,29 @@ function bindText() {
   $('#textClear').addEventListener('click', () => { input.value = ''; update(); input.focus(); });
   $('#textCopy').addEventListener('click', async () => { if (!input.value) return; await navigator.clipboard?.writeText(output.textContent); showNotice('#textPrivacy', '결과를 클립보드에 복사했습니다.'); });
   $('#textDownload').addEventListener('click', () => downloadBlob(new Blob([output.textContent], { type: 'text/plain;charset=utf-8' }), 'dawith-정리된-텍스트.txt'));
+  $('#textAiAssist').addEventListener('click', async () => {
+    if (!input.value.trim()) return showNotice('#textPrivacy', '원문을 먼저 입력해 주세요.', true);
+    const button = $('#textAiAssist');
+    button.disabled = true;
+    button.textContent = '로컬 AI 처리 중…';
+    try {
+      aiResult = await runLocalAi('text-clean', input.value);
+      output.textContent = aiResult;
+      output.classList.remove('empty');
+      $('#textResultLabel').textContent = '로컬 AI 문장 정리 결과 · 검토 필요';
+      $('#textResultCount').textContent = `결과 ${aiResult.length.toLocaleString()}자`;
+      $('#textResultBytes').textContent = `UTF-8 ${new TextEncoder().encode(aiResult).length.toLocaleString()} byte`;
+      $('#textDownload').disabled = false;
+      $('#textAiApply').classList.remove('hidden');
+      showNotice('#textPrivacy', '로컬 모델이 만든 초안입니다. 원문과 대조한 뒤 적용하세요.');
+    } catch (error) {
+      showNotice('#textPrivacy', aiErrorMessage(error), true);
+    } finally {
+      button.disabled = false;
+      button.textContent = '로컬 AI로 다듬기';
+    }
+  });
+  $('#textAiApply').addEventListener('click', () => { if (!aiResult) return; input.value = aiResult; aiResult = ''; update(); input.focus(); showNotice('#textPrivacy', 'AI 결과를 원문에 적용했습니다.'); });
   updateOptions();
   update();
 }
@@ -344,6 +412,71 @@ function fourDigitToKorean(value) { let text = ''; String(value).padStart(4, '0'
 function numberToKorean(value) { if (value === 0) return '영'; let number = Math.floor(value); let index = 0; let result = ''; while (number > 0) { const part = number % 10000; if (part) result = `${fourDigitToKorean(part)}${largeUnits[index]}${result}`; number = Math.floor(number / 10000); index += 1; } return result; }
 function bindMoney() { const input = $('#moneyInput'); const update = () => { const number = Number(input.value.replace(/[^\d]/g, '')); const result = $('#moneyResult'); if (!input.value || !Number.isFinite(number)) { result.innerHTML = '<span class="result-label">결과가 여기에 표시됩니다.</span>'; $('#moneyCopy').disabled = true; return; } const text = `금 ${numberToKorean(number)}원정`; result.innerHTML = `<span class="result-label">한글 표기</span><strong style="font-size:26px">${text}</strong><small>${number.toLocaleString('ko-KR')}원</small>`; $('#moneyCopy').disabled = false; $('#moneyCopy').dataset.copy = text; }; input.addEventListener('input', update); $('#moneyCopy').addEventListener('click', async () => { await navigator.clipboard?.writeText($('#moneyCopy').dataset.copy || ''); showNotice('#moneyResult', '결과를 복사했습니다.'); }); }
 function bindDate() { const start = $('#dateStart'); const end = $('#dateEnd'); const update = () => { if (!start.value || !end.value) return; const first = parseLocalDate(start.value); const last = parseLocalDate(end.value); const days = Math.round((last - first) / 86400000); const result = $('#dateResult'); result.innerHTML = days < 0 ? '<span class="result-label">종료일을 확인해 주세요.</span>' : `<span class="result-label">두 날짜 사이</span><strong>${days + 1}일</strong><small>날짜 차이 ${days}일 · 시작일과 종료일을 모두 포함한 기간</small>`; }; start.addEventListener('change', update); end.addEventListener('change', update); }
+
+function bindAiSetup() {
+  const status = $('#aiSetupStatus');
+  const notice = $('#aiSetupNotice');
+  const modelSelect = $('#aiModelSelect');
+  const refresh = async () => {
+    status.textContent = '확인 중…';
+    $('#aiRefresh').disabled = true;
+    $('#aiPullModel').disabled = true;
+    try {
+      const capabilities = await fetchLocalAiCapabilities();
+      const system = capabilities.system || {};
+      const ollama = capabilities.ollama || {};
+      const recommendation = ollama.recommendation || {};
+      $('#aiSystemSpec').textContent = `${system.platformLabel || system.platform || '이 PC'} · RAM ${system.memoryGB || '?'}GB · CPU ${system.cpuCores || '?'}코어`;
+      $('#aiRecommendation').textContent = `${recommendation.model || '확인 필요'} · ${recommendation.label || '사양 확인 필요'}`;
+      const names = [...new Set([recommendation.model, ...(ollama.models || []).map((model) => typeof model === 'string' ? model : model.name)].filter(Boolean))];
+      modelSelect.innerHTML = names.length ? names.map((name) => `<option value="${escapeHtml(name)}">${escapeHtml(name)}${name === recommendation.model ? ' · 추천' : ''}</option>`).join('') : '<option value="">모델 정보 없음</option>';
+      if (recommendation.model) modelSelect.value = recommendation.model;
+      $('#aiModelHelp').textContent = ollama.available
+        ? recommendation.installedModel ? `${recommendation.installedModel}이 준비되어 있습니다. 다른 모델을 고르면 내려받을 수 있습니다.` : 'Ollama 연결됨. 추천 모델을 준비하면 기능 화면에서 사용할 수 있습니다.'
+        : 'Ollama를 설치하고 실행한 뒤 상태 다시 확인을 누르세요.';
+      status.textContent = ollama.available ? (recommendation.installedModel ? '모델 준비됨' : 'Ollama 연결됨') : 'Ollama 연결 필요';
+      $('#aiPullModel').disabled = !ollama.available || !modelSelect.value;
+      notice.hidden = true;
+    } catch (error) {
+      state.aiCapabilities = null;
+      $('#aiSystemSpec').textContent = '로컬 서버 또는 EXE에서 확인 가능';
+      $('#aiRecommendation').textContent = '설정 상태를 읽지 못했습니다.';
+      modelSelect.innerHTML = '<option value="qwen2.5:7b">qwen2.5:7b · 기본 추천</option>';
+      status.textContent = '연결 확인 필요';
+      notice.hidden = false;
+      notice.className = 'notice error-notice';
+      notice.textContent = aiErrorMessage(error);
+    } finally {
+      $('#aiRefresh').disabled = false;
+    }
+  };
+  $('#aiRefresh').addEventListener('click', refresh);
+  $('#aiPullModel').addEventListener('click', async () => {
+    const model = modelSelect.value;
+    if (!model) return;
+    const button = $('#aiPullModel');
+    button.disabled = true;
+    button.textContent = '모델 준비 중…';
+    notice.hidden = false;
+    notice.className = 'notice';
+    notice.textContent = `${model}을 준비하는 중입니다. 모델 크기에 따라 시간이 걸릴 수 있습니다.`;
+    try {
+      const response = await fetch('./api/ollama/pull', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ model }) });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.error || `ollama_pull_http_${response.status}`);
+      notice.textContent = `${model} 준비가 끝났습니다. 텍스트·기관 양식 화면에서 로컬 AI를 사용할 수 있습니다.`;
+      await refresh();
+    } catch (error) {
+      notice.className = 'notice error-notice';
+      notice.textContent = aiErrorMessage(error);
+      button.disabled = false;
+    } finally {
+      button.textContent = '모델 준비';
+    }
+  });
+  void refresh();
+}
+
 function bindTemplateStudio() {
   const templateSelect = $('#templateSelect'); const templateBody = $('#templateBody'); const profileKey = 'dawith-institution-profile-v1';
   const fields = { organization: $('#profileOrganization'), manager: $('#profileManager'), date: $('#templateDate'), project: $('#templateProject'), author: $('#templateAuthor'), attendees: $('#templateAttendees'), purpose: $('#templatePurpose'), content: $('#templateContent'), decisions: $('#templateDecisions'), actions: $('#templateActions') };
@@ -361,6 +494,23 @@ function bindTemplateStudio() {
   $('#templateSave').addEventListener('click', () => { const title = $('#templateName').value.trim(); const body = templateBody.value.trim(); if (!title || !body) return showNotice('#templateNotice', '양식 이름과 본문을 모두 입력해 주세요.', true); let custom = []; try { custom = JSON.parse(localStorage.getItem('dawith-custom-templates-v1') || '[]'); } catch { custom = []; } const saved = { id: `custom-${Date.now()}`, title, body }; custom.push(saved); try { localStorage.setItem('dawith-custom-templates-v1', JSON.stringify(custom)); } catch { return showNotice('#templateNotice', '저장 공간을 사용할 수 없습니다.', true); } templateSelect.innerHTML = getTemplateCatalog().map((template) => `<option value="${escapeHtml(template.id)}">${escapeHtml(template.title)}</option>`).join(''); templateSelect.value = saved.id; showNotice('#templateNotice', '내 양식으로 저장했습니다.'); });
   $('#templateCopy').addEventListener('click', async () => { await navigator.clipboard?.writeText($('#templatePreview').textContent || ''); showNotice('#templateNotice', '초안을 클립보드에 복사했습니다.'); });
   $('#templateDownload').addEventListener('click', () => { const title = currentTemplate().title || '기관문서'; const html = `<!doctype html><meta charset="utf-8"><title>${escapeHtml(title)}</title><body style="font-family:Arial,sans-serif;line-height:1.75;white-space:pre-wrap">${escapeHtml($('#templatePreview').textContent || '').replace(/\n/g, '<br>')}</body>`; downloadBlob(new Blob([html], { type: 'application/msword;charset=utf-8' }), `${title}_${compactDate(new Date())}.doc`); });
+  $('#templateAiAssist').addEventListener('click', async () => {
+    const text = $('#templatePreview').textContent.trim();
+    if (!text || text === '내용을 입력하면 초안이 여기에 표시됩니다.') return showNotice('#templateNotice', '먼저 문서 내용을 입력해 주세요.', true);
+    const button = $('#templateAiAssist');
+    button.disabled = true;
+    button.textContent = '로컬 AI 처리 중…';
+    try {
+      const result = await runLocalAi('document-draft', text, `${fields.organization.value.trim()} ${fields.project.value.trim()}`.trim());
+      $('#templatePreview').textContent = result;
+      showNotice('#templateNotice', '로컬 AI 초안을 만들었습니다. 원문과 대조해 검토하세요.');
+    } catch (error) {
+      showNotice('#templateNotice', aiErrorMessage(error), true);
+    } finally {
+      button.disabled = false;
+      button.textContent = '로컬 AI로 초안 다듬기';
+    }
+  });
   loadTemplate();
 }
 function bindAttendance() {
@@ -412,7 +562,7 @@ $('#homeButton').addEventListener('click', showHome);
 $('#privacyButton').addEventListener('click', () => $('#privacyDialog').showModal());
 $('#closePrivacy').addEventListener('click', () => $('#privacyDialog').close());
 $('#toolSearch').addEventListener('input', (event) => { state.search = event.target.value; renderToolGrid(); });
-$$('.category-button').forEach((button) => button.addEventListener('click', () => { state.category = button.dataset.category; $$('.category-button').forEach((item) => item.classList.toggle('active', item === button)); renderToolGrid(); }));
+$$('.category-button').forEach((button) => button.addEventListener('click', () => { state.category = button.dataset.category; state.search = ''; $('#toolSearch').value = ''; $$('.category-button').forEach((item) => item.classList.toggle('active', item === button)); showHome(); }));
 renderToolGrid();
 
 let deferredInstallPrompt;

@@ -2,9 +2,9 @@ import { test, expect } from '@playwright/test';
 import { PDFDocument } from 'pdf-lib';
 import { readFile } from 'node:fs/promises';
 
-async function pdfBuffer() {
+async function pdfBuffer(pageCount = 1) {
   const document = await PDFDocument.create();
-  document.addPage([200, 200]);
+  for (let index = 0; index < pageCount; index += 1) document.addPage([200, 200]);
   return Buffer.from(await document.save());
 }
 
@@ -24,13 +24,28 @@ async function hwpxBuffer() {
 test('홈에서 비AI 로컬 도구를 검색하고 분류할 수 있다', async ({ page }) => {
   await page.goto('/');
   await expect(page).toHaveTitle(/Dawith Local Tools/);
-  await expect(page.locator('.tool-card')).toHaveCount(14);
+  await expect(page.locator('.tool-card')).toHaveCount(15);
   await page.locator('#toolSearch').fill('만나이');
   await expect(page.locator('.tool-card')).toHaveCount(1);
   await expect(page.locator('.tool-card')).toContainText('만나이 계산기');
   await page.locator('#privacyButton').click();
   await expect(page.locator('#privacyDialog')).toBeVisible();
   await page.locator('#closePrivacy').click();
+});
+
+test('작업 화면에서도 왼쪽 메뉴가 즉시 목록으로 전환된다', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('.tool-card[data-tool="pdf-merge"]').click();
+  await expect(page.locator('#workspaceView')).toBeVisible();
+  await page.locator('.category-button[data-category="image"]').click();
+  await expect(page.locator('#homeView')).toBeVisible();
+  await expect(page.locator('.tool-card')).toHaveCount(4);
+  await expect(page.locator('.tool-card[data-tool="image-compress"]')).toBeVisible();
+  await page.locator('.category-button[data-category="ai"]').click();
+  await expect(page.locator('.tool-card[data-tool="ai-setup"]')).toBeVisible();
+  await page.locator('.tool-card[data-tool="ai-setup"]').click();
+  await expect(page.locator('#aiInstallLink')).toBeVisible();
+  await expect(page.locator('#aiRefresh')).toBeVisible();
 });
 
 test('텍스트 도구가 개인정보를 로컬에서 가린다', async ({ page }) => {
@@ -69,6 +84,18 @@ test('PDF 합치기에서 여러 파일을 하나로 저장할 수 있다', asyn
   await page.locator('#pdfMergeButton').click();
   await download;
   await expect(page.locator('#pdfNotice')).toContainText('완료했습니다');
+});
+
+test('PDF 나누기는 지정한 페이지만 새 파일로 저장한다', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('.tool-card[data-tool="pdf-split"]').click();
+  await page.locator('#splitPdfInput').setInputFiles({ name: '원본.pdf', mimeType: 'application/pdf', buffer: await pdfBuffer(3) });
+  await expect(page.locator('#splitFileList')).toContainText('3페이지');
+  await page.locator('#splitRange').fill('2');
+  const download = page.waitForEvent('download');
+  await page.locator('#splitButton').click();
+  expect((await download).suggestedFilename()).toMatch(/\.pdf$/);
+  await expect(page.locator('#splitNotice')).toContainText('1페이지');
 });
 
 test('HWPX 양식은 rhwp WASM으로 로컬 텍스트를 추출한다', async ({ page }) => {
@@ -149,6 +176,34 @@ test('기관 양식 작업공간은 기관 정보와 문서 초안을 로컬에�
   await page.locator('#templateBody').fill('기관: {{기관명}}\n사업: {{사업명}}\n내용: {{내용}}');
   await page.locator('#templateSave').click();
   await expect(page.locator('#templateNotice')).toContainText('저장했습니다');
+});
+
+test('기관 양식과 텍스트 화면에 로컬 AI 보조 진입점이 있다', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('.tool-card[data-tool="text-tools"]').click();
+  await expect(page.locator('#textAiAssist')).toBeVisible();
+  await page.locator('[data-action="home"]').click();
+  await page.locator('.tool-card[data-tool="template-studio"]').click();
+  await expect(page.locator('#templateAiAssist')).toBeVisible();
+});
+
+test('텍스트 로컬 AI 보조는 외부가 아닌 로컬 API 결과를 화면에 반영한다', async ({ page }) => {
+  await page.route('**/api/capabilities', async (route) => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({ system: { platformLabel: '테스트', memoryGB: 16, cpuCores: 8 }, ollama: { available: true, models: [{ name: 'qwen2.5:7b' }], recommendation: { model: 'qwen2.5:7b', installedModel: 'qwen2.5:7b', label: '복지 기록 기본형' } } }),
+  }));
+  await page.route('**/api/ai/assist', async (route) => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({ result: '대상자는 주거비 부담을 호소하였으며, 임대주택 신청 방법을 안내하기로 함.' }),
+  }));
+  await page.goto('/');
+  await page.locator('.tool-card[data-tool="text-tools"]').click();
+  await page.locator('#textInput').fill('대상자는 주거비가 부담된다고 말함. 임대주택 신청 방법을 안내하기로 함.');
+  await page.locator('#textAiAssist').click();
+  await expect(page.locator('#textOutput')).toContainText('주거비 부담을 호소');
+  await expect(page.locator('#textAiApply')).toBeVisible();
 });
 
 test('작은 화면에서도 도구 작업대가 가로로 넘치지 않는다', async ({ page }) => {

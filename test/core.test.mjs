@@ -6,7 +6,7 @@ import test from 'node:test';
 import { DatabaseSync } from 'node:sqlite';
 import JSZip from 'jszip';
 import { Document, Paragraph, Packer } from 'docx';
-import { buildDrafts, parseOllamaDraft } from '../src/processing.mjs';
+import { buildDrafts, buildOllamaAssistPrompt, parseOllamaAssist, parseOllamaDraft } from '../src/processing.mjs';
 import { parseWhisperJson, sha256 } from '../src/transcription.mjs';
 import { buildDocumentDraft } from '../src/documents.mjs';
 import { documentToDocx } from '../src/document-export.mjs';
@@ -47,6 +47,14 @@ test('invalid local-model output never bypasses deterministic fallback', () => {
   const fallback = buildDrafts({ kind: 'meeting', rawText: '회의에서 주거 지원을 논의함.' });
   assert.equal(parseOllamaDraft('not-json', fallback), fallback);
   assert.equal(parseOllamaDraft(JSON.stringify({ counselingLog: 'only one field' }), fallback), fallback);
+});
+
+test('local AI assist prompt and parser keep the model output bounded', () => {
+  const prompt = buildOllamaAssistPrompt({ task: 'text-clean', text: '주거비가 부담된다고 말함.' });
+  assert.match(prompt, /입력된 사실만 사용/);
+  assert.match(prompt, /JSON 객체/);
+  assert.equal(parseOllamaAssist('{"result":"주거비 부담을 호소함."}'), '주거비 부담을 호소함.');
+  assert.equal(parseOllamaAssist('{"result": ""}'), '');
 });
 
 test('Ollama recommendation stays usable across common office hardware tiers', () => {

@@ -121,6 +121,33 @@ export function buildOllamaPrompt({ kind, rawText, contextText }) {
   ].join('\n\n');
 }
 
+export function buildOllamaAssistPrompt({ task, text, contextText = '' }) {
+  const instructions = {
+    'text-clean': '사실과 의미를 바꾸지 말고 사회복지 기록에 맞는 간결한 문장으로 다듬으세요. 개인정보를 새로 만들거나 추정하지 말고, 결과 문장만 반환하세요.',
+    'document-draft': '입력된 메모를 기관 문서 초안으로 정리하세요. 제목과 문단을 읽기 쉽게 나누되, 입력에 없는 사실·수치·성과를 만들지 마세요. 확인이 필요한 내용은 [확인 필요]로 표시하세요.',
+    'hwp-summary': '입력된 양식 텍스트에서 사실, 결정사항, 후속조치만 추려서 정리하세요. 입력에 없는 정보는 만들지 마세요.',
+  }[task];
+  if (!instructions) throw new Error('ollama_assist_task_not_allowed');
+  return [
+    '당신은 한국 사회복지기관의 로컬 문서 보조자입니다.',
+    '개인정보는 외부로 전송되지 않으며, 입력된 사실만 사용해야 합니다.',
+    instructions,
+    `추가 맥락:\n${contextText || '(없음)'}`,
+    `입력:\n${text || '(없음)'}`,
+    '반드시 JSON 객체 하나만 반환하세요. 형식: {"result":"정리된 결과"}',
+  ].join('\n\n');
+}
+
+export function parseOllamaAssist(content) {
+  try {
+    const parsed = JSON.parse(content);
+    if (typeof parsed.result === 'string' && parsed.result.trim()) return parsed.result.trim();
+  } catch {
+    // Local model output is untrusted; callers should keep the original text on failure.
+  }
+  return '';
+}
+
 export function parseOllamaDraft(content, fallback) {
   try {
     const parsed = JSON.parse(content);

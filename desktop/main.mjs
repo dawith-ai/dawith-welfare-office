@@ -1,14 +1,14 @@
-import { app, BrowserWindow, net, protocol, shell } from 'electron';
+import { app, BrowserWindow, shell } from 'electron';
 import path from 'node:path';
-import { fileURLToPath, pathToFileURL } from 'node:url';
-
-protocol.registerSchemesAsPrivileged([{ scheme: 'dawith', privileges: { standard: true, secure: true, supportFetchAPI: true, stream: true, corsEnabled: true } }]);
+import { fileURLToPath } from 'node:url';
+import { startServer } from '../server.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 let mainWindow;
+let localRuntime;
 let shuttingDown = false;
 
-async function createWindow() {
+async function createWindow(url) {
   mainWindow = new BrowserWindow({
     width: 1440,
     height: 940,
@@ -23,7 +23,7 @@ async function createWindow() {
     },
   });
 
-  await mainWindow.loadURL('dawith://app/index.html');
+  await mainWindow.loadURL(url);
   mainWindow.on('closed', () => {
     mainWindow = null;
   });
@@ -49,16 +49,9 @@ if (!hasSingleInstanceLock) {
 
 app.whenReady().then(async () => {
   if (!hasSingleInstanceLock) return;
-  const publicRoot = path.resolve(here, '..', 'public');
-  protocol.handle('dawith', async (request) => {
-    const requestUrl = new URL(request.url);
-    const relativePath = decodeURIComponent(requestUrl.pathname).replace(/^\/+/, '') || 'index.html';
-    const filePath = path.resolve(publicRoot, relativePath);
-    if (filePath !== publicRoot && !filePath.startsWith(`${publicRoot}${path.sep}`)) return new Response('Not found', { status: 404 });
-    try { return await net.fetch(pathToFileURL(filePath).toString()); } catch { return new Response('Not found', { status: 404 }); }
-  });
   try {
-    await createWindow();
+    localRuntime = await startServer({ port: 0, host: '127.0.0.1', dataDir: path.join(app.getPath('userData'), 'data') });
+    await createWindow(`${localRuntime.url}/?desktop=1`);
   } catch (error) {
     console.error('Dawith Welfare Office failed to start:', error);
     try {
@@ -82,6 +75,7 @@ app.on('window-all-closed', () => {
 app.on('before-quit', () => {
   if (shuttingDown) return;
   shuttingDown = true;
+  localRuntime?.server.close();
 });
 
 void here;

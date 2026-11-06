@@ -5,7 +5,7 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { buildDrafts, buildOllamaPrompt, parseOllamaDraft } from './src/processing.mjs';
+import { buildDrafts, buildOllamaAssistPrompt, buildOllamaPrompt, parseOllamaAssist, parseOllamaDraft } from './src/processing.mjs';
 import { openStore } from './src/storage.mjs';
 import { getCapabilities, whisperConfiguration } from './src/capabilities.mjs';
 import { buildDocumentDraft, documentTemplates } from './src/documents.mjs';
@@ -108,7 +108,28 @@ async function ollamaDraft(input, timeoutMs = defaultOllamaTimeoutMs) {
   return payload.message?.content || '';
 }
 
+async function ollamaAssist(input, timeoutMs = defaultOllamaTimeoutMs) {
+  const response = await fetch('http://127.0.0.1:11434/api/chat', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    signal: AbortSignal.timeout(timeoutMs),
+    body: JSON.stringify({
+      model: input.model || 'qwen2.5:7b',
+      stream: false,
+      format: 'json',
+      messages: [
+        { role: 'system', content: '로컬 PC 안에서만 동작하는 사회복지 행정 문서 보조자입니다. 입력 밖의 사실을 만들지 말고 JSON만 반환하세요.' },
+        { role: 'user', content: buildOllamaAssistPrompt(input) },
+      ],
+    }),
+  });
+  if (!response.ok) throw new Error(`ollama_http_${response.status}`);
+  const payload = await response.json();
+  return parseOllamaAssist(payload.message?.content || '');
+}
+
 const allowedOllamaModels = new Set(['qwen3:4b', 'qwen3.5:4b-mlx', 'qwen2.5:3b', 'qwen2.5:7b', 'qwen2.5:14b', 'qwen2.5:32b', 'gemma3:4b', 'gemma2:2b', 'gemma2:9b', 'llama3.2:1b', 'llama3.2:3b']);
+const allowedOllamaAssistTasks = new Set(['text-clean', 'document-draft', 'hwp-summary']);
 
 async function pullOllamaModel(model) {
   const response = await fetch('http://127.0.0.1:11434/api/pull', {
@@ -272,6 +293,26 @@ export function createServer({ dataDir = defaultDataDir, ollamaTimeoutMs = defau
         } catch (error) {
           const reason = error.name === 'TimeoutError' || error.name === 'AbortError' ? 'ollama_pull_timeout' : String(error.message || '').startsWith('ollama_http_') ? error.message : 'ollama_unavailable';
           return json(response, 503, { error: reason, message: 'Ollama가 실행 중인지 확인한 뒤 다시 시도하세요.' });
+        }
+      }
+      if (url.pathname === '/api/ai/assist' && request.method === 'POST') {
+        const input = safeJson(await body(request, 2 * 1024 * 1024));
+        const task = String(input.task || '');
+        const text = String(input.text || '').trim();
+        const contextText = String(input.contextText || '').trim();
+        const model = String(input.model || '');
+        if (!allowedOllamaAssistTasks.has(task)) return json(response, 400, { error: 'ollama_assist_task_not_allowed' });
+        if (!text) return json(response, 400, { error: 'assist_text_required' });
+        if (model && !allowedOllamaModels.has(model)) return json(response, 400, { error: 'ollama_model_not_allowed' });
+        try {
+          const result = await ollamaAssist({ task, text, contextText, model }, ollamaTimeoutMs);
+          if (!result) return json(response, 502, { error: 'ollama_invalid_result', message: '로컬 모델이 읽을 수 있는 결과를 반환하지 않았습니다.' });
+          return json(response, 200, { result, task, provider: 'ollama-local', transfer: { external: false, destination: 'local machine' } });
+        } catch (error) {
+          const reason = error.name === 'TimeoutError' || error.name === 'AbortError'
+            ? 'ollama_timeout'
+            : String(error.message || '').startsWith('ollama_http_') ? error.message : 'ollama_unavailable';
+          return json(response, 503, { error: reason, message: 'Ollama가 실행 중이고 선택한 모델이 준비되어 있는지 확인하세요.' });
         }
       }
       if (url.pathname === '/api/auth/users' && request.method === 'GET') return json(response, 200, { users: store.listUsers() });

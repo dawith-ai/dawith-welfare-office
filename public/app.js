@@ -1,5 +1,5 @@
 const state = { task: 'counseling', draft: null, sourceName: '', audioMeta: null, recordId: null, records: [], cases: [], caseId: '', capabilities: null, settings: null, activeTab: 'counselingLog', documentTemplates: [], uploadedTemplates: [], documents: [], documentId: null, documentTemplateId: 'business-plan', uploadedTemplate: null, documentDraft: null, documentSource: null, auth: null, update: null };
-const APP_VERSION = '0.8.1';
+const APP_VERSION = '0.8.2';
 const DEMO_MODE = window.DAWITH_DEMO === true || (window.location.protocol === 'https:' && !['127.0.0.1', 'localhost'].includes(window.location.hostname));
 const DESKTOP_MODE = new URLSearchParams(window.location.search).get('desktop') === '1';
 const samples = {
