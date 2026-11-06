@@ -1,64 +1,12 @@
-import { app, BrowserWindow, ipcMain, safeStorage, shell } from 'electron';
-import electronUpdater from 'electron-updater';
-import fs from 'node:fs';
-import crypto from 'node:crypto';
+import { app, BrowserWindow, shell } from 'electron';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { startServer } from '../server.mjs';
-
-const { autoUpdater } = electronUpdater;
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-let localServer;
 let mainWindow;
-
-function sendUpdateStatus(status, payload = {}) {
-  mainWindow?.webContents.send('dawith:update-status', { status, ...payload });
-}
-
-function configureAutoUpdates() {
-  autoUpdater.autoDownload = false;
-  autoUpdater.autoInstallOnAppQuit = true;
-  autoUpdater.on('checking-for-update', () => sendUpdateStatus('checking'));
-  autoUpdater.on('update-available', (info) => sendUpdateStatus('available', { version: info.version }));
-  autoUpdater.on('update-not-available', () => sendUpdateStatus('current'));
-  autoUpdater.on('download-progress', (progress) => sendUpdateStatus('downloading', { version: autoUpdater.updateInfo?.version || '', progress: Math.round(progress.percent) }));
-  autoUpdater.on('update-downloaded', (info) => sendUpdateStatus('downloaded', { version: info.version }));
-  autoUpdater.on('error', (error) => sendUpdateStatus('error', { message: error.message }));
-  ipcMain.handle('dawith:update-check', async () => { if (!app.isPackaged) return { status: 'disabled', version: app.getVersion() }; await autoUpdater.checkForUpdates(); return { status: 'checking', version: app.getVersion() }; });
-  ipcMain.handle('dawith:update-download', async () => { await autoUpdater.downloadUpdate(); return { status: 'downloading' }; });
-  ipcMain.handle('dawith:update-install', () => { autoUpdater.quitAndInstall(); return { status: 'installing' }; });
-}
-
-async function loadProtectedDatabaseKey(dataDir) {
-  if (!(await safeStorage.isAsyncEncryptionAvailable())) throw new Error('os_key_storage_unavailable');
-  const protectedPath = path.join(dataDir, '.os-protected-key');
-  fs.mkdirSync(dataDir, { recursive: true, mode: 0o700 });
-  if (fs.existsSync(protectedPath)) {
-    const decrypted = await safeStorage.decryptStringAsync(fs.readFileSync(protectedPath));
-    const encoded = typeof decrypted === 'string' ? decrypted : decrypted.result;
-    const key = Buffer.from(encoded, 'base64');
-    if (key.length !== 32) throw new Error('protected_database_key_invalid');
-    return key;
-  }
-  const legacyPath = path.join(dataDir, '.local-key');
-  const key = fs.existsSync(legacyPath) ? fs.readFileSync(legacyPath) : crypto.randomBytes(32);
-  if (key.length !== 32) throw new Error('legacy_database_key_invalid');
-  fs.writeFileSync(protectedPath, await safeStorage.encryptStringAsync(key.toString('base64')), { mode: 0o600 });
-  return key;
-}
+let shuttingDown = false;
 
 async function createWindow() {
-  const dataDir = path.join(app.getPath('userData'), 'data');
-  const encryptionKey = await loadProtectedDatabaseKey(dataDir);
-  localServer = await startServer({
-    port: 0,
-    host: '127.0.0.1',
-    authRequired: false,
-    dataDir,
-    encryptionKey,
-  });
-
   mainWindow = new BrowserWindow({
     width: 1440,
     height: 940,
@@ -70,13 +18,14 @@ async function createWindow() {
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true,
-      preload: path.join(here, 'preload.mjs'),
     },
   });
 
-  const desktopUrl = new URL(localServer.url);
-  desktopUrl.searchParams.set('desktop', '1');
-  await mainWindow.loadURL(desktopUrl.toString());
+  const appPath = path.join(here, '..', 'public', 'index.html');
+  await mainWindow.loadFile(appPath);
+  mainWindow.on('closed', () => {
+    mainWindow = null;
+  });
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
     if (url.startsWith('http://127.0.0.1:')) return { action: 'allow' };
     shell.openExternal(url);
@@ -84,17 +33,30 @@ async function createWindow() {
   });
 }
 
+const hasSingleInstanceLock = app.requestSingleInstanceLock();
+
+if (!hasSingleInstanceLock) {
+  app.quit();
+} else {
+  app.on('second-instance', () => {
+    if (!mainWindow) return;
+    if (mainWindow.isMinimized()) mainWindow.restore();
+    mainWindow.show();
+    mainWindow.focus();
+  });
+}
+
 app.whenReady().then(async () => {
+  if (!hasSingleInstanceLock) return;
   try {
-    configureAutoUpdates();
     await createWindow();
-    if (app.isPackaged) void autoUpdater.checkForUpdates().catch((error) => console.warn('dawith_update_check_failed', error.message));
   } catch (error) {
     console.error('Dawith Welfare Office failed to start:', error);
     try {
       const startupLog = path.join(app.getPath('userData'), 'startup-error.log');
-      fs.mkdirSync(path.dirname(startupLog), { recursive: true });
-      fs.appendFileSync(startupLog, `${new Date().toISOString()}\n${error?.stack ?? error}\n`, 'utf8');
+      const { appendFileSync, mkdirSync } = await import('node:fs');
+      mkdirSync(path.dirname(startupLog), { recursive: true });
+      appendFileSync(startupLog, `${new Date().toISOString()}\n${error?.stack ?? error}\n`, 'utf8');
     } catch (logError) {
       console.error('Dawith Welfare Office could not write startup log:', logError);
     }
@@ -109,7 +71,8 @@ app.on('window-all-closed', () => {
 });
 
 app.on('before-quit', () => {
-  if (localServer) localServer.server.close();
+  if (shuttingDown) return;
+  shuttingDown = true;
 });
 
 void here;

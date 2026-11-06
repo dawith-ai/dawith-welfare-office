@@ -26,7 +26,7 @@ const localSecurityHeaders = {
   'Referrer-Policy': 'no-referrer',
   'Permissions-Policy': 'camera=(), microphone=(), geolocation=(), payment=()',
   'Cross-Origin-Resource-Policy': 'same-origin',
-  'Content-Security-Policy': "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'",
+  'Content-Security-Policy': "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'",
 };
 
 const isLoopbackAddress = (value) => ['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(String(value || ''));
@@ -108,13 +108,13 @@ async function ollamaDraft(input, timeoutMs = defaultOllamaTimeoutMs) {
   return payload.message?.content || '';
 }
 
-const allowedOllamaModels = new Set(['qwen2.5:3b', 'qwen2.5:7b', 'qwen2.5:14b', 'qwen2.5:32b', 'gemma2:2b', 'gemma2:9b', 'llama3.2:1b', 'llama3.2:3b']);
+const allowedOllamaModels = new Set(['qwen3:4b', 'qwen3.5:4b-mlx', 'qwen2.5:3b', 'qwen2.5:7b', 'qwen2.5:14b', 'qwen2.5:32b', 'gemma3:4b', 'gemma2:2b', 'gemma2:9b', 'llama3.2:1b', 'llama3.2:3b']);
 
 async function pullOllamaModel(model) {
   const response = await fetch('http://127.0.0.1:11434/api/pull', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    signal: AbortSignal.timeout(Number(process.env.OLLAMA_PULL_TIMEOUT_MS || 20 * 60 * 1000)),
+    signal: AbortSignal.timeout(Number(process.env.OLLAMA_PULL_TIMEOUT_MS || 45 * 60 * 1000)),
     body: JSON.stringify({ model, stream: false }),
   });
   if (!response.ok) throw new Error(`ollama_http_${response.status}`);
@@ -191,6 +191,7 @@ export function createServer({ dataDir = defaultDataDir, ollamaTimeoutMs = defau
       const url = new URL(request.url, 'http://127.0.0.1');
       const origin = request.headers.origin;
       if (origin) {
+        const staticAssetRequest = !url.pathname.startsWith('/api/') && ['GET', 'HEAD'].includes(request.method);
         let sameLocalOrigin = false;
         try {
           const parsedOrigin = new URL(origin);
@@ -200,7 +201,9 @@ export function createServer({ dataDir = defaultDataDir, ollamaTimeoutMs = defau
         } catch {
           sameLocalOrigin = false;
         }
-        if (!sameLocalOrigin) return json(response, 403, { error: 'origin_not_allowed' });
+        // Static assets can be delivered through an HTTPS preview proxy. API requests
+        // remain loopback/origin restricted so a preview cannot expose local data.
+        if (!sameLocalOrigin && !staticAssetRequest) return json(response, 403, { error: 'origin_not_allowed' });
       }
       if (url.pathname === '/api/health') return json(response, 200, { ok: true, mode: authRequired ? 'institution-network' : 'local-only', host, externalProviders: 'blocked', authentication: authRequired ? 'required' : 'disabled' });
       if (url.pathname === '/api/auth/status' && request.method === 'GET') {

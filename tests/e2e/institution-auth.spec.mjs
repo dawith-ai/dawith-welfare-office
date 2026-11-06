@@ -8,7 +8,7 @@ let runtime;
 let dataDir;
 
 test.beforeAll(async () => {
-  dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'dawith-welfare-browser-auth-'));
+  dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'dawith-local-tools-auth-'));
   runtime = await startServer({ port: 0, host: '127.0.0.1', authRequired: true, dataDir });
 });
 
@@ -17,18 +17,9 @@ test.afterAll(async () => {
   fs.rmSync(dataDir, { recursive: true, force: true });
 });
 
-test('기관 최초 관리자 설정과 로그아웃 흐름을 브라우저에서 완료한다', async ({ page }) => {
+test('기관 인증 모드에서도 로컬 도구 화면은 열리고 보호 API는 인증을 요구한다', async ({ page, request }) => {
   await page.goto(runtime.url);
-  await expect(page.locator('#authGate')).toBeVisible();
-  await expect(page.locator('#authTitle')).toHaveText('관리자 계정을 만드세요');
-  await page.locator('#authUsername').fill('admin');
-  await page.locator('#authPassword').fill('institution-safe-password');
-  await page.locator('#authPasswordConfirm').fill('institution-safe-password');
-  await page.locator('#authSubmit').click();
-  await expect(page.locator('#authGate')).toBeHidden();
-  await expect(page.locator('#homeView')).toBeVisible();
-  await expect(page.locator('#securityText')).toContainText('기관 내부망');
-  await page.locator('#logoutButton').click();
-  await expect(page.locator('#authGate')).toBeVisible();
-  await expect(page.locator('#authTitle')).toHaveText('기관 계정으로 시작하세요');
+  await expect(page.locator('#homeTitle')).toContainText('반복되는 일을');
+  const response = await request.get(`${runtime.url}/api/capabilities`);
+  expect(response.status()).toBe(401);
 });

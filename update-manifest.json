@@ -1,0 +1,9 @@
+{
+  "version": "0.6.5",
+  "releaseUrl": "https://github.com/dawith-ai/dawith-welfare-office/releases/latest",
+  "desktop": {
+    "provider": "github",
+    "channel": "latest",
+    "notes": "Dawith Local Tools 최신 안정 버전"
+  }
+}

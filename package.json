@@ -1,9 +1,9 @@
 {
   "name": "dawith-welfare-office",
-  "version": "0.4.9",
+  "version": "0.6.5",
   "private": true,
   "type": "module",
-  "description": "Dawith local-first welfare record workspace with no cloud LLM path",
+  "description": "Dawith lightweight local welfare work tools for files, images, text, dates, and amounts",
   "author": "Dawith",
   "engines": {
     "node": ">=22.12.0"
@@ -11,7 +11,7 @@
   "scripts": {
     "start": "node server.mjs",
     "test": "node --test",
-    "check": "node --check server.mjs && node --check src/processing.mjs && node --check src/storage.mjs && node --check src/capabilities.mjs && node --check src/documents.mjs && node --check src/document-export.mjs && node --check src/template-engine.mjs && node --check src/transcription.mjs && node --check public/app.js && node --check desktop/main.mjs",
+    "check": "node --check server.mjs && node --check src/processing.mjs && node --check src/storage.mjs && node --check src/capabilities.mjs && node --check src/documents.mjs && node --check src/document-export.mjs && node --check src/template-engine.mjs && node --check src/transcription.mjs && node --check public/app.js && node --check public/toolbox.js && node --check desktop/main.mjs",
     "test:e2e": "playwright test",
     "rea:audit": "node scripts/rea-audit.mjs",
     "desktop": "electron desktop/main.mjs",
@@ -24,22 +24,25 @@
   "main": "desktop/main.mjs",
   "devDependencies": {
     "@playwright/test": "^1.55.0",
+    "docx": "^9.15.2",
     "electron": "^45.0.0",
-    "electron-builder": "^26.0.12"
+    "electron-builder": "^26.0.12",
+    "jszip": "^3.10.2",
+    "pdf-lib": "^1.17.1"
   },
   "build": {
     "appId": "site.welfarehub.dawith.welfareoffice",
     "productName": "Dawith Welfare Office",
     "asar": true,
-    "electronLanguages": [
-      "en-US",
-      "ko"
-    ],
+    "electronLanguages": ["en-US"],
     "files": [
-      "desktop/**/*",
-      "public/**/*",
-      "src/**/*",
-      "server.mjs",
+      "desktop/main.mjs",
+      "public/index.html",
+      "public/styles-tools.css",
+      "public/toolbox.js",
+      "public/favicon.svg",
+      "public/dawith-ci.svg",
+      "public/vendor/pdf-lib.min.js",
       "package.json"
     ],
     "directories": {
@@ -65,6 +68,7 @@
       "artifactName": "Dawith-Welfare-Office-${version}-${arch}-Setup.${ext}",
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
+      "include": "build/installer.nsh",
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "shortcutName": "Dawith Welfare Office"
@@ -79,9 +83,5 @@
       "releaseType": "release"
     }
   },
-  "dependencies": {
-    "docx": "^9.14.0",
-    "electron-updater": "^6.6.2",
-    "jszip": "^3.10.1"
-  }
+  "dependencies": {}
 }
