@@ -4,6 +4,7 @@ let pdfLibPromise;
 const toolCatalog = [
   { id: 'pdf-merge', category: 'document', mark: 'PDF', name: 'PDF 합치기', description: '여러 개의 PDF를 한 파일로 묶습니다.', keywords: 'pdf 병합 붙임서류 합치기', label: 'DOCUMENT' },
   { id: 'pdf-split', category: 'document', mark: 'PDF', name: 'PDF 나누기', description: '필요한 페이지만 추출하거나 낱장으로 나눕니다.', keywords: 'pdf 분할 페이지 추출', label: 'DOCUMENT' },
+  { id: 'hwp-inspector', category: 'document', mark: 'HWP', name: '한글 양식 확인', description: 'HWP·HWPX 기관 양식을 이 기기에서 열고 내용을 확인합니다.', keywords: '한글 hwp hwpx hml 양식 문서 텍스트 추출', label: 'DOCUMENT' },
   { id: 'template-studio', category: 'document', mark: 'FORM', name: '기관 양식 작업공간', description: '기관 정보를 저장하고 회의록·사업 문서 초안을 만듭니다.', keywords: '기관 양식 사업계획서 결과보고서 회의록 문서 초안 템플릿', label: 'WORKSPACE' },
   { id: 'image-resize', category: 'image', mark: 'IMG', name: '이미지 크기 조절', description: '게시판·보고서 규격에 맞춰 크기를 바꿉니다.', keywords: '이미지 사진 크기 리사이즈', label: 'IMAGE' },
   { id: 'image-compress', category: 'image', mark: 'IMG', name: '이미지 용량 줄이기', description: '화질을 보면서 파일 크기를 줄입니다.', keywords: '이미지 사진 압축 용량', label: 'IMAGE' },
@@ -87,6 +88,7 @@ function openTool(toolId) {
 function renderWorkspace(tool) {
   if (tool.id === 'pdf-merge') return `${toolHeader(tool, 'PDF를 한 파일로 묶기', '붙임 서류 순서를 확인하고 하나의 PDF로 저장합니다.')}<div class="tool-layout pdf-layout"><section class="tool-panel"><div class="panel-heading"><div><h2>파일 순서</h2><p>위에서 아래 순서로 합쳐집니다.</p></div><span id="pdfSummary" class="muted-text">0개</span></div><div id="pdfDropzone" class="dropzone" data-pdf-drop><div><span class="dropzone-mark">+</span><b>PDF 파일을 놓으세요</b><p>여러 파일을 한 번에 선택해도 됩니다.</p><label class="file-button"><input id="pdfInput" type="file" accept="application/pdf,.pdf" multiple />파일 선택</label></div></div><div id="pdfFileList" class="file-list"></div><div id="pdfNotice"></div></section><aside class="tool-panel"><div class="panel-heading"><div><h2>저장</h2><p>원본은 바뀌지 않습니다.</p></div></div><div class="side-list"><div><span>필요한 파일</span><b>2개 이상</b></div><div><span>처리 위치</span><b>이 기기</b></div><div><span>결과 형식</span><b>PDF</b></div></div><div class="control-group" style="margin-top:24px"><label for="pdfOutputName">저장할 이름</label><input id="pdfOutputName" class="wide-input" value="복지관_붙임서류" /></div><div class="tool-actions"><button id="pdfMergeButton" class="primary-button" type="button" disabled>PDF 합치기 →</button></div><div class="side-tip"><b>작업 팁</b><p>파일 이름 앞에 01, 02를 붙여두면 순서를 확인하기 쉽습니다.</p></div></aside></div>`;
   if (tool.id === 'pdf-split') return `${toolHeader(tool, 'PDF에서 필요한 페이지만 꺼내기', '페이지 번호를 입력하면 새 PDF로 저장합니다.')}<div class="tool-layout pdf-layout"><section class="tool-panel"><div class="panel-heading"><div><h2>원본 PDF</h2><p>한 파일만 선택합니다.</p></div><span id="splitPdfSummary" class="muted-text">선택 전</span></div><div id="splitDropzone" class="dropzone" data-split-drop><div><span class="dropzone-mark">↓</span><b>PDF 파일을 놓으세요</b><p>예: 1-3, 5, 8-10</p><label class="file-button"><input id="splitPdfInput" type="file" accept="application/pdf,.pdf" />파일 선택</label></div></div><div id="splitFileList" class="file-list"></div><div id="splitNotice"></div></section><aside class="tool-panel"><div class="panel-heading"><div><h2>페이지 선택</h2><p>원본 페이지 번호 기준입니다.</p></div></div><div class="control-group" style="margin-top:22px"><label for="splitRange">추출할 페이지</label><input id="splitRange" class="wide-input" placeholder="예: 1-3, 5" /></div><div class="control-group" style="margin-top:16px"><label for="splitOutputName">저장할 이름</label><input id="splitOutputName" class="wide-input" value="필요페이지_추출" /></div><div class="tool-actions"><button id="splitButton" class="primary-button" type="button" disabled>페이지 추출 →</button></div><div class="side-tip"><b>작업 팁</b><p>페이지를 비워두면 전체 페이지를 새 파일로 다시 저장합니다.</p></div></aside></div>`;
+  if (tool.id === 'hwp-inspector') return renderHwpWorkspace(tool);
   if (tool.id === 'template-studio') return renderTemplateStudio(tool);
   if (tool.id === 'image-resize' || tool.id === 'image-compress' || tool.id === 'image-privacy' || tool.id === 'image-rotate') return renderImageWorkspace(tool);
   if (tool.id === 'text-tools') return renderTextWorkspace(tool);
@@ -125,6 +127,10 @@ function renderDateWorkspace(tool) {
   return `${toolHeader(tool, '날짜와 기간을 계산하기', '상담 후속일, 사업 기간, 마감일을 빠르게 확인합니다.')}<div class="tool-layout calculator-layout"><section class="calculator-card"><h2>두 날짜 사이</h2><p>시작일과 종료일을 입력하면 기간을 계산합니다.</p><div class="control-group"><label for="dateStart">시작일</label><input id="dateStart" type="date" class="wide-input" /></div><div class="control-group" style="margin-top:14px"><label for="dateEnd">종료일</label><input id="dateEnd" type="date" class="wide-input" /></div><div id="dateResult" class="calculator-result"><span class="result-label">결과가 여기에 표시됩니다.</span></div></section><section class="calculator-reference"><h3>후속 일정에 활용하세요</h3><div class="reference-row"><b>상담 후 7일</b><span>초기 안부 확인·서류 보완 일정</span></div><div class="reference-row"><b>상담 후 30일</b><span>서비스 연계 및 변화 점검 일정</span></div><div class="reference-row"><b>사업 기간</b><span>시작일과 종료일을 모두 포함할지 기관 기준을 확인</span></div></section></div>`;
 }
 
+function renderHwpWorkspace(tool) {
+  return `${toolHeader(tool, '한글 기관 양식을 확인하기', 'HWP·HWPX 파일을 외부로 보내지 않고 이 기기에서 텍스트와 페이지 정보를 읽습니다.')}<div class="hwp-layout"><section class="tool-panel hwp-entry"><div class="panel-heading"><div><h2>양식 파일</h2><p>기관에서 받은 .hwp 또는 .hwpx 파일을 선택하세요.</p></div><span id="hwpEngineStatus" class="local-note">엔진 준비 전</span></div><div id="hwpDropzone" class="dropzone"><div><span class="dropzone-mark">H</span><b>HWP·HWPX 파일을 놓으세요</b><p>파일은 이 브라우저에서만 읽습니다.</p><label class="file-button"><input id="hwpInput" type="file" accept=".hwp,.hwpx,.hml,application/x-hwp,application/haansofthwp" />파일 선택</label></div></div><div id="hwpNotice" class="notice" hidden></div><div id="hwpMeta" class="hwp-meta hidden"><div><span>파일</span><b id="hwpFileName"></b></div><div><span>페이지</span><b id="hwpPageCount">-</b></div><div><span>처리</span><b>이 기기</b></div></div></section><section class="tool-panel hwp-result"><div class="panel-heading"><div><h2>양식 내용</h2><p id="hwpResultLabel">파일을 선택하면 텍스트를 추출합니다.</p></div><button id="hwpCopy" class="secondary-button" type="button" disabled>복사</button></div><pre id="hwpPreview" class="hwp-preview">HWP·HWPX 파일을 선택하면 양식 안의 텍스트가 여기에 표시됩니다.</pre><div class="tool-actions"><button id="hwpUseAsSource" class="primary-button" type="button" disabled>내용을 텍스트 도구로 보내기 →</button></div></section></div><aside class="hwp-safety"><b>지원 범위</b><span>HWP 5.0 · HWPX · 일부 HML</span><span>표·문단 텍스트 추출</span><span>rhwp MIT 엔진을 필요할 때만 불러옵니다</span></aside>`;
+}
+
 const builtInTemplates = [
   { id: 'meeting-minutes', title: '사례회의·회의록', body: '회의명: {{사업명}}\n일시: {{문서일}}\n기관: {{기관명}}\n작성자: {{작성자}}\n참석자: {{참석자}}\n\n1. 회의 목적\n{{목적}}\n\n2. 주요 논의\n{{내용}}\n\n3. 결정사항\n{{결정사항}}\n\n4. 후속 조치\n{{후속조치}}' },
   { id: 'business-plan', title: '사업계획서 초안', body: '사업명: {{사업명}}\n기관명: {{기관명}}\n작성일: {{문서일}}\n작성자: {{작성자}}\n\n1. 추진 배경 및 필요성\n{{목적}}\n\n2. 사업 내용\n{{내용}}\n\n3. 기대 결과\n{{결정사항}}\n\n4. 추진 일정 및 담당\n{{후속조치}}' },
@@ -160,6 +166,7 @@ function renderQrWorkspace(tool) {
 function bindWorkspace(toolId) {
   if (toolId === 'pdf-merge') bindPdfMerge();
   if (toolId === 'pdf-split') bindPdfSplit();
+  if (toolId === 'hwp-inspector') bindHwpInspector();
   if (toolId === 'image-resize' || toolId === 'image-compress' || toolId === 'image-privacy' || toolId === 'image-rotate') bindImage(toolId);
   if (toolId === 'text-tools') bindText();
   if (toolId === 'age-calculator') bindAge();
@@ -168,6 +175,42 @@ function bindWorkspace(toolId) {
   if (toolId === 'attendance') bindAttendance();
   if (toolId === 'duty-schedule') bindDutySchedule();
   if (toolId === 'template-studio') bindTemplateStudio();
+}
+
+let rhwpRuntimePromise;
+async function loadRhwpRuntime() {
+  if (!rhwpRuntimePromise) {
+    rhwpRuntimePromise = (async () => {
+      const module = await import('./vendor/rhwp/rhwp.js');
+      const response = await fetch('./vendor/rhwp/rhwp_bg.wasm');
+      if (!response.ok) throw new Error(`rhwp_wasm_${response.status}`);
+      await module.default({ module_or_path: await response.arrayBuffer() });
+      return module;
+    })().catch((error) => { rhwpRuntimePromise = null; throw error; });
+  }
+  return rhwpRuntimePromise;
+}
+
+function hwpTextFromEngine(doc) {
+  const raw = doc.getTextFileUnicode?.() || doc.getTextFileText();
+  const parsed = JSON.parse(raw);
+  if (typeof parsed === 'string') return parsed;
+  return parsed.text || parsed.value || '';
+}
+
+function bindHwpInspector() {
+  const input = $('#hwpInput'); const zone = $('#hwpDropzone'); const preview = $('#hwpPreview'); const copy = $('#hwpCopy'); const useAsSource = $('#hwpUseAsSource'); let extracted = '';
+  const notice = (message, error = false) => { $('#hwpNotice').hidden = false; $('#hwpNotice').className = `notice${error ? ' error-notice' : ''}`; $('#hwpNotice').textContent = message; };
+  const readFile = async (file) => {
+    $('#hwpEngineStatus').textContent = '엔진 준비 중…'; notice('HWP 엔진을 처음 불러오는 중입니다. 파일은 외부로 전송하지 않습니다.');
+    try {
+      const { HwpDocument } = await loadRhwpRuntime(); const document = new HwpDocument(new Uint8Array(await file.arrayBuffer()));
+      try { extracted = hwpTextFromEngine(document).replace(/\r\n/g, '\n').trim(); const pages = document.pageCount(); $('#hwpFileName').textContent = file.name; $('#hwpPageCount').textContent = `${pages}페이지`; $('#hwpMeta').classList.remove('hidden'); preview.textContent = extracted || '텍스트를 찾지 못했습니다. 표·그림 중심 양식일 수 있습니다.'; $('#hwpResultLabel').textContent = `${formatBytes(file.size)} · ${pages}페이지 · 로컬 추출 완료`; copy.disabled = !extracted; useAsSource.disabled = !extracted; $('#hwpEngineStatus').textContent = '엔진 준비됨'; notice('양식 내용을 이 기기에서 읽었습니다.'); } finally { document.free(); }
+    } catch (error) { extracted = ''; preview.textContent = '파일을 읽지 못했습니다.'; copy.disabled = true; useAsSource.disabled = true; $('#hwpEngineStatus').textContent = '확인 필요'; notice(error?.message?.includes('rhwp_wasm') ? 'HWP 엔진 파일을 불러오지 못했습니다. 앱을 최신 버전으로 업데이트해 주세요.' : '지원하지 않는 형식이거나 암호가 걸린 파일입니다.', true); }
+  };
+  bindDropzone(zone, input, (files) => { if (files[0]) readFile(files[0]); });
+  copy.addEventListener('click', async () => { await navigator.clipboard?.writeText(extracted); notice('추출한 내용을 클립보드에 복사했습니다.'); });
+  useAsSource.addEventListener('click', () => { localStorage.setItem('dawith-hwp-source-v1', extracted); openTool('text-tools'); $('#textInput').value = extracted; $('#textInput').dispatchEvent(new Event('input', { bubbles: true })); });
 }
 
 function bindDropzone(zone, input, callback) {

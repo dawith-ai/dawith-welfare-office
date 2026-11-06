@@ -1,5 +1,5 @@
 {
-  "version": "0.7.0",
+  "version": "0.8.0",
   "releaseUrl": "https://github.com/dawith-ai/dawith-welfare-office/releases/latest",
   "desktop": {
     "provider": "github",

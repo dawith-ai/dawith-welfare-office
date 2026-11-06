@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { PDFDocument } from 'pdf-lib';
+import { readFile } from 'node:fs/promises';
 
 async function pdfBuffer() {
   const document = await PDFDocument.create();
@@ -7,10 +8,23 @@ async function pdfBuffer() {
   return Buffer.from(await document.save());
 }
 
+let rhwpReady;
+async function hwpxBuffer() {
+  const module = await import('../../public/vendor/rhwp/rhwp.js');
+  rhwpReady ||= module.default({ module_or_path: await readFile(new URL('../../public/vendor/rhwp/rhwp_bg.wasm', import.meta.url)) });
+  await rhwpReady;
+  const document = module.HwpDocument.createEmpty();
+  document.createBlankDocument();
+  document.insertText(0, 0, 0, '2026년 사례회의 양식\n결정사항을 입력하세요.');
+  const bytes = Buffer.from(document.exportHwpx());
+  document.free();
+  return bytes;
+}
+
 test('홈에서 비AI 로컬 도구를 검색하고 분류할 수 있다', async ({ page }) => {
   await page.goto('/');
   await expect(page).toHaveTitle(/Dawith Local Tools/);
-  await expect(page.locator('.tool-card')).toHaveCount(13);
+  await expect(page.locator('.tool-card')).toHaveCount(14);
   await page.locator('#toolSearch').fill('만나이');
   await expect(page.locator('.tool-card')).toHaveCount(1);
   await expect(page.locator('.tool-card')).toContainText('만나이 계산기');
@@ -55,6 +69,16 @@ test('PDF 합치기에서 여러 파일을 하나로 저장할 수 있다', asyn
   await page.locator('#pdfMergeButton').click();
   await download;
   await expect(page.locator('#pdfNotice')).toContainText('완료했습니다');
+});
+
+test('HWPX 양식은 rhwp WASM으로 로컬 텍스트를 추출한다', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('.tool-card[data-tool="hwp-inspector"]').click();
+  await page.locator('#hwpInput').setInputFiles({ name: '사례회의.hwpx', mimeType: 'application/octet-stream', buffer: await hwpxBuffer() });
+  await expect(page.locator('#hwpEngineStatus')).toHaveText('엔진 준비됨');
+  await expect(page.locator('#hwpPreview')).toContainText('2026년 사례회의 양식');
+  await expect(page.locator('#hwpPageCount')).toContainText('1페이지');
+  await expect(page.locator('#hwpUseAsSource')).toBeEnabled();
 });
 
 test('이미지 도구는 선택한 파일을 로컬 미리보기로 보여준다', async ({ page }) => {

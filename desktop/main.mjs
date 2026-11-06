@@ -1,6 +1,8 @@
-import { app, BrowserWindow, shell } from 'electron';
+import { app, BrowserWindow, net, protocol, shell } from 'electron';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
+
+protocol.registerSchemesAsPrivileged([{ scheme: 'dawith', privileges: { standard: true, secure: true, supportFetchAPI: true, stream: true, corsEnabled: true } }]);
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 let mainWindow;
@@ -21,8 +23,7 @@ async function createWindow() {
     },
   });
 
-  const appPath = path.join(here, '..', 'public', 'index.html');
-  await mainWindow.loadFile(appPath);
+  await mainWindow.loadURL('dawith://app/index.html');
   mainWindow.on('closed', () => {
     mainWindow = null;
   });
@@ -48,6 +49,14 @@ if (!hasSingleInstanceLock) {
 
 app.whenReady().then(async () => {
   if (!hasSingleInstanceLock) return;
+  const publicRoot = path.resolve(here, '..', 'public');
+  protocol.handle('dawith', async (request) => {
+    const requestUrl = new URL(request.url);
+    const relativePath = decodeURIComponent(requestUrl.pathname).replace(/^\/+/, '') || 'index.html';
+    const filePath = path.resolve(publicRoot, relativePath);
+    if (filePath !== publicRoot && !filePath.startsWith(`${publicRoot}${path.sep}`)) return new Response('Not found', { status: 404 });
+    try { return await net.fetch(pathToFileURL(filePath).toString()); } catch { return new Response('Not found', { status: 404 }); }
+  });
   try {
     await createWindow();
   } catch (error) {

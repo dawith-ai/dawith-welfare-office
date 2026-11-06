@@ -1,6 +1,6 @@
 {
   "name": "dawith-welfare-office",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "private": true,
   "type": "module",
   "description": "Dawith lightweight local welfare work tools for files, images, text, dates, and amounts",
@@ -45,6 +45,11 @@
       "public/favicon.svg",
       "public/dawith-ci.svg",
       "public/vendor/pdf-lib.min.js",
+      "public/vendor/rhwp/rhwp.js",
+      "public/vendor/rhwp/rhwp_bg.wasm",
+      "public/vendor/rhwp/LICENSE",
+      "public/vendor/rhwp/THIRD_PARTY_LICENSES.md",
+      "public/vendor/rhwp/NOTICE.md",
       "package.json"
     ],
     "directories": {
