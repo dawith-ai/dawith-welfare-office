@@ -1,16 +1,16 @@
-# Dawith Welfare Office 0.8.0
+# Dawith Welfare Office 0.8.1
 
 사회복지 현장에서 반복되는 파일·이미지·텍스트·계산 업무를 가볍게 처리하는 로컬 도구 모음입니다. 기본 화면에는 클라우드 LLM을 넣지 않았고, 선택한 파일과 입력 내용은 브라우저 또는 설치된 앱 안에서만 처리합니다.
 
 기관 양식 작업공간에서는 기관 기본정보와 사용자가 만든 문서 양식을 이 기기에 저장하고, 회의록·사업계획서·결과보고서·상담일지 초안을 로컬에서 작성할 수 있습니다. 웹앱은 PWA로 설치해 오프라인 작업공간처럼 사용할 수 있습니다.
 
-한글 양식 확인 도구는 [rhwp](https://github.com/edwardkim/rhwp) v0.8.7 MIT 엔진을 필요할 때만 불러와 HWP·HWPX의 문단·표 텍스트와 페이지 수를 로컬에서 읽습니다. 원본 파일은 업로드하지 않으며, 엔진 고지와 서드파티 라이선스는 `public/vendor/rhwp/`에 포함되어 있습니다.
+한글 양식 도구는 [rhwp](https://github.com/edwardkim/rhwp) v0.8.7 MIT 엔진을 필요할 때만 불러와 HWP·HWPX의 문단·표 텍스트와 페이지 수를 로컬에서 읽습니다. `{{기관명}}` 같은 표식을 치환해 HWPX로 다시 저장할 수도 있습니다. 원본 파일은 업로드하지 않으며, 엔진 고지와 서드파티 라이선스는 `public/vendor/rhwp/`에 포함되어 있습니다.
 
 ## 포함 도구
 
 - PDF 합치기: 여러 PDF의 순서를 확인하고 하나로 저장
 - PDF 나누기: 페이지 번호로 필요한 페이지만 추출
-- 한글 양식 확인: HWP·HWPX 파일의 텍스트·페이지·표 내용을 로컬 추출
+- 한글 양식 확인·채우기: HWP·HWPX 텍스트·페이지·표 추출, 표식 치환 후 HWPX 저장
 - 이미지 크기 조절: 픽셀 크기와 비율을 유지한 채 저장
 - 이미지 용량 줄이기: JPG·PNG·WEBP 품질 조절
 - 사진 정보 지우기: 재인코딩으로 GPS·촬영정보 등 메타데이터 제거
@@ -52,8 +52,8 @@ npm run test:e2e
 npm run dist:win
 ```
 
-- `dist/Dawith-Welfare-Office-0.8.0-x64-Setup.exe`
-- `dist/Dawith-Welfare-Office-0.8.0-x64-Portable.exe`
+- `dist/Dawith-Welfare-Office-0.8.1-x64-Setup.exe`
+- `dist/Dawith-Welfare-Office-0.8.1-x64-Portable.exe`
 
 Electron 런타임과 HWP 엔진 때문에 설치 파일은 0.7.x보다 커질 수 있지만, HWP 엔진은 해당 도구를 열 때만 초기화되고 AI 모델은 포함하지 않습니다. 모델 다운로드나 Ollama 설치 없이도 기본 도구와 HWP 텍스트 확인을 사용할 수 있습니다.
 

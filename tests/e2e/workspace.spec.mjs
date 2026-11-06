@@ -15,7 +15,7 @@ async function hwpxBuffer() {
   await rhwpReady;
   const document = module.HwpDocument.createEmpty();
   document.createBlankDocument();
-  document.insertText(0, 0, 0, '2026년 사례회의 양식\n결정사항을 입력하세요.');
+  document.insertText(0, 0, 0, '기관명: {{기관명}}\n2026년 사례회의 양식\n결정사항을 입력하세요.');
   const bytes = Buffer.from(document.exportHwpx());
   document.free();
   return bytes;
@@ -79,6 +79,12 @@ test('HWPX 양식은 rhwp WASM으로 로컬 텍스트를 추출한다', async ({
   await expect(page.locator('#hwpPreview')).toContainText('2026년 사례회의 양식');
   await expect(page.locator('#hwpPageCount')).toContainText('1페이지');
   await expect(page.locator('#hwpUseAsSource')).toBeEnabled();
+  await page.locator('#hwpQuery').fill('{{기관명}}');
+  await page.locator('#hwpReplacement').fill('다위복지관');
+  const download = page.waitForEvent('download');
+  await page.locator('#hwpReplaceSave').click();
+  expect((await download).suggestedFilename()).toMatch(/\.hwpx$/);
+  await expect(page.locator('#hwpPreview')).toContainText('다위복지관');
 });
 
 test('이미지 도구는 선택한 파일을 로컬 미리보기로 보여준다', async ({ page }) => {
