@@ -114,6 +114,8 @@ test('HWPX 양식은 rhwp WASM으로 로컬 텍스트를 추출한다', async ({
   await expect(page.locator('#hwpPreview')).toContainText('2026년 사례회의 양식');
   await expect(page.locator('#hwpPageCount')).toContainText('1페이지');
   await expect(page.locator('#hwpUseAsSource')).toBeEnabled();
+  await expect(page.locator('#hwpLocalAi')).toBeEnabled();
+  await expect(page.locator('#hwpSubscriptionAi')).toBeEnabled();
   await page.locator('#hwpQuery').fill('{{기관명}}');
   await page.locator('#hwpReplacement').fill('다위복지관');
   const download = page.waitForEvent('download');
@@ -214,6 +216,32 @@ test('기관 양식과 텍스트 화면에 로컬 AI 보조 진입점이 있다'
   await page.locator('[data-action="home"]').click();
   await page.locator('.tool-card[data-tool="template-studio"]').click();
   await expect(page.locator('#templateAiAssist')).toBeVisible();
+  await expect(page.locator('#templateSubscriptionAssist')).toBeVisible();
+  await expect(page.locator('#templateAiRevert')).toBeHidden();
+});
+
+test('기관 양식 구독 AI 결과는 적용 전 되돌릴 수 있다', async ({ page }) => {
+  await page.route('**/api/ai/subscription/status', async (route) => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({ providers: { codex: { provider: 'codex', label: 'Codex 구독', state: 'ready' } } }),
+  }));
+  await page.route('**/api/ai/subscription/assist', async (route) => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({ result: '구독 AI가 만든 합성 문서 초안입니다.' }),
+  }));
+  page.on('dialog', (dialog) => dialog.accept());
+  await page.goto('/');
+  await page.locator('.tool-card[data-tool="template-studio"]').click();
+  await page.locator('#templateProject').fill('합성 사례회의');
+  await page.locator('#templateContent').fill('주거 지원 절차를 논의함.');
+  await page.locator('#templateSubscriptionAssist').click();
+  await expect(page.locator('#templatePreview')).toContainText('구독 AI가 만든');
+  await expect(page.locator('#templateAiRevert')).toBeVisible();
+  await page.locator('#templateAiRevert').click();
+  await expect(page.locator('#templatePreview')).toContainText('합성 사례회의');
+  await expect(page.locator('#templateAiRevert')).toBeHidden();
 });
 
 test('AI 연결 센터는 로컬 모델과 구독 AI 경계를 분리해 보여준다', async ({ page }) => {

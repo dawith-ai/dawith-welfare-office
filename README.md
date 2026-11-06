@@ -1,4 +1,4 @@
-# Dawith Welfare Office 0.9.0
+# Dawith Welfare Office 0.9.1
 
 사회복지 현장에서 반복되는 파일·이미지·텍스트·계산 업무를 가볍게 처리하는 로컬 도구 모음입니다. 기본 화면에는 클라우드 LLM을 넣지 않았고, 선택한 파일과 입력 내용은 브라우저 또는 설치된 앱 안에서만 처리합니다.
 
@@ -15,6 +15,7 @@
 - PDF 합치기: 여러 PDF의 순서를 확인하고 하나로 저장
 - PDF 나누기: 페이지 번호로 필요한 페이지만 추출
 - 한글 양식 확인·채우기: HWP·HWPX 텍스트·페이지·표 추출, 표식 치환 후 HWPX 저장
+- 한글 양식 AI 검토: 추출한 텍스트를 로컬 모델 또는 명시적으로 선택한 구독 AI로 요약하고 되돌리기
 - 이미지 크기 조절: 픽셀 크기와 비율을 유지한 채 저장
 - 이미지 용량 줄이기: JPG·PNG·WEBP 품질 조절
 - 사진 정보 지우기: 재인코딩으로 GPS·촬영정보 등 메타데이터 제거
@@ -59,8 +60,8 @@ npm run test:e2e
 npm run dist:win
 ```
 
-- `dist/Dawith-Welfare-Office-0.9.0-x64-Setup.exe`
-- `dist/Dawith-Welfare-Office-0.9.0-x64-Portable.exe`
+- `dist/Dawith-Welfare-Office-0.9.1-x64-Setup.exe`
+- `dist/Dawith-Welfare-Office-0.9.1-x64-Portable.exe`
 
 Electron 런타임과 HWP 엔진 때문에 설치 파일은 0.7.x보다 커질 수 있지만, HWP 엔진은 해당 도구를 열 때만 초기화되고 AI 모델은 포함하지 않습니다. 모델 다운로드나 Ollama 설치 없이도 기본 도구와 HWP 텍스트 확인을 사용할 수 있습니다.
 

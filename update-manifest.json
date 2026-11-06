@@ -1,9 +1,9 @@
 {
-  "version": "0.9.0",
+  "version": "0.9.1",
   "releaseUrl": "https://github.com/dawith-ai/dawith-welfare-office/releases/latest",
   "desktop": {
     "provider": "github",
     "channel": "latest",
-    "notes": "Dawith Welfare Office 0.9.0 · AI 연결 센터와 사용 안내 추가"
+    "notes": "Dawith Welfare Office 0.9.1 · 기관 양식·HWP AI 검토 흐름 보강"
   }
 }

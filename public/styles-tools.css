@@ -260,7 +260,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .template-preview-heading > div:first-child { display: grid; gap: 4px; }
 .template-preview-heading b { font-size: 13px; }
 .template-preview-heading span { color: var(--muted); font-size: 10px; }
-.template-actions { display: flex; gap: 7px; }
+.template-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 7px; }
 .template-actions .primary-button { margin-left: 0; }
 .panel-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 7px; }
 .ai-setup-layout { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(260px, .75fr); gap: 22px; margin-top: 28px; }

@@ -134,7 +134,7 @@ function renderAiSetup(tool) {
 }
 
 function renderHwpWorkspace(tool) {
-  return `${toolHeader(tool, '한글 기관 양식을 확인하고 채우기', 'HWP·HWPX 파일을 외부로 보내지 않고 이 기기에서 읽고 표식을 치환해 저장합니다.')}<div class="hwp-layout"><section class="tool-panel hwp-entry"><div class="panel-heading"><div><h2>양식 파일</h2><p>기관에서 받은 .hwp 또는 .hwpx 파일을 선택하세요.</p></div><span id="hwpEngineStatus" class="local-note">엔진 준비 전</span></div><div id="hwpDropzone" class="dropzone"><div><span class="dropzone-mark">H</span><b>HWP·HWPX 파일을 놓으세요</b><p>파일은 이 브라우저에서만 읽습니다.</p><label class="file-button"><input id="hwpInput" type="file" accept=".hwp,.hwpx,.hml,application/x-hwp,application/haansofthwp" />파일 선택</label></div></div><div id="hwpNotice" class="notice" hidden></div><div id="hwpMeta" class="hwp-meta hidden"><div><span>파일</span><b id="hwpFileName"></b></div><div><span>페이지</span><b id="hwpPageCount">-</b></div><div><span>처리</span><b>이 기기</b></div></div><div id="hwpReplacePanel" class="hwp-replace hidden"><b>양식 표식 치환</b><p><code>{{기관명}}</code>처럼 양식에 넣은 표식을 찾아 바꿉니다.</p><div class="replace-grid"><label>찾을 표식<input id="hwpQuery" class="wide-input" placeholder="예: {{기관명}}" /></label><label>바꿀 내용<input id="hwpReplacement" class="wide-input" placeholder="예: 다위복지관" /></label></div><button id="hwpReplaceSave" class="primary-button" type="button" disabled>치환한 HWPX 저장 →</button></div></section><section class="tool-panel hwp-result"><div class="panel-heading"><div><h2>양식 내용</h2><p id="hwpResultLabel">파일을 선택하면 텍스트를 추출합니다.</p></div><button id="hwpCopy" class="secondary-button" type="button" disabled>복사</button></div><pre id="hwpPreview" class="hwp-preview">HWP·HWPX 파일을 선택하면 양식 안의 텍스트가 여기에 표시됩니다.</pre><div class="tool-actions"><button id="hwpUseAsSource" class="primary-button" type="button" disabled>내용을 텍스트 도구로 보내기 →</button></div></section></div><aside class="hwp-safety"><b>지원 범위</b><span>HWP 5.0 · HWPX · 일부 HML</span><span>표·문단 텍스트 추출</span><span>rhwp MIT 엔진을 필요할 때만 불러옵니다</span></aside>`;
+  return `${toolHeader(tool, '한글 기관 양식을 확인하고 채우기', 'HWP·HWPX 파일을 외부로 보내지 않고 이 기기에서 읽고 표식을 치환해 저장합니다.')}<div class="hwp-layout"><section class="tool-panel hwp-entry"><div class="panel-heading"><div><h2>양식 파일</h2><p>기관에서 받은 .hwp 또는 .hwpx 파일을 선택하세요.</p></div><span id="hwpEngineStatus" class="local-note">엔진 준비 전</span></div><div id="hwpDropzone" class="dropzone"><div><span class="dropzone-mark">H</span><b>HWP·HWPX 파일을 놓으세요</b><p>파일은 이 브라우저에서만 읽습니다.</p><label class="file-button"><input id="hwpInput" type="file" accept=".hwp,.hwpx,.hml,application/x-hwp,application/haansofthwp" />파일 선택</label></div></div><div id="hwpNotice" class="notice" hidden></div><div id="hwpMeta" class="hwp-meta hidden"><div><span>파일</span><b id="hwpFileName"></b></div><div><span>페이지</span><b id="hwpPageCount">-</b></div><div><span>처리</span><b>이 기기</b></div></div><div id="hwpReplacePanel" class="hwp-replace hidden"><b>양식 표식 치환</b><p><code>{{기관명}}</code>처럼 양식에 넣은 표식을 찾아 바꿉니다.</p><div class="replace-grid"><label>찾을 표식<input id="hwpQuery" class="wide-input" placeholder="예: {{기관명}}" /></label><label>바꿀 내용<input id="hwpReplacement" class="wide-input" placeholder="예: 다위복지관" /></label></div><button id="hwpReplaceSave" class="primary-button" type="button" disabled>치환한 HWPX 저장 →</button></div></section><section class="tool-panel hwp-result"><div class="panel-heading"><div><h2>양식 내용</h2><p id="hwpResultLabel">파일을 선택하면 텍스트를 추출합니다.</p></div><div class="panel-actions"><button id="hwpCopy" class="secondary-button" type="button" disabled>복사</button><button id="hwpLocalAi" class="secondary-button" type="button" disabled>로컬 AI 요약</button><button id="hwpSubscriptionAi" class="secondary-button external-ai-button" type="button" disabled>구독 AI 요약</button><button id="hwpAiRevert" class="secondary-button hidden" type="button">되돌리기</button></div></div><pre id="hwpPreview" class="hwp-preview">HWP·HWPX 파일을 선택하면 양식 안의 텍스트가 여기에 표시됩니다.</pre><div class="tool-actions"><button id="hwpUseAsSource" class="primary-button" type="button" disabled>내용을 텍스트 도구로 보내기 →</button></div></section></div><aside class="hwp-safety"><b>지원 범위</b><span>HWP 5.0 · HWPX · 일부 HML</span><span>표·문단 텍스트 추출</span><span>AI 버튼은 선택한 텍스트를 초안으로 요약합니다</span><span>rhwp MIT 엔진을 필요할 때만 불러옵니다</span></aside>`;
 }
 
 const builtInTemplates = [
@@ -151,7 +151,7 @@ function getTemplateCatalog() {
 function renderTemplateStudio(tool) {
   const templates = getTemplateCatalog();
   const options = templates.map((template) => `<option value="${escapeHtml(template.id)}">${escapeHtml(template.title)}</option>`).join('');
-  return `${toolHeader(tool, '기관 양식 작업공간', '기관 정보와 자주 쓰는 문장을 이 PC에 저장하고 행정문서 초안을 만듭니다.')}<div class="template-layout"><aside class="tool-panel template-sidebar"><div class="panel-heading"><div><h2>내 양식</h2><p>저장한 양식은 이 기기에만 남습니다.</p></div></div><div class="control-group template-select-group"><label for="templateSelect">사용할 문서</label><select id="templateSelect" class="wide-input">${options}</select></div><div class="template-save-box"><label for="templateName">내 양식으로 저장</label><input id="templateName" class="wide-input" placeholder="예: 우리 기관 회의록" /><textarea id="templateBody" class="template-body-input" placeholder="{{기관명}}, {{사업명}} 같은 항목을 사용할 수 있습니다."></textarea><button id="templateSave" class="secondary-button" type="button">내 양식 저장</button><p id="templateNotice" class="field-hint">양식 안의 개인정보는 저장하지 마세요.</p></div><div class="template-help"><b>사용 가능한 항목</b><p>{{기관명}} · {{문서일}} · {{사업명}} · {{작성자}} · {{참석자}} · {{목적}} · {{내용}} · {{결정사항}} · {{후속조치}}</p></div></aside><section class="tool-panel template-editor-panel"><div class="panel-heading"><div><h2>초안 작성</h2><p>입력하는 즉시 오른쪽 결과에 반영됩니다.</p></div><span class="local-note">● 자동 저장 안 함</span></div><div class="profile-strip"><div><b>기관 기본정보</b><span>다음 작업에 다시 입력하지 않도록 이 PC에 저장합니다.</span></div><div class="profile-fields"><input id="profileOrganization" class="wide-input" placeholder="기관명" /><input id="profileManager" class="wide-input" placeholder="기본 작성자" /><button id="profileSave" class="secondary-button" type="button">저장</button></div></div><div class="template-fields"><div class="control-group"><label for="templateDate">문서일</label><input id="templateDate" type="date" class="wide-input" /></div><div class="control-group"><label for="templateProject">사업명·회의명</label><input id="templateProject" class="wide-input" placeholder="예: 2026년 주거취약가구 지원사업" /></div><div class="control-group"><label for="templateAuthor">작성자</label><input id="templateAuthor" class="wide-input" placeholder="담당자 이름" /></div><div class="control-group"><label for="templateAttendees">참석자</label><input id="templateAttendees" class="wide-input" placeholder="예: 김○○, 이○○" /></div><div class="control-group full-field"><label for="templatePurpose">목적·추진 배경</label><textarea id="templatePurpose" placeholder="왜 이 문서를 작성하는지 입력하세요."></textarea></div><div class="control-group full-field"><label for="templateContent">주요 내용</label><textarea id="templateContent" placeholder="논의 내용·추진 내용·상담 내용을 입력하세요."></textarea></div><div class="control-group"><label for="templateDecisions">성과·결정사항</label><textarea id="templateDecisions" placeholder="확인된 성과나 결정사항"></textarea></div><div class="control-group"><label for="templateActions">후속 조치·향후 계획</label><textarea id="templateActions" placeholder="담당자와 다음 일정을 입력하세요."></textarea></div></div><div class="template-preview-heading"><div><b>결과 미리보기</b><span>원문은 외부로 전송되지 않습니다.</span></div><div class="template-actions"><button id="templateAiAssist" class="secondary-button" type="button">로컬 AI로 초안 다듬기</button><button id="templateCopy" class="secondary-button" type="button">복사</button><button id="templateDownload" class="primary-button" type="button">문서용 HTML 저장 →</button></div></div><pre id="templatePreview" class="template-preview">내용을 입력하면 초안이 여기에 표시됩니다.</pre></section></div>`;
+  return `${toolHeader(tool, '기관 양식 작업공간', '기관 정보와 자주 쓰는 문장을 이 PC에 저장하고 행정문서 초안을 만듭니다.')}<div class="template-layout"><aside class="tool-panel template-sidebar"><div class="panel-heading"><div><h2>내 양식</h2><p>저장한 양식은 이 기기에만 남습니다.</p></div></div><div class="control-group template-select-group"><label for="templateSelect">사용할 문서</label><select id="templateSelect" class="wide-input">${options}</select></div><div class="template-save-box"><label for="templateName">내 양식으로 저장</label><input id="templateName" class="wide-input" placeholder="예: 우리 기관 회의록" /><textarea id="templateBody" class="template-body-input" placeholder="{{기관명}}, {{사업명}} 같은 항목을 사용할 수 있습니다."></textarea><button id="templateSave" class="secondary-button" type="button">내 양식 저장</button><p id="templateNotice" class="field-hint">양식 안의 개인정보는 저장하지 마세요.</p></div><div class="template-help"><b>사용 가능한 항목</b><p>{{기관명}} · {{문서일}} · {{사업명}} · {{작성자}} · {{참석자}} · {{목적}} · {{내용}} · {{결정사항}} · {{후속조치}}</p></div></aside><section class="tool-panel template-editor-panel"><div class="panel-heading"><div><h2>초안 작성</h2><p>입력하는 즉시 결과에 반영됩니다. AI 결과는 검토 전 초안입니다.</p></div><span class="local-note">● 로컬 우선</span></div><div class="profile-strip"><div><b>기관 기본정보</b><span>다음 작업에 다시 입력하지 않도록 이 PC에 저장합니다.</span></div><div class="profile-fields"><input id="profileOrganization" class="wide-input" placeholder="기관명" /><input id="profileManager" class="wide-input" placeholder="기본 작성자" /><button id="profileSave" class="secondary-button" type="button">저장</button></div></div><div class="template-fields"><div class="control-group"><label for="templateDate">문서일</label><input id="templateDate" type="date" class="wide-input" /></div><div class="control-group"><label for="templateProject">사업명·회의명</label><input id="templateProject" class="wide-input" placeholder="예: 2026년 주거취약가구 지원사업" /></div><div class="control-group"><label for="templateAuthor">작성자</label><input id="templateAuthor" class="wide-input" placeholder="담당자 이름" /></div><div class="control-group"><label for="templateAttendees">참석자</label><input id="templateAttendees" class="wide-input" placeholder="예: 김○○, 이○○" /></div><div class="control-group full-field"><label for="templatePurpose">목적·추진 배경</label><textarea id="templatePurpose" placeholder="왜 이 문서를 작성하는지 입력하세요."></textarea></div><div class="control-group full-field"><label for="templateContent">주요 내용</label><textarea id="templateContent" placeholder="논의 내용·추진 내용·상담 내용을 입력하세요."></textarea></div><div class="control-group"><label for="templateDecisions">성과·결정사항</label><textarea id="templateDecisions" placeholder="확인된 성과나 결정사항"></textarea></div><div class="control-group"><label for="templateActions">후속 조치·향후 계획</label><textarea id="templateActions" placeholder="담당자와 다음 일정을 입력하세요."></textarea></div></div><div class="template-preview-heading"><div><b>결과 미리보기</b><span>기본은 로컬 처리 · 구독 AI 사용 시 선택한 문서가 외부로 전송됩니다.</span></div><div class="template-actions"><button id="templateAiAssist" class="secondary-button" type="button">로컬 AI로 초안 다듬기</button><button id="templateSubscriptionAssist" class="secondary-button external-ai-button" type="button">구독 AI 사용</button><button id="templateAiRevert" class="secondary-button hidden" type="button">AI 결과 되돌리기</button><button id="templateCopy" class="secondary-button" type="button">복사</button><button id="templateDownload" class="primary-button" type="button">문서용 HTML 저장 →</button></div></div><pre id="templatePreview" class="template-preview">내용을 입력하면 초안이 여기에 표시됩니다.</pre></section></div>`;
 }
 
 function renderAttendanceWorkspace(tool) {
@@ -206,18 +206,38 @@ function hwpTextFromEngine(doc) {
 }
 
 function bindHwpInspector() {
-  const input = $('#hwpInput'); const zone = $('#hwpDropzone'); const preview = $('#hwpPreview'); const copy = $('#hwpCopy'); const useAsSource = $('#hwpUseAsSource'); const replacePanel = $('#hwpReplacePanel'); const replaceSave = $('#hwpReplaceSave'); let extracted = ''; let loadedDocument = null;
+  const input = $('#hwpInput'); const zone = $('#hwpDropzone'); const preview = $('#hwpPreview'); const copy = $('#hwpCopy'); const useAsSource = $('#hwpUseAsSource'); const replacePanel = $('#hwpReplacePanel'); const replaceSave = $('#hwpReplaceSave'); let extracted = ''; let loadedDocument = null; let aiPreviousPreview = '';
   const notice = (message, error = false) => { $('#hwpNotice').hidden = false; $('#hwpNotice').className = `notice${error ? ' error-notice' : ''}`; $('#hwpNotice').textContent = message; };
   const readFile = async (file) => {
     $('#hwpEngineStatus').textContent = '엔진 준비 중…'; notice('HWP 엔진을 처음 불러오는 중입니다. 파일은 외부로 전송하지 않습니다.');
     try {
       const { HwpDocument } = await loadRhwpRuntime(); if (loadedDocument) loadedDocument.free(); loadedDocument = new HwpDocument(new Uint8Array(await file.arrayBuffer()));
-      extracted = hwpTextFromEngine(loadedDocument).replace(/\r\n/g, '\n').trim(); const pages = loadedDocument.pageCount(); $('#hwpFileName').textContent = file.name; $('#hwpPageCount').textContent = `${pages}페이지`; $('#hwpMeta').classList.remove('hidden'); replacePanel.classList.remove('hidden'); replaceSave.disabled = false; preview.textContent = extracted || '텍스트를 찾지 못했습니다. 표·그림 중심 양식일 수 있습니다.'; $('#hwpResultLabel').textContent = `${formatBytes(file.size)} · ${pages}페이지 · 로컬 추출 완료`; copy.disabled = !extracted; useAsSource.disabled = !extracted; $('#hwpEngineStatus').textContent = '엔진 준비됨'; notice('양식 내용을 이 기기에서 읽었습니다.');
-    } catch (error) { if (loadedDocument) { loadedDocument.free(); loadedDocument = null; } extracted = ''; replacePanel.classList.add('hidden'); replaceSave.disabled = true; preview.textContent = '파일을 읽지 못했습니다.'; copy.disabled = true; useAsSource.disabled = true; $('#hwpEngineStatus').textContent = '확인 필요'; notice(error?.message?.includes('rhwp_wasm') ? 'HWP 엔진 파일을 불러오지 못했습니다. 앱을 최신 버전으로 업데이트해 주세요.' : '지원하지 않는 형식이거나 암호가 걸린 파일입니다.', true); }
+      extracted = hwpTextFromEngine(loadedDocument).replace(/\r\n/g, '\n').trim(); const pages = loadedDocument.pageCount(); $('#hwpFileName').textContent = file.name; $('#hwpPageCount').textContent = `${pages}페이지`; $('#hwpMeta').classList.remove('hidden'); replacePanel.classList.remove('hidden'); replaceSave.disabled = false; preview.textContent = extracted || '텍스트를 찾지 못했습니다. 표·그림 중심 양식일 수 있습니다.'; $('#hwpResultLabel').textContent = `${formatBytes(file.size)} · ${pages}페이지 · 로컬 추출 완료`; copy.disabled = !extracted; useAsSource.disabled = !extracted; $('#hwpLocalAi').disabled = !extracted; $('#hwpSubscriptionAi').disabled = !extracted; $('#hwpEngineStatus').textContent = '엔진 준비됨'; notice('양식 내용을 이 기기에서 읽었습니다.');
+    } catch (error) { if (loadedDocument) { loadedDocument.free(); loadedDocument = null; } extracted = ''; replacePanel.classList.add('hidden'); replaceSave.disabled = true; preview.textContent = '파일을 읽지 못했습니다.'; copy.disabled = true; useAsSource.disabled = true; $('#hwpLocalAi').disabled = true; $('#hwpSubscriptionAi').disabled = true; $('#hwpEngineStatus').textContent = '확인 필요'; notice(error?.message?.includes('rhwp_wasm') ? 'HWP 엔진 파일을 불러오지 못했습니다. 앱을 최신 버전으로 업데이트해 주세요.' : '지원하지 않는 형식이거나 암호가 걸린 파일입니다.', true); }
   };
   bindDropzone(zone, input, (files) => { if (files[0]) readFile(files[0]); });
   copy.addEventListener('click', async () => { await navigator.clipboard?.writeText(extracted); notice('추출한 내용을 클립보드에 복사했습니다.'); });
   replaceSave.addEventListener('click', () => { const query = $('#hwpQuery').value; const replacement = $('#hwpReplacement').value; if (!loadedDocument || !query) return notice('찾을 표식을 입력해 주세요.', true); try { const result = JSON.parse(loadedDocument.replaceAll(query, replacement, true)); if (!result.count) return notice('찾은 표식이 없습니다.', true); extracted = hwpTextFromEngine(loadedDocument).replace(/\r\n/g, '\n').trim(); preview.textContent = extracted; notice(`${result.count}곳을 치환했습니다. 원본은 바뀌지 않았습니다.`); const bytes = loadedDocument.exportHwpx(); downloadBlob(new Blob([bytes], { type: 'application/vnd.hancom.hwpx' }), `다위복지관_양식_작성본_${compactDate(new Date())}.hwpx`); } catch { notice('치환한 HWPX를 저장하지 못했습니다.', true); } });
+  $('#hwpLocalAi').addEventListener('click', async () => {
+    if (!extracted) return;
+    const button = $('#hwpLocalAi'); button.disabled = true; button.textContent = '로컬 AI 처리 중…';
+    try { aiPreviousPreview = preview.textContent; preview.textContent = await runLocalAi('hwp-summary', extracted); $('#hwpAiRevert').classList.remove('hidden'); notice('로컬 AI 요약 초안입니다. 원문과 대조해 검토하세요.'); }
+    catch (error) { notice(aiErrorMessage(error), true); }
+    finally { button.disabled = false; button.textContent = '로컬 AI 요약'; }
+  });
+  $('#hwpSubscriptionAi').addEventListener('click', async () => {
+    if (!extracted) return;
+    const status = await fetchSubscriptionStatus().catch(() => null);
+    const available = Object.values(status?.providers || {}).filter((item) => item.state === 'ready');
+    if (!available.length) return notice('로그인된 Claude·Codex 구독을 찾지 못했습니다. AI 보조·연결 센터에서 상태를 확인하세요.', true);
+    const provider = available[0].provider; const label = provider === 'codex' ? 'Codex' : 'Claude';
+    if (!window.confirm(`${label} 구독으로 HWP 원문을 외부 전송해 요약합니다. 기관 승인과 개인정보 보호 기준을 확인했습니까?`)) return;
+    const button = $('#hwpSubscriptionAi'); button.disabled = true; button.textContent = '구독 AI 처리 중…';
+    try { aiPreviousPreview = preview.textContent; preview.textContent = await runSubscriptionAi({ provider, task: 'hwp-summary', text: extracted }); $('#hwpAiRevert').classList.remove('hidden'); notice(`${label} 구독 AI 요약 초안입니다. 외부 전송 결과이므로 원문과 대조하세요.`); }
+    catch (error) { notice(subscriptionErrorMessage(error), true); }
+    finally { button.disabled = false; button.textContent = '구독 AI 요약'; }
+  });
+  $('#hwpAiRevert').addEventListener('click', () => { if (!aiPreviousPreview) return; preview.textContent = aiPreviousPreview; aiPreviousPreview = ''; $('#hwpAiRevert').classList.add('hidden'); notice('AI 요약을 적용 전 원문으로 되돌렸습니다.'); });
   useAsSource.addEventListener('click', () => { localStorage.setItem('dawith-hwp-source-v1', extracted); openTool('text-tools'); $('#textInput').value = extracted; $('#textInput').dispatchEvent(new Event('input', { bubbles: true })); });
 }
 
@@ -572,6 +592,7 @@ function subscriptionErrorMessage(error) {
 
 function bindTemplateStudio() {
   const templateSelect = $('#templateSelect'); const templateBody = $('#templateBody'); const profileKey = 'dawith-institution-profile-v1';
+  let aiPreviousPreview = '';
   const fields = { organization: $('#profileOrganization'), manager: $('#profileManager'), date: $('#templateDate'), project: $('#templateProject'), author: $('#templateAuthor'), attendees: $('#templateAttendees'), purpose: $('#templatePurpose'), content: $('#templateContent'), decisions: $('#templateDecisions'), actions: $('#templateActions') };
   const today = compactDate(new Date()).replace(/(\d{4})(\d{2})(\d{2})/, '$1-$2-$3');
   fields.date.value = today;
@@ -579,7 +600,8 @@ function bindTemplateStudio() {
   const currentTemplate = () => getTemplateCatalog().find((template) => template.id === templateSelect.value) || builtInTemplates[0];
   const loadTemplate = () => { const template = currentTemplate(); templateBody.value = template.body; $('#templateName').value = template.id.startsWith('custom-') ? template.title : ''; update(); };
   const values = () => ({ '기관명': fields.organization.value.trim() || '기관명 입력 필요', '문서일': fields.date.value ? formatDate(new Date(`${fields.date.value}T00:00:00`)) : '문서일 입력 필요', '사업명': fields.project.value.trim() || '사업명 입력 필요', '작성자': fields.author.value.trim() || fields.manager.value.trim() || '작성자 입력 필요', '참석자': fields.attendees.value.trim() || '참석자 입력 필요', '목적': fields.purpose.value.trim() || '내용 입력 필요', '내용': fields.content.value.trim() || '내용 입력 필요', '결정사항': fields.decisions.value.trim() || '내용 입력 필요', '후속조치': fields.actions.value.trim() || '내용 입력 필요' });
-  const update = () => { let output = templateBody.value; for (const [key, value] of Object.entries(values())) output = output.split(`{{${key}}}`).join(value); $('#templatePreview').textContent = output || '양식 내용을 입력하세요.'; };
+  const update = () => { let output = templateBody.value; for (const [key, value] of Object.entries(values())) output = output.split(`{{${key}}}`).join(value); $('#templatePreview').textContent = output || '양식 내용을 입력하세요.'; $('#templateAiRevert').classList.add('hidden'); aiPreviousPreview = ''; };
+  const applyAiPreview = (result, providerLabel) => { aiPreviousPreview = $('#templatePreview').textContent; $('#templatePreview').textContent = result; $('#templateAiRevert').classList.remove('hidden'); showNotice('#templateNotice', `${providerLabel} 초안을 미리보기에 적용했습니다. 원문과 대조한 뒤 확정하세요.`); };
   $('#profileSave').addEventListener('click', () => { try { localStorage.setItem(profileKey, JSON.stringify({ organization: fields.organization.value.trim(), manager: fields.manager.value.trim() })); showNotice('#templateNotice', '기관 기본정보를 이 PC에 저장했습니다.'); } catch { showNotice('#templateNotice', '이 브라우저에서는 저장할 수 없습니다.', true); } });
   templateSelect.addEventListener('change', loadTemplate);
   Object.values(fields).forEach((field) => field.addEventListener('input', update));
@@ -595,8 +617,7 @@ function bindTemplateStudio() {
     button.textContent = '로컬 AI 처리 중…';
     try {
       const result = await runLocalAi('document-draft', text, `${fields.organization.value.trim()} ${fields.project.value.trim()}`.trim());
-      $('#templatePreview').textContent = result;
-      showNotice('#templateNotice', '로컬 AI 초안을 만들었습니다. 원문과 대조해 검토하세요.');
+      applyAiPreview(result, '로컬 AI');
     } catch (error) {
       showNotice('#templateNotice', aiErrorMessage(error), true);
     } finally {
@@ -604,6 +625,30 @@ function bindTemplateStudio() {
       button.textContent = '로컬 AI로 초안 다듬기';
     }
   });
+  $('#templateSubscriptionAssist').addEventListener('click', async () => {
+    const text = $('#templatePreview').textContent.trim();
+    if (!text || text === '내용을 입력하면 초안이 여기에 표시됩니다.') return showNotice('#templateNotice', '먼저 문서 내용을 입력해 주세요.', true);
+    const status = await fetchSubscriptionStatus().catch(() => null);
+    const available = Object.values(status?.providers || {}).filter((item) => item.state === 'ready');
+    if (!available.length) return showNotice('#templateNotice', '로그인된 Claude·Codex 구독을 찾지 못했습니다. AI 보조·연결 센터에서 상태를 확인하세요.', true);
+    const provider = available[0].provider;
+    const providerLabel = provider === 'codex' ? 'Codex' : 'Claude';
+    if (!window.confirm(`${providerLabel} 구독으로 문서 초안을 외부 전송합니다. 기관 승인과 개인정보 보호 기준을 확인했습니까?`)) return;
+    const button = $('#templateSubscriptionAssist');
+    button.disabled = true;
+    button.textContent = '구독 AI 처리 중…';
+    try {
+      const result = await runSubscriptionAi({ provider, task: 'document-draft', text, contextText: `${fields.organization.value.trim()} ${fields.project.value.trim()}`.trim() });
+      applyAiPreview(result, `${providerLabel} 구독 AI`);
+      showNotice('#templateNotice', `${providerLabel} 구독 AI 결과입니다. 외부 전송 결과이므로 원문과 대조하세요.`);
+    } catch (error) {
+      showNotice('#templateNotice', subscriptionErrorMessage(error), true);
+    } finally {
+      button.disabled = false;
+      button.textContent = '구독 AI 사용';
+    }
+  });
+  $('#templateAiRevert').addEventListener('click', () => { if (!aiPreviousPreview) return; $('#templatePreview').textContent = aiPreviousPreview; aiPreviousPreview = ''; $('#templateAiRevert').classList.add('hidden'); showNotice('#templateNotice', 'AI 결과를 적용 전 미리보기로 되돌렸습니다.'); });
   loadTemplate();
 }
 function bindAttendance() {
