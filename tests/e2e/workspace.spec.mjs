@@ -248,13 +248,13 @@ test('AI 연결 센터는 로컬 모델과 구독 AI 경계를 분리해 보여�
   await page.route('**/api/ai/subscription/status', async (route) => route.fulfill({
     status: 200,
     contentType: 'application/json',
-    body: JSON.stringify({ providers: { 'claude-code': { provider: 'claude-code', label: 'Claude 구독', installed: true, state: 'signed-out' }, codex: { provider: 'codex', label: 'Codex 구독', installed: true, state: 'ready' } } }),
+    body: JSON.stringify({ providers: { 'claude-code': { provider: 'claude-code', label: 'Claude 구독', installed: true, state: 'signed-out' }, codex: { provider: 'codex', label: 'Codex 구독', installed: true, state: 'ready' }, 'gemini-cli': { provider: 'gemini-cli', label: 'Gemini 무료 · Google 로그인', installed: true, state: 'ready' }, chatgpt: { provider: 'chatgpt', label: 'ChatGPT 구독', kind: 'oauth', state: 'not-connected' }, openrouter: { provider: 'openrouter', label: 'OpenRouter 무료', kind: 'oauth', state: 'not-connected' }, gemini: { provider: 'gemini', label: 'Google Gemini', kind: 'key', state: 'not-connected' } } }),
   }));
   await page.goto('/');
   await page.locator('.tool-card[data-tool="ai-setup"]').click();
   await expect(page.locator('.subscription-panel')).toBeVisible();
   await expect(page.locator('.subscription-warning')).toContainText('외부 전송');
-  await expect(page.locator('.subscription-card')).toHaveCount(2);
+  await expect(page.locator('.subscription-card')).toHaveCount(6);
   await page.locator('#subscriptionText').fill('개인정보 없는 합성 문장입니다.');
   await expect(page.locator('#subscriptionAssist')).toBeEnabled();
 });

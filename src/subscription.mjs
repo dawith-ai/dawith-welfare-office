@@ -15,6 +15,11 @@ const PROVIDERS = {
     commands: ['codex', 'codex.exe'],
     installUrl: 'https://developers.openai.com/codex/cli',
   },
+  'gemini-cli': {
+    label: 'Gemini 무료 · Google 로그인',
+    commands: ['gemini', 'gemini.cmd', 'gemini.exe'],
+    installUrl: 'https://github.com/google-gemini/gemini-cli',
+  },
 };
 
 const MAX_PROMPT_LENGTH = 120_000;
@@ -24,7 +29,7 @@ const REQUEST_TIMEOUT_MS = 120_000;
 const activeChildren = new Set();
 
 function isProvider(value) {
-  return value === 'claude-code' || value === 'codex';
+  return value === 'claude-code' || value === 'codex' || value === 'gemini-cli';
 }
 
 function cleanEnv(command) {
@@ -124,6 +129,17 @@ function runChild(program, args, { input = '', timeoutMs = REQUEST_TIMEOUT_MS, c
 
 function statusFrom(provider, program, result) {
   const output = `${result.stdout}\n${result.stderr}`;
+  if (provider === 'gemini-cli') {
+    return {
+      provider,
+      label: PROVIDERS[provider].label,
+      installed: Boolean(program),
+      loggedIn: Boolean(program && result.code === 0),
+      state: !program ? 'not-installed' : result.code === 0 ? 'ready' : 'signed-out',
+      authHint: '처음 사용할 때 Gemini CLI 화면에서 Google로 로그인합니다.',
+      installUrl: PROVIDERS[provider].installUrl,
+    };
+  }
   if (provider === 'claude-code') {
     let parsed = null;
     const start = result.stdout.indexOf('{');
@@ -158,7 +174,7 @@ async function providerStatus(provider) {
   const program = await locate(provider);
   if (!program) return statusFrom(provider, null, { stdout: '', stderr: '' });
   try {
-    const args = provider === 'claude-code' ? ['auth', 'status', '--json'] : ['login', 'status'];
+    const args = provider === 'claude-code' ? ['auth', 'status', '--json'] : provider === 'codex' ? ['login', 'status'] : ['--version'];
     const result = await runChild(program, args, { timeoutMs: STATUS_TIMEOUT_MS });
     return statusFrom(provider, program, result);
   } catch (error) {
@@ -197,6 +213,12 @@ function promptFor({ task, text, contextText }) {
 async function claudeAssist(program, prompt) {
   const args = ['-p', '--input-format', 'text', '--output-format', 'text', '--tools', '', '--restricted', '--strict-mcp-config', '--setting-sources', '', '--disable-slash-commands', '--no-session-persistence'];
   const result = await runChild(program, args, { input: prompt });
+  if (result.code !== 0) throw new Error('subscription_request_failed');
+  return result.stdout.trim();
+}
+
+async function geminiCliAssist(program, prompt) {
+  const result = await runChild(program, ['-p', '', '--output-format', 'text', '--approval-mode', 'plan'], { input: prompt, cwd: os.tmpdir() });
   if (result.code !== 0) throw new Error('subscription_request_failed');
   return result.stdout.trim();
 }
@@ -285,9 +307,22 @@ export function createSubscriptionBridge() {
       const program = await locate(provider);
       if (!program) throw new Error('subscription_not_installed');
       const prompt = promptFor({ task: String(input.task || ''), text, contextText: String(input.contextText || '') });
-      const result = provider === 'claude-code' ? await claudeAssist(program, prompt) : await codexAssist(program, prompt);
+      const result = provider === 'claude-code' ? await claudeAssist(program, prompt) : provider === 'codex' ? await codexAssist(program, prompt) : await geminiCliAssist(program, prompt);
       if (!result) throw new Error('subscription_empty_result');
       return { result: result.slice(0, MAX_OUTPUT_LENGTH), provider, transfer: { external: true, destination: provider, userInitiated: true } };
+    },
+    async login(provider) {
+      if (!isProvider(provider)) throw new Error('subscription_provider_invalid');
+      const program = await locate(provider);
+      if (!program) throw new Error('subscription_not_installed');
+      const args = provider === 'claude-code' ? ['auth', 'login'] : provider === 'codex' ? ['login'] : [];
+      const command = process.platform === 'win32' ? 'cmd.exe' : process.platform === 'darwin' ? 'open' : 'x-terminal-emulator';
+      const commandArgs = process.platform === 'win32' ? ['/d', '/k', program.command, ...args] : process.platform === 'darwin' ? ['-a', 'Terminal', '--args', program.command, ...args] : ['-e', program.command, ...args];
+      try {
+        const child = spawn(command, commandArgs, { detached: true, stdio: 'ignore', windowsHide: false, shell: false });
+        child.unref();
+        return { provider, started: true };
+      } catch { throw new Error('subscription_login_launch_failed'); }
     },
     close() {
       for (const child of [...activeChildren]) stopProcess(child);

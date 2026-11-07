@@ -62,15 +62,36 @@ test('subscription bridge exposes provider status without reading login files', 
   const runtime = await startServer({ port: 0, dataDir });
   try {
     const status = await fetch(`${runtime.url}/api/ai/subscription/status`).then((response) => response.json());
-    assert.deepEqual(Object.keys(status.providers).sort(), ['claude-code', 'codex']);
+    assert.deepEqual(Object.keys(status.providers).sort(), ['chatgpt', 'claude-code', 'codex', 'gemini', 'gemini-cli', 'openrouter']);
     assert.equal(status.policy, 'explicit-user-choice');
     for (const provider of Object.values(status.providers)) {
-      assert.ok(['ready', 'signed-out', 'not-installed', 'unknown', 'error'].includes(provider.state));
+      assert.ok(['ready', 'signed-out', 'not-installed', 'not-connected', 'unknown', 'error'].includes(provider.state));
       assert.equal('accountEmail' in provider, false);
     }
     const blocked = await fetch(`${runtime.url}/api/ai/subscription/assist`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ provider: 'codex', task: 'text-clean', text: '합성 문장', confirmExternal: false }) });
     assert.equal(blocked.status, 400);
     assert.equal((await blocked.json()).error, 'external_transfer_confirmation_required');
+  } finally {
+    await new Promise((resolve) => runtime.server.close(resolve));
+    fs.rmSync(dataDir, { recursive: true, force: true });
+  }
+});
+
+test('external AI connections require consent and secrets stay encrypted locally', async () => {
+  const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'dawith-welfare-ai-connections-'));
+  const store = openStore(dataDir);
+  const secret = 'AIzaSyntheticSecretValue_1234567890';
+  store.updateAiConnections({ gemini: { apiKey: secret, model: 'gemini-2.5-flash' } });
+  store.close();
+  const database = fs.readFileSync(path.join(dataDir, 'welfare-office.sqlite'));
+  assert.equal(database.includes(secret), false);
+  const runtime = await startServer({ port: 0, dataDir });
+  try {
+    const blocked = await fetch(`${runtime.url}/api/ai/connect`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ provider: 'openrouter', confirmExternal: false }) });
+    assert.equal(blocked.status, 400);
+    const unconnected = await fetch(`${runtime.url}/api/ai/subscription/assist`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ provider: 'chatgpt', task: 'text-clean', text: '합성 문장', confirmExternal: true }) });
+    assert.equal(unconnected.status, 400);
+    assert.equal((await unconnected.json()).error, 'ai_provider_not_connected');
   } finally {
     await new Promise((resolve) => runtime.server.close(resolve));
     fs.rmSync(dataDir, { recursive: true, force: true });
@@ -128,6 +149,36 @@ input.on('line', (line) => { let message; try { message = JSON.parse(line); } ca
     const payload = await response.json();
     assert.equal(response.status, 200);
     assert.equal(payload.result, '합성 Codex 결과');
+  } finally {
+    await new Promise((resolve) => runtime.server.close(resolve));
+    process.env.PATH = previousPath;
+    fs.rmSync(dataDir, { recursive: true, force: true });
+    fs.rmSync(binDir, { recursive: true, force: true });
+  }
+});
+
+test('subscription bridge supports the Google-login Gemini CLI flow without reading credential files', async () => {
+  const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'dawith-welfare-gemini-cli-fake-'));
+  const binDir = fs.mkdtempSync(path.join(os.tmpdir(), 'dawith-welfare-gemini-cli-bin-'));
+  const fakeGemini = path.join(binDir, 'gemini');
+  fs.writeFileSync(fakeGemini, `#!/usr/bin/env node
+import fs from 'node:fs';
+if (process.argv.includes('--version')) { process.stdout.write('0.1.0\\n'); process.exit(0); }
+process.stdin.resume();
+process.stdin.on('end', () => process.stdout.write('합성 Gemini CLI 결과'));
+`);
+  fs.chmodSync(fakeGemini, 0o755);
+  const previousPath = process.env.PATH;
+  process.env.PATH = `${binDir}${path.delimiter}${path.dirname(process.execPath)}`;
+  const runtime = await startServer({ port: 0, dataDir });
+  try {
+    const status = await fetch(`${runtime.url}/api/ai/subscription/status`).then((response) => response.json());
+    assert.equal(status.providers['gemini-cli'].state, 'ready');
+    const response = await fetch(`${runtime.url}/api/ai/subscription/assist`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ provider: 'gemini-cli', task: 'text-clean', text: '합성 원문', confirmExternal: true }) });
+    const payload = await response.json();
+    assert.equal(response.status, 200);
+    assert.equal(payload.result, '합성 Gemini CLI 결과');
+    assert.deepEqual(payload.transfer, { external: true, destination: 'gemini-cli', userInitiated: true });
   } finally {
     await new Promise((resolve) => runtime.server.close(resolve));
     process.env.PATH = previousPath;

@@ -16,13 +16,14 @@ const toolCatalog = [
   { id: 'date-calculator', category: 'calculator', mark: 'D+', name: '날짜·기간 계산', description: '두 날짜 사이 기간과 기준일을 계산합니다.', keywords: '날짜 기간 일수 d-day', label: 'CALCULATOR' },
   { id: 'attendance', category: 'field', mark: '✓', name: '인원 체크', description: '식사·프로그램 명단을 로컬에서 체크하고 CSV로 저장합니다.', keywords: '인원 출석 신규 종결 대기 수령 명단 현황 csv', label: 'FIELD' },
   { id: 'duty-schedule', category: 'field', mark: 'CAL', name: '당직 일정', description: '직원 순서를 기준으로 당직표를 만들고 CSV로 저장합니다.', keywords: '당직 근무 일정 스케줄 직원 배치 csv', label: 'FIELD' },
-  { id: 'ai-setup', category: 'ai', mark: 'AI', name: 'AI 보조·연결 센터', description: '로컬 모델과 사용자의 Claude·Codex 구독을 구분해 연결합니다.', keywords: 'ollama 로컬 llm ai 모델 다운로드 상담 회의록 문서 claude codex 구독', label: 'AI CONTROL' },
+  { id: 'ai-setup', category: 'ai', mark: 'AI', name: 'AI 보조·연결 센터', description: '로컬·구독·무료 AI를 직접 고르고 연결합니다.', keywords: 'ollama 로컬 llm ai 모델 다운로드 상담 회의록 문서 claude codex chatgpt openrouter gemini 구독', label: 'AI CONTROL' },
 ];
 
 const state = { category: 'all', search: '', activeTool: null, pdfFiles: [], imageFile: null, imageUrl: '', imageInfo: null, textMode: 'mask' };
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
 const escapeHtml = (value) => String(value ?? '').replace(/[&<>'"]/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' })[char]);
+const providerLabel = (provider) => ({ 'claude-code': 'Claude', codex: 'Codex', 'gemini-cli': 'Gemini CLI', chatgpt: 'ChatGPT', openrouter: 'OpenRouter', gemini: 'Gemini' }[provider] || provider);
 const formatBytes = (bytes) => bytes < 1024 ? `${bytes} B` : bytes < 1024 ** 2 ? `${(bytes / 1024).toFixed(1)} KB` : `${(bytes / 1024 ** 2).toFixed(2)} MB`;
 const formatDate = (date) => new Intl.DateTimeFormat('ko-KR', { dateStyle: 'long' }).format(date);
 
@@ -130,7 +131,7 @@ function renderDateWorkspace(tool) {
 }
 
 function renderAiSetup(tool) {
-  return `${toolHeader(tool, 'AI 보조 연결 센터', '원문을 어디에서 처리할지 먼저 고르고, 선택한 방식만 사용합니다.')}<div class="ai-control-layout"><section class="tool-panel ai-setup-main"><div class="panel-heading"><div><h2>이 PC 안에서 처리</h2><p>Ollama 로컬 모델은 상담 원문을 외부로 보내지 않습니다.</p></div><span id="aiSetupStatus" class="local-note">확인 전</span></div><div class="ai-device-summary"><div><span>현재 기기</span><b id="aiSystemSpec">확인 중…</b></div><div><span>추천 모델</span><b id="aiRecommendation">확인 중…</b></div></div><ol class="ai-setup-steps"><li><span>1</span><div><b>Ollama 설치</b><small>공식 설치 파일을 한 번 설치하고 실행합니다.</small></div><a id="aiInstallLink" href="https://ollama.com/download" target="_blank" rel="noreferrer">공식 설치 열기 ↗</a></li><li><span>2</span><div><b>연결 확인</b><small>현재 PC의 RAM·CPU를 읽어 모델을 추천합니다.</small></div><button id="aiRefresh" class="secondary-button" type="button">상태 다시 확인</button></li><li><span>3</span><div><b>추천 모델 준비</b><small id="aiModelHelp">모델이 없으면 규칙 기반 기능만으로도 계속 사용할 수 있습니다.</small></div><div class="ai-model-action"><select id="aiModelSelect" class="wide-input" aria-label="로컬 AI 모델 선택"></select><button id="aiPullModel" class="primary-button" type="button" disabled>모델 준비</button></div></li></ol><div id="aiSetupNotice" class="notice" hidden></div><div class="ai-privacy-note"><b>처리 경계</b><span>상담 원문·문서 내용은 Dawith 서버나 클라우드로 보내지 않습니다.</span><span>모델 다운로드 때만 Ollama 공식 저장소와 통신합니다.</span><span>AI 결과는 초안이며 담당자가 원문과 대조해 확정해야 합니다.</span></div></section><section class="tool-panel subscription-panel"><div class="panel-heading"><div><h2>내 구독 AI 연결</h2><p>설치되어 로그인된 Claude 또는 Codex 프로그램을 직접 사용합니다.</p></div><button id="subscriptionRefresh" class="secondary-button" type="button">상태 확인</button></div><div class="subscription-warning"><b>중요: 이 경로는 외부 전송입니다.</b><span>버튼을 눌러 동의한 텍스트만 선택한 회사의 구독 프로그램으로 전달됩니다. Dawith 서버에는 저장하지 않습니다.</span></div><div id="subscriptionCards" class="subscription-cards"><p class="muted-text">상태를 확인하는 중…</p></div><div class="subscription-test"><label for="subscriptionText">선택 전송 테스트</label><textarea id="subscriptionText" class="subscription-input" placeholder="개인정보가 없는 짧은 문장으로 먼저 테스트하세요."></textarea><div class="subscription-actions"><select id="subscriptionProvider" class="wide-input" aria-label="구독 provider"><option value="claude-code">Claude</option><option value="codex">Codex</option></select><button id="subscriptionAssist" class="primary-button" type="button">선택한 구독으로 정리</button></div><p id="subscriptionNotice" class="field-hint">상태 확인만으로는 원문이 전송되지 않습니다.</p></div></section></div>`;
+  return `${toolHeader(tool, 'AI 보조 연결 센터', '로컬·내 구독·무료 연결 중 처리 위치를 먼저 고릅니다.')}<div class="ai-control-layout"><section class="tool-panel ai-setup-main"><div class="panel-heading"><div><h2>이 PC 안에서 처리</h2><p>Ollama 로컬 모델은 상담 원문을 외부로 보내지 않습니다.</p></div><span id="aiSetupStatus" class="local-note">확인 전</span></div><div class="ai-device-summary"><div><span>현재 기기</span><b id="aiSystemSpec">확인 중…</b></div><div><span>추천 모델</span><b id="aiRecommendation">확인 중…</b></div></div><ol class="ai-setup-steps"><li><span>1</span><div><b>Ollama 설치</b><small>공식 설치 파일을 한 번 설치하고 실행합니다.</small></div><a id="aiInstallLink" href="https://ollama.com/download" target="_blank" rel="noreferrer">공식 설치 열기 ↗</a></li><li><span>2</span><div><b>연결 확인</b><small>현재 PC의 RAM·CPU를 읽어 모델을 추천합니다.</small></div><button id="aiRefresh" class="secondary-button" type="button">상태 다시 확인</button></li><li><span>3</span><div><b>추천 모델 준비</b><small id="aiModelHelp">모델이 없으면 규칙 기반 기능만으로도 계속 사용할 수 있습니다.</small></div><div class="ai-model-action"><select id="aiModelSelect" class="wide-input" aria-label="로컬 AI 모델 선택"></select><button id="aiPullModel" class="primary-button" type="button" disabled>모델 준비</button></div></li></ol><div id="aiSetupNotice" class="notice" hidden></div><div class="ai-privacy-note"><b>처리 경계</b><span>상담 원문·문서 내용은 Dawith 서버나 외부 AI로 자동 전송하지 않습니다.</span><span>모델 다운로드 때만 Ollama 공식 저장소와 통신합니다.</span><span>외부 provider는 연결·전송 버튼을 누른 경우에만 사용합니다.</span></div></section><section class="tool-panel subscription-panel"><div class="panel-heading"><div><h2>내 AI 연결</h2><p>Claude·Codex·ChatGPT 구독과 OpenRouter·Gemini 무료 연결을 직접 선택합니다.</p></div><button id="subscriptionRefresh" class="secondary-button" type="button">상태 확인</button></div><div class="subscription-warning"><b>외부 전송은 별도 연결 동의가 필요합니다.</b><span>선택한 텍스트만 해당 provider로 전달하며, Dawith 서버에는 저장하지 않습니다. 개인정보가 포함된 원문은 로컬 처리 후 담당자가 전송 여부를 결정하세요.</span></div><div id="subscriptionCards" class="subscription-cards"><p class="muted-text">상태를 확인하는 중…</p></div><div class="subscription-test"><label for="subscriptionText">선택 전송 테스트</label><textarea id="subscriptionText" class="subscription-input" placeholder="개인정보가 없는 짧은 문장으로 먼저 테스트하세요."></textarea><div class="subscription-actions"><select id="subscriptionProvider" class="wide-input" aria-label="외부 AI provider"><option value="claude-code">Claude</option><option value="codex">Codex</option></select><button id="subscriptionAssist" class="primary-button" type="button">선택한 AI로 정리</button></div><p id="subscriptionNotice" class="field-hint">상태 확인만으로는 원문이 전송되지 않습니다.</p></div></section></div>`;
 }
 
 function renderHwpWorkspace(tool) {
@@ -229,8 +230,8 @@ function bindHwpInspector() {
     if (!extracted) return;
     const status = await fetchSubscriptionStatus().catch(() => null);
     const available = Object.values(status?.providers || {}).filter((item) => item.state === 'ready');
-    if (!available.length) return notice('로그인된 Claude·Codex 구독을 찾지 못했습니다. AI 보조·연결 센터에서 상태를 확인하세요.', true);
-    const provider = available[0].provider; const label = provider === 'codex' ? 'Codex' : 'Claude';
+    if (!available.length) return notice('연결된 외부 AI가 없습니다. AI 보조·연결 센터에서 먼저 연결하세요.', true);
+    const provider = available[0].provider; const label = providerLabel(provider);
     if (!window.confirm(`${label} 구독으로 HWP 원문을 외부 전송해 요약합니다. 기관 승인과 개인정보 보호 기준을 확인했습니까?`)) return;
     const button = $('#hwpSubscriptionAi'); button.disabled = true; button.textContent = '구독 AI 처리 중…';
     try { aiPreviousPreview = preview.textContent; preview.textContent = await runSubscriptionAi({ provider, task: 'hwp-summary', text: extracted }); $('#hwpAiRevert').classList.remove('hidden'); notice(`${label} 구독 AI 요약 초안입니다. 외부 전송 결과이므로 원문과 대조하세요.`); }
@@ -397,10 +398,10 @@ function bindText() {
     if (!input.value.trim()) return showNotice('#textPrivacy', '원문을 먼저 입력해 주세요.', true);
     const status = await fetchSubscriptionStatus().catch(() => null);
     const available = Object.values(status?.providers || {}).filter((item) => item.state === 'ready');
-    if (!available.length) return showNotice('#textPrivacy', '로그인된 Claude·Codex 구독을 찾지 못했습니다. AI 보조·연결 센터에서 상태를 확인하세요.', true);
+    if (!available.length) return showNotice('#textPrivacy', '연결된 외부 AI가 없습니다. AI 보조·연결 센터에서 먼저 연결하세요.', true);
     const provider = available[0].provider;
-    const providerLabel = provider === 'codex' ? 'Codex' : 'Claude';
-    if (!window.confirm(`${providerLabel} 구독으로 원문을 외부 전송합니다. 기관 승인과 개인정보 보호 기준을 확인했습니까?`)) return;
+    const providerName = providerLabel(provider);
+    if (!window.confirm(`${providerName} 연결로 원문을 외부 전송합니다. 기관 승인과 개인정보 보호 기준을 확인했습니까?`)) return;
     const button = $('#textSubscriptionAssist');
     button.disabled = true;
     button.textContent = '구독 AI 처리 중…';
@@ -408,12 +409,12 @@ function bindText() {
       aiResult = await runSubscriptionAi({ provider, task: 'text-clean', text: input.value });
       output.textContent = aiResult;
       output.classList.remove('empty');
-      $('#textResultLabel').textContent = `${providerLabel} 구독 AI 결과 · 외부 전송 · 검토 필요`;
+      $('#textResultLabel').textContent = `${providerName} 결과 · 외부 전송 · 검토 필요`;
       $('#textResultCount').textContent = `결과 ${aiResult.length.toLocaleString()}자`;
       $('#textResultBytes').textContent = `UTF-8 ${new TextEncoder().encode(aiResult).length.toLocaleString()} byte`;
       $('#textDownload').disabled = false;
       $('#textAiApply').classList.remove('hidden');
-      showNotice('#textPrivacy', `${providerLabel} 구독 AI 초안입니다. 외부 전송 결과이므로 원문과 대조한 뒤 적용하세요.`);
+      showNotice('#textPrivacy', `${providerName} 결과입니다. 외부 전송 결과이므로 원문과 대조한 뒤 적용하세요.`);
     } catch (error) {
       showNotice('#textPrivacy', subscriptionErrorMessage(error), true);
     } finally {
@@ -523,6 +524,47 @@ function bindAiSetup() {
     }
   });
   $('#subscriptionRefresh').addEventListener('click', refreshSubscriptionCards);
+  $('#subscriptionCards').addEventListener('click', async (event) => {
+    const connectButton = event.target.closest('[data-ai-connect]');
+    const disconnectButton = event.target.closest('[data-ai-disconnect]');
+    const cliLoginButton = event.target.closest('[data-ai-cli-login]');
+    const provider = connectButton?.dataset.aiConnect || disconnectButton?.dataset.aiDisconnect || cliLoginButton?.dataset.aiCliLogin;
+    if (!provider) return;
+    if (cliLoginButton) {
+      cliLoginButton.disabled = true;
+      try {
+        const response = await fetch('./api/ai/subscription/login', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ provider }) });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(payload.message || payload.error || 'subscription_login_failed');
+        showSubscriptionNotice(`${providerLabel(provider)} 로그인 창을 열었습니다. 브라우저 또는 터미널에서 로그인을 끝낸 뒤 상태를 다시 확인하세요.`);
+      } catch (error) { showSubscriptionNotice(error.message || '로그인 창을 열지 못했습니다.', true); }
+      finally { cliLoginButton.disabled = false; }
+      return;
+    }
+    if (disconnectButton) {
+      if (!window.confirm('이 기기에서 저장한 AI 연결 정보를 삭제할까요?')) return;
+      await fetch('./api/ai/disconnect', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ provider }) });
+      return refreshSubscriptionCards();
+    }
+    let apiKey = '';
+    if (provider === 'gemini') {
+      apiKey = window.prompt('Google AI Studio에서 만든 Gemini API 키를 붙여 넣으세요. 키는 암호화해 이 기기에만 저장합니다.') || '';
+      if (!apiKey) return;
+    }
+    if (!window.confirm(`${provider === 'chatgpt' ? 'ChatGPT' : provider === 'openrouter' ? 'OpenRouter 무료' : 'Google Gemini'} 연결을 시작합니다. 선택한 서비스로 인증 정보 또는 API 요청이 전달됩니다. 계속할까요?`)) return;
+    connectButton.disabled = true;
+    connectButton.textContent = '연결 중…';
+    try {
+      const response = await fetch('./api/ai/connect', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ provider, apiKey, confirmExternal: true }) });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.message || payload.error || 'ai_connect_failed');
+      showSubscriptionNotice(`${provider} 연결을 완료했습니다. 문서 화면에서 사용할 AI를 선택하세요.`);
+    } catch (error) {
+      showSubscriptionNotice(error.message || 'AI 연결에 실패했습니다.', true);
+    } finally {
+      await refreshSubscriptionCards();
+    }
+  });
   $('#subscriptionAssist').addEventListener('click', async () => {
     const text = $('#subscriptionText').value.trim();
     if (!text) return showSubscriptionNotice('개인정보가 없는 짧은 문장으로 먼저 테스트하세요.', true);
@@ -551,12 +593,27 @@ async function fetchSubscriptionStatus() {
 }
 
 function subscriptionStateLabel(state) {
-  return { ready: '사용 가능', 'not-installed': '설치 필요', 'signed-out': '로그인 필요', unknown: '확인 필요', error: '확인 실패' }[state] || '확인 중';
+  return { ready: '사용 가능', 'not-installed': '설치 필요', 'not-connected': '연결 필요', 'signed-out': '로그인 필요', unknown: '확인 필요', error: '확인 실패' }[state] || '확인 중';
 }
 
 function renderSubscriptionCards(payload) {
   const providers = Object.values(payload?.providers || {});
-  $('#subscriptionCards').innerHTML = providers.length ? providers.map((item) => `<div class="subscription-card"><div><b>${escapeHtml(item.label)}</b><span>${item.installed ? '프로그램 발견' : '프로그램 없음'}</span></div><strong class="subscription-state-${escapeHtml(item.state)}">${subscriptionStateLabel(item.state)}</strong><small>${item.state === 'ready' ? '이 PC의 로그인 상태를 확인했습니다.' : item.state === 'not-installed' ? '공식 설치 후 다시 상태를 확인하세요.' : '구독 프로그램에서 로그인 상태를 확인하세요.'}</small>${item.state === 'not-installed' ? `<a href="${escapeHtml(item.installUrl)}" target="_blank" rel="noreferrer">공식 설치 안내 ↗</a>` : ''}</div>`).join('') : '<p class="muted-text">구독 상태를 읽지 못했습니다.</p>';
+  $('#subscriptionCards').innerHTML = providers.length ? providers.map((item) => {
+    const connected = item.state === 'ready';
+    const action = ['openrouter', 'gemini', 'chatgpt'].includes(item.provider)
+      ? connected ? `<button class="icon-text-button" type="button" data-ai-disconnect="${escapeHtml(item.provider)}">연결 해제</button>` : `<button class="secondary-button" type="button" data-ai-connect="${escapeHtml(item.provider)}">${item.provider === 'chatgpt' ? 'ChatGPT로 계속' : item.provider === 'openrouter' ? '브라우저로 무료 연결' : 'Gemini 키 연결'}</button>`
+      : ['claude-code', 'codex', 'gemini-cli'].includes(item.provider) && item.state !== 'not-installed' ? `<button class="secondary-button" type="button" data-ai-cli-login="${escapeHtml(item.provider)}">${item.provider === 'gemini-cli' ? 'Google 로그인 시작' : 'CLI 로그인 시작'}</button>` : '';
+    const detail = connected ? `${item.model ? `${escapeHtml(item.model)} · ` : ''}이 기기에서 연결됨` : item.state === 'not-installed' ? '공식 프로그램을 설치한 뒤 연결하세요.' : item.state === 'not-connected' ? '연결 버튼을 누르면 공식 인증 화면이 열립니다.' : '공식 프로그램의 로그인 상태를 확인하세요.';
+    const source = item.kind === 'oauth' ? '브라우저 인증' : item.kind === 'key' ? '키는 이 기기에 암호화 저장' : item.installed ? '프로그램 발견' : '프로그램 없음';
+    return `<div class="subscription-card"><div><b>${escapeHtml(item.label)}</b><span>${source}</span></div><strong class="subscription-state-${escapeHtml(item.state)}">${subscriptionStateLabel(item.state)}</strong><small>${detail}</small>${action}${item.state === 'not-installed' ? `<a href="${escapeHtml(item.installUrl)}" target="_blank" rel="noreferrer">공식 설치 안내 ↗</a>` : ''}</div>`;
+  }).join('') : '<p class="muted-text">구독 상태를 읽지 못했습니다.</p>';
+  const select = $('#subscriptionProvider');
+  if (select) {
+    const selected = select.value;
+    const usable = providers.filter((item) => item.state === 'ready');
+    select.innerHTML = usable.length ? usable.map((item) => `<option value="${escapeHtml(item.provider)}">${escapeHtml(item.label)}</option>`).join('') : '<option value="">연결된 외부 AI 없음</option>';
+    if (usable.some((item) => item.provider === selected)) select.value = selected;
+  }
 }
 
 async function refreshSubscriptionCards() {
@@ -585,6 +642,10 @@ function showSubscriptionNotice(message, error = false) {
 function subscriptionErrorMessage(error) {
   const message = String(error?.message || error || '');
   if (message.includes('not_installed')) return '선택한 구독 프로그램이 설치되어 있지 않습니다.';
+  if (message.includes('not_connected')) return '먼저 AI 보조·연결 센터에서 해당 provider를 연결하세요.';
+  if (message.includes('chatgpt')) return 'ChatGPT 연결이 만료되었거나 요금제 사용 권한이 없습니다. 연결을 다시 확인하세요.';
+  if (message.includes('openrouter')) return 'OpenRouter 무료 연결 상태와 무료 모델 한도를 확인하세요.';
+  if (message.includes('gemini')) return 'Gemini 키가 만료되었거나 모델 요청이 거절되었습니다.';
   if (message.includes('timeout')) return '구독 프로그램 응답 시간이 초과되었습니다.';
   if (message.includes('signed')) return '구독 프로그램에 로그인한 뒤 다시 시도하세요.';
   return '구독 AI 결과를 받지 못했습니다. 프로그램 로그인 상태와 설치를 확인하세요.';
@@ -630,17 +691,17 @@ function bindTemplateStudio() {
     if (!text || text === '내용을 입력하면 초안이 여기에 표시됩니다.') return showNotice('#templateNotice', '먼저 문서 내용을 입력해 주세요.', true);
     const status = await fetchSubscriptionStatus().catch(() => null);
     const available = Object.values(status?.providers || {}).filter((item) => item.state === 'ready');
-    if (!available.length) return showNotice('#templateNotice', '로그인된 Claude·Codex 구독을 찾지 못했습니다. AI 보조·연결 센터에서 상태를 확인하세요.', true);
+    if (!available.length) return showNotice('#templateNotice', '연결된 외부 AI가 없습니다. AI 보조·연결 센터에서 먼저 연결하세요.', true);
     const provider = available[0].provider;
-    const providerLabel = provider === 'codex' ? 'Codex' : 'Claude';
-    if (!window.confirm(`${providerLabel} 구독으로 문서 초안을 외부 전송합니다. 기관 승인과 개인정보 보호 기준을 확인했습니까?`)) return;
+    const providerName = providerLabel(provider);
+    if (!window.confirm(`${providerName} 연결로 문서 초안을 외부 전송합니다. 기관 승인과 개인정보 보호 기준을 확인했습니까?`)) return;
     const button = $('#templateSubscriptionAssist');
     button.disabled = true;
     button.textContent = '구독 AI 처리 중…';
     try {
       const result = await runSubscriptionAi({ provider, task: 'document-draft', text, contextText: `${fields.organization.value.trim()} ${fields.project.value.trim()}`.trim() });
-      applyAiPreview(result, `${providerLabel} 구독 AI`);
-      showNotice('#templateNotice', `${providerLabel} 구독 AI 결과입니다. 외부 전송 결과이므로 원문과 대조하세요.`);
+      applyAiPreview(result, `${providerName} 결과`);
+      showNotice('#templateNotice', `${providerName} 결과입니다. 외부 전송 결과이므로 원문과 대조하세요.`);
     } catch (error) {
       showNotice('#templateNotice', subscriptionErrorMessage(error), true);
     } finally {

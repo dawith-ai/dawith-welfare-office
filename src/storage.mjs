@@ -171,6 +171,28 @@ export function openStore(dataDir, { encryptionKey } = {}) {
       audit('settings_updated', 'settings', '', { keys: Object.keys(input).filter((key) => allowed.includes(key)) });
       return current;
     },
+    getAiConnections() {
+      const row = db.prepare('SELECT value FROM settings WHERE key = ?').get('aiConnections');
+      if (!row) return {};
+      try {
+        const parsed = JSON.parse(cipher.open(row.value));
+        return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+      } catch {
+        return {};
+      }
+    },
+    updateAiConnections(input = {}) {
+      const allowed = ['openrouter', 'gemini', 'chatgpt'];
+      const next = {};
+      for (const provider of allowed) {
+        const value = input[provider];
+        if (value && typeof value === 'object' && !Array.isArray(value)) next[provider] = value;
+      }
+      const timestamp = now();
+      db.prepare('INSERT INTO settings (key, value, updated_at) VALUES (?, ?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at').run('aiConnections', cipher.seal(JSON.stringify(next)), timestamp);
+      audit('ai_connections_updated', 'settings', '', { providers: Object.keys(next) });
+      return next;
+    },
     exportRecord(recordId) {
       const row = db.prepare('SELECT records.id, records.case_id AS caseId, cases.label AS caseLabel, records.kind, records.provider, records.source_name AS sourceName, records.raw_text AS rawText, records.context_text AS contextText, records.draft_json AS draftJson, records.source_hash AS sourceHash, records.draft_hash AS draftHash, records.created_at AS createdAt FROM records LEFT JOIN cases ON cases.id = records.case_id WHERE records.id = ?').get(recordId);
       if (!row) return null;

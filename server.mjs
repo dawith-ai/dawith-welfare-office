@@ -14,6 +14,7 @@ import { analyzeTemplate, isUploadedTemplateId, renderTemplate, uploadedTemplate
 import { transcribeAudio } from './src/transcription.mjs';
 import { authPolicy, can, createSession, hashPassword, publicUser, roles, validatePassword, validateUsername, verifyPassword } from './src/auth.mjs';
 import { createSubscriptionBridge } from './src/subscription.mjs';
+import { createAiConnectionManager } from './src/ai-connections.mjs';
 
 const root = path.dirname(fileURLToPath(import.meta.url));
 const defaultPort = Number(process.env.PORT || 4387);
@@ -164,6 +165,7 @@ export function createServer({ dataDir = defaultDataDir, ollamaTimeoutMs = defau
   const sessions = new Map();
   const loginFailures = new Map();
   const subscription = createSubscriptionBridge();
+  const aiConnections = createAiConnectionManager({ store });
   const sessionUser = (request) => {
     const token = parseCookies(request.headers.cookie).dawith_session;
     if (!token) return null;
@@ -318,15 +320,38 @@ export function createServer({ dataDir = defaultDataDir, ollamaTimeoutMs = defau
         }
       }
       if (url.pathname === '/api/ai/subscription/status' && request.method === 'GET') {
-        return json(response, 200, await subscription.status());
+        const [subscriptionStatus, connectionStatus] = await Promise.all([subscription.status(), aiConnections.status()]);
+        return json(response, 200, { providers: { ...subscriptionStatus.providers, ...connectionStatus.providers }, policy: 'explicit-user-choice', credentials: connectionStatus.credentials });
+      }
+      if (url.pathname === '/api/ai/connect' && request.method === 'POST') {
+        const input = safeJson(await body(request, 32 * 1024));
+        if (input.confirmExternal !== true) return json(response, 400, { error: 'external_transfer_confirmation_required', message: '외부 연결 동의가 필요합니다.' });
+        try {
+          return json(response, 200, { ...(await aiConnections.connect(String(input.provider || ''), input)), transfer: { external: true, destination: String(input.provider || ''), userInitiated: true } });
+        } catch (error) {
+          const known = new Set(['ai_provider_invalid', 'gemini_key_invalid', 'gemini_key_rejected', 'openrouter_exchange_failed', 'openrouter_key_missing', 'chatgpt_plan_not_granted', 'chatgpt_token_rejected']);
+          return json(response, known.has(error.message) ? 400 : 502, { error: error.message || 'ai_connect_failed', message: 'AI 연결을 완료하지 못했습니다. 브라우저 로그인 또는 키 상태를 확인하세요.' });
+        }
+      }
+      if (url.pathname === '/api/ai/disconnect' && request.method === 'POST') {
+        const input = safeJson(await body(request, 16 * 1024));
+        try { return json(response, 200, await aiConnections.disconnect(String(input.provider || ''))); }
+        catch (error) { return json(response, 400, { error: error.message || 'ai_disconnect_failed' }); }
+      }
+      if (url.pathname === '/api/ai/subscription/login' && request.method === 'POST') {
+        const input = safeJson(await body(request, 16 * 1024));
+        try { return json(response, 200, await subscription.login(String(input.provider || ''))); }
+        catch (error) { return json(response, error.message === 'subscription_not_installed' ? 409 : 400, { error: error.message || 'subscription_login_failed', message: '공식 CLI 로그인 창을 열지 못했습니다.' }); }
       }
       if (url.pathname === '/api/ai/subscription/assist' && request.method === 'POST') {
         const input = safeJson(await body(request, 2 * 1024 * 1024));
         if (input.confirmExternal !== true) return json(response, 400, { error: 'external_transfer_confirmation_required', message: '외부 전송 동의가 필요합니다.' });
         try {
-          return json(response, 200, await subscription.assist(input));
+          const provider = String(input.provider || '');
+          const result = ['openrouter', 'gemini', 'chatgpt'].includes(provider) ? await aiConnections.assist(input) : await subscription.assist(input);
+          return json(response, 200, result);
         } catch (error) {
-          const known = new Set(['assist_text_required', 'assist_text_too_large', 'subscription_provider_invalid', 'subscription_not_installed', 'subscription_empty_result', 'subscription_request_failed', 'subscription_process_timeout']);
+          const known = new Set(['assist_text_required', 'assist_text_too_large', 'subscription_provider_invalid', 'subscription_not_installed', 'subscription_empty_result', 'subscription_request_failed', 'subscription_process_timeout', 'ai_provider_invalid', 'ai_provider_not_connected', 'ai_provider_empty_result', 'chatgpt_not_connected', 'chatgpt_refresh_failed', 'openrouter_request_failed', 'gemini_request_failed', 'chatgpt_request_failed']);
           const status = known.has(error.message) ? (error.message === 'subscription_not_installed' ? 409 : 400) : 502;
           return json(response, status, { error: error.message || 'subscription_assist_failed', message: error.message === 'subscription_not_installed' ? '선택한 구독 프로그램이 설치되어 있지 않습니다.' : '구독 프로그램에서 결과를 받지 못했습니다.' });
         }

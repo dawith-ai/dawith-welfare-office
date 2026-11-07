@@ -1,5 +1,5 @@
 import { cpSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
-import { spawnSync } from 'node:child_process';
+import { execFileSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -21,15 +21,20 @@ try {
   for (const entry of sourceEntries) cpSync(resolve(ROOT, entry), join(focusedRoot, entry), { recursive: true });
 
   const npx = process.platform === 'win32' ? 'npx.cmd' : 'npx';
-  const result = spawnSync(npx, ['-y', `rea-agents@${REA_VERSION}`, 'analyze-javascript-application', focusedRoot, '--json'], {
-    cwd: ROOT,
-    encoding: 'utf8',
-    maxBuffer: 128 * 1024 * 1024,
-  });
-  if (result.error) throw result.error;
-  if (result.status !== 0) throw new Error(`REA exited with status ${result.status}: ${result.stderr.trim()}`);
+  let stdout;
+  try {
+    stdout = execFileSync(npx, ['-y', `rea-agents@${REA_VERSION}`, 'analyze-javascript-application', focusedRoot, '--json'], {
+      cwd: ROOT,
+      encoding: 'utf8',
+      maxBuffer: 512 * 1024 * 1024,
+      stdio: ['ignore', 'pipe', 'pipe'],
+    });
+  } catch (error) {
+    const stderr = Buffer.isBuffer(error.stderr) ? error.stderr.toString('utf8') : String(error.stderr || '');
+    throw new Error(`REA exited with status ${error.status ?? 'unknown'}: ${stderr.trim()}`);
+  }
 
-  const evidence = findResult(result.stdout);
+  const evidence = findResult(stdout);
   const normalized = evidence.normalized_result;
   const summary = {
     generatedAt: new Date().toISOString(),

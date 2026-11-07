@@ -1,6 +1,6 @@
 {
   "name": "dawith-welfare-office",
-  "version": "0.9.1",
+  "version": "0.9.2",
   "private": true,
   "type": "module",
   "description": "Dawith lightweight local welfare work tools for files, images, text, dates, and amounts",
@@ -11,7 +11,7 @@
   "scripts": {
     "start": "node server.mjs",
     "test": "node --test",
-    "check": "node --check server.mjs && node --check src/processing.mjs && node --check src/storage.mjs && node --check src/capabilities.mjs && node --check src/documents.mjs && node --check src/document-export.mjs && node --check src/template-engine.mjs && node --check src/transcription.mjs && node --check src/subscription.mjs && node --check public/app.js && node --check public/toolbox.js && node --check desktop/main.mjs",
+    "check": "node --check server.mjs && node --check src/processing.mjs && node --check src/storage.mjs && node --check src/capabilities.mjs && node --check src/documents.mjs && node --check src/document-export.mjs && node --check src/template-engine.mjs && node --check src/transcription.mjs && node --check src/subscription.mjs && node --check src/ai-connections.mjs && node --check public/app.js && node --check public/toolbox.js && node --check desktop/main.mjs",
     "test:e2e": "playwright test",
     "rea:audit": "node scripts/rea-audit.mjs",
     "desktop": "electron desktop/main.mjs",
