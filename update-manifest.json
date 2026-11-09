@@ -1,9 +1,9 @@
 {
-  "version": "0.9.3",
+  "version": "0.9.4",
   "releaseUrl": "https://github.com/dawith-ai/dawith-welfare-office/releases/latest",
   "desktop": {
     "provider": "github",
     "channel": "latest",
-    "notes": "Dawith Welfare Office 0.9.3 · 가독성·반응형·AI 연결 화면 개선"
+    "notes": "Dawith Welfare Office 0.9.4 · Windows 실행 의존성 수정"
   }
 }

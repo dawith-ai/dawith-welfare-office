@@ -1,6 +1,6 @@
 {
   "name": "dawith-welfare-office",
-  "version": "0.9.3",
+  "version": "0.9.4",
   "private": true,
   "type": "module",
   "description": "Dawith lightweight local welfare work tools for files, images, text, dates, and amounts",
@@ -22,12 +22,14 @@
     "dist:mac": "electron-builder --mac dmg --arm64 --publish never"
   },
   "main": "desktop/main.mjs",
+  "dependencies": {
+    "docx": "^9.15.2",
+    "jszip": "^3.10.2"
+  },
   "devDependencies": {
     "@playwright/test": "^1.55.0",
-    "docx": "^9.15.2",
     "electron": "^45.0.0",
     "electron-builder": "^26.0.12",
-    "jszip": "^3.10.2",
     "pdf-lib": "^1.17.1"
   },
   "build": {
@@ -63,15 +65,11 @@
       "target": [
         {
           "target": "nsis",
-          "arch": [
-            "x64"
-          ]
+          "arch": ["x64"]
         },
         {
           "target": "portable",
-          "arch": [
-            "x64"
-          ]
+          "arch": ["x64"]
         }
       ]
     },
@@ -93,6 +91,5 @@
       "repo": "dawith-welfare-office",
       "releaseType": "release"
     }
-  },
-  "dependencies": {}
+  }
 }

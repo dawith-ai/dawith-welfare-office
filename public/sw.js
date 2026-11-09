@@ -1,4 +1,4 @@
-const CACHE_NAME = 'dawith-welfare-office-0.9.3';
+const CACHE_NAME = 'dawith-welfare-office-0.9.4';
 const APP_SHELL = [
   './',
   './index.html',
