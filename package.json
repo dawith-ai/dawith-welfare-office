@@ -17,7 +17,8 @@
     "desktop": "electron desktop/main.mjs",
     "dist:win": "npm run dist:win:setup && npm run dist:win:portable",
     "dist:win:setup": "electron-builder --win nsis --x64 --publish never",
-    "dist:win:portable": "electron-builder --win portable --x64 --config.compression=store --publish never",
+    "dist:win:portable": "electron-builder --win portable --x64 --config.compression=maximum --publish never",
+    "dist:win:lite": "electron-builder --win portable --x64 --config.compression=maximum --config.directories.output=dist-lite --publish never",
     "dist:dir": "electron-builder --dir",
     "dist:mac": "electron-builder --mac dmg --arm64 --publish never"
   },

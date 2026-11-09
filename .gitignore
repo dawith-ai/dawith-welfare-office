@@ -12,6 +12,7 @@ playwright-report/
 .playwright/
 dist/
 dist-portable/
+dist-lite/
 artifacts/rea/
 .DS_Store
 .vercel/
