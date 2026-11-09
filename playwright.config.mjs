@@ -13,6 +13,7 @@ export default defineConfig({
   reporter: process.env.CI ? [['list'], ['html', { outputFolder: 'playwright-report', open: 'never' }]] : 'list',
   use: {
     baseURL: 'http://127.0.0.1:4397',
+    serviceWorkers: 'block',
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',

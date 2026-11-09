@@ -7,12 +7,12 @@ import { randomUUID } from 'node:crypto';
 const PROVIDERS = {
   'claude-code': {
     label: 'Claude 구독',
-    commands: ['claude', 'claude.exe'],
+    commands: ['claude', 'claude.cmd', 'claude.exe'],
     installUrl: 'https://code.claude.com/docs/en/setup',
   },
   codex: {
     label: 'Codex 구독',
-    commands: ['codex', 'codex.exe'],
+    commands: ['codex', 'codex.cmd', 'codex.exe'],
     installUrl: 'https://developers.openai.com/codex/cli',
   },
   'gemini-cli': {
@@ -49,8 +49,8 @@ function cleanEnv(command) {
 }
 
 function pathCandidates(command) {
-  const names = process.platform === 'win32' && !command.endsWith('.exe')
-    ? [command, `${command}.exe`]
+  const names = process.platform === 'win32' && !path.extname(command)
+    ? [command, `${command}.cmd`, `${command}.exe`, `${command}.ps1`]
     : [command];
   const dirs = String(process.env.PATH || '').split(path.delimiter).filter(Boolean);
   if (process.platform === 'win32') {
@@ -89,6 +89,13 @@ function stopProcess(child) {
   setTimeout(() => { try { if (!child.killed) child.kill('SIGKILL'); } catch { /* best effort */ } }, 2_000).unref?.();
 }
 
+function spawnSpec(program, args) {
+  if (process.platform === 'win32' && /\.cmd$/i.test(program.command)) {
+    return { command: program.command, args: [...(program.prefixArgs || []), ...args], shell: true };
+  }
+  return { command: program.command, args: [...(program.prefixArgs || []), ...args], shell: false };
+}
+
 function runChild(program, args, { input = '', timeoutMs = REQUEST_TIMEOUT_MS, cwd = os.tmpdir() } = {}) {
   return new Promise((resolve, reject) => {
     let stdout = '';
@@ -104,10 +111,11 @@ function runChild(program, args, { input = '', timeoutMs = REQUEST_TIMEOUT_MS, c
       if (error) reject(error); else resolve(result);
     };
     try {
-      child = spawn(program.command, [...(program.prefixArgs || []), ...args], {
+      const invocation = spawnSpec(program, args);
+      child = spawn(invocation.command, invocation.args, {
         cwd,
         env: cleanEnv(program.command),
-        shell: false,
+        shell: invocation.shell,
         windowsHide: true,
         stdio: ['pipe', 'pipe', 'pipe'],
       });
@@ -226,8 +234,10 @@ async function geminiCliAssist(program, prompt) {
 function objectValue(value) { return value && typeof value === 'object' ? value : {}; }
 
 async function codexAssist(program, prompt) {
-  const child = spawn(program.command, [...(program.prefixArgs || []), 'app-server', '-c', 'features.hooks=false', '-c', 'features.plugins=false', '-c', 'features.apps=false', '-c', 'features.memories=false', '-c', 'history.persistence="none"', '-c', 'web_search="disabled"', '--listen', 'stdio://'], {
-    cwd: os.tmpdir(), env: cleanEnv(program.command), shell: false, windowsHide: true, stdio: ['pipe', 'pipe', 'pipe'],
+  const args = ['app-server', '-c', 'features.hooks=false', '-c', 'features.plugins=false', '-c', 'features.apps=false', '-c', 'features.memories=false', '-c', 'history.persistence="none"', '-c', 'web_search="disabled"', '--listen', 'stdio://'];
+  const invocation = spawnSpec(program, args);
+  const child = spawn(invocation.command, invocation.args, {
+    cwd: os.tmpdir(), env: cleanEnv(program.command), shell: invocation.shell, windowsHide: true, stdio: ['pipe', 'pipe', 'pipe'],
   });
   activeChildren.add(child);
   let pending = new Map();

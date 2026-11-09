@@ -4,6 +4,7 @@ let pdfLibPromise;
 const toolCatalog = [
   { id: 'pdf-merge', category: 'document', mark: 'PDF', name: 'PDF 합치기', description: '여러 개의 PDF를 한 파일로 묶습니다.', keywords: 'pdf 병합 붙임서류 합치기', label: 'DOCUMENT' },
   { id: 'pdf-split', category: 'document', mark: 'PDF', name: 'PDF 나누기', description: '필요한 페이지만 추출하거나 낱장으로 나눕니다.', keywords: 'pdf 분할 페이지 추출', label: 'DOCUMENT' },
+  { id: 'document-convert', category: 'document', mark: 'CONV', name: '문서 형식 변환', description: 'TXT·Markdown·HTML·CSV 파일을 서로 바꿔 저장합니다.', keywords: '변환 확장자 txt markdown md html csv 문서 파일 형식', label: 'CONVERSION' },
   { id: 'hwp-inspector', category: 'document', mark: 'HWP', name: '한글 양식 확인', description: 'HWP·HWPX 기관 양식을 이 기기에서 열고 내용을 확인합니다.', keywords: '한글 hwp hwpx hml 양식 문서 텍스트 추출', label: 'DOCUMENT' },
   { id: 'template-studio', category: 'document', mark: 'FORM', name: '기관 양식 작업공간', description: '기관 정보를 저장하고 회의록·사업 문서 초안을 만듭니다.', keywords: '기관 양식 사업계획서 결과보고서 회의록 문서 초안 템플릿', label: 'WORKSPACE' },
   { id: 'image-resize', category: 'image', mark: 'IMG', name: '이미지 크기 조절', description: '게시판·보고서 규격에 맞춰 크기를 바꿉니다.', keywords: '이미지 사진 크기 리사이즈', label: 'IMAGE' },
@@ -16,6 +17,9 @@ const toolCatalog = [
   { id: 'date-calculator', category: 'calculator', mark: 'D+', name: '날짜·기간 계산', description: '두 날짜 사이 기간과 기준일을 계산합니다.', keywords: '날짜 기간 일수 d-day', label: 'CALCULATOR' },
   { id: 'attendance', category: 'field', mark: '✓', name: '인원 체크', description: '식사·프로그램 명단을 로컬에서 체크하고 CSV로 저장합니다.', keywords: '인원 출석 신규 종결 대기 수령 명단 현황 csv', label: 'FIELD' },
   { id: 'duty-schedule', category: 'field', mark: 'CAL', name: '당직 일정', description: '직원 순서를 기준으로 당직표를 만들고 CSV로 저장합니다.', keywords: '당직 근무 일정 스케줄 직원 배치 csv', label: 'FIELD' },
+  { id: 'case-record', category: 'field', mark: 'LOG', name: '상담·회의 기록', description: '상담·회의 원문을 로컬 규칙 또는 로컬 LLM으로 기록 초안으로 정리합니다.', keywords: '상담기록 회의록 사례관리 기록 결정사항 조치사항 로컬 ai ollama', label: 'CASE RECORD', aiMode: 'local-optional' },
+  { id: 'genogram', category: 'diagram', mark: 'GENO', name: '가계도 편집', description: '생성형 결과에 의존하지 않고 직접 수정하는 가계도 편집기입니다.', keywords: '가계도 genogram 가족관계 mcgoldrick svg pdf json 개인정보', label: 'RELATIONSHIP MAP', aiMode: 'local-optional' },
+  { id: 'ecomap', category: 'diagram', mark: 'ECO', name: '생태도 편집', description: '가구와 기관·자원을 직접 배치하고 관계 강도를 표시합니다.', keywords: '생태도 ecomap 자원망 사회적지지 기관관계 svg json', label: 'RELATIONSHIP MAP', aiMode: 'local-optional' },
   { id: 'ai-setup', category: 'ai', mark: 'AI', name: 'AI 보조·연결 센터', description: '로컬·구독·무료 AI를 직접 고르고 연결합니다.', keywords: 'ollama 로컬 llm ai 모델 다운로드 상담 회의록 문서 claude codex chatgpt openrouter gemini 구독', label: 'AI CONTROL' },
 ];
 
@@ -43,6 +47,7 @@ function saveRecent(toolId) {
   try {
     const recent = JSON.parse(localStorage.getItem('dawith-tool-recent') || '[]').filter((id) => id !== toolId);
     localStorage.setItem('dawith-tool-recent', JSON.stringify([toolId, ...recent].slice(0, 5)));
+    renderRecentTools();
   } catch { /* localStorage may be unavailable in private mode */ }
 }
 
@@ -63,7 +68,18 @@ function renderToolGrid() {
   const query = state.search.trim().toLowerCase();
   const visible = toolCatalog.filter((tool) => (state.category === 'all' || tool.category === state.category) && (!query || `${tool.name} ${tool.description} ${tool.keywords}`.toLowerCase().includes(query)));
   $('#toolCount').textContent = `도구 ${visible.length}개`;
-  $('#toolGrid').innerHTML = visible.length ? visible.map((tool) => `<button class="tool-card" data-tool="${tool.id}" data-category="${tool.category}" type="button"><span class="tool-card-mark">${tool.mark}</span><span><b>${tool.name}</b><small>${tool.description}</small></span><span class="tool-card-arrow">→</span></button>`).join('') : '<p class="muted-text" style="grid-column:1/-1;padding:24px 0">찾는 도구가 없습니다. 다른 단어로 검색해보세요.</p>';
+  $('#toolGrid').innerHTML = visible.length ? visible.map((tool) => `<button class="tool-card" data-tool="${tool.id}" data-category="${tool.category}" type="button"><span class="tool-card-mark">${tool.mark}</span><span><b>${tool.name}</b><small>${tool.description}</small><em class="tool-card-ai">${tool.aiMode === 'local-optional' ? '로컬 AI 선택' : 'AI 불필요'}</em></span><span class="tool-card-arrow">→</span></button>`).join('') : '<p class="muted-text" style="grid-column:1/-1;padding:24px 0">찾는 도구가 없습니다. 다른 단어로 검색해보세요.</p>';
+}
+
+function renderRecentTools() {
+  const section = $('#recentToolsSection');
+  const target = $('#recentTools');
+  if (!section || !target) return;
+  let recent = [];
+  try { recent = JSON.parse(localStorage.getItem('dawith-tool-recent') || '[]'); } catch { recent = []; }
+  const tools = recent.map((id) => toolCatalog.find((tool) => tool.id === id)).filter(Boolean);
+  section.hidden = !tools.length;
+  target.innerHTML = tools.map((tool) => `<button class="recent-tool" data-tool="${tool.id}" type="button"><span>${tool.mark}</span><b>${tool.name}</b><small>${tool.aiMode === 'local-optional' ? '로컬 AI 선택' : '기기 안에서 처리'}</small></button>`).join('');
 }
 
 function showHome() {
@@ -72,6 +88,7 @@ function showHome() {
   $('#workspaceView').classList.add('hidden');
   $('#workspaceMount').innerHTML = '';
   renderToolGrid();
+  renderRecentTools();
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
@@ -90,6 +107,7 @@ function openTool(toolId) {
 function renderWorkspace(tool) {
   if (tool.id === 'pdf-merge') return `${toolHeader(tool, 'PDF를 한 파일로 묶기', '붙임 서류 순서를 확인하고 하나의 PDF로 저장합니다.')}<div class="tool-layout pdf-layout"><section class="tool-panel"><div class="panel-heading"><div><h2>파일 순서</h2><p>위에서 아래 순서로 합쳐집니다.</p></div><span id="pdfSummary" class="muted-text">0개</span></div><div id="pdfDropzone" class="dropzone" data-pdf-drop><div><span class="dropzone-mark">+</span><b>PDF 파일을 놓으세요</b><p>여러 파일을 한 번에 선택해도 됩니다.</p><label class="file-button"><input id="pdfInput" type="file" accept="application/pdf,.pdf" multiple />파일 선택</label></div></div><div id="pdfFileList" class="file-list"></div><div id="pdfNotice"></div></section><aside class="tool-panel"><div class="panel-heading"><div><h2>저장</h2><p>원본은 바뀌지 않습니다.</p></div></div><div class="side-list"><div><span>필요한 파일</span><b>2개 이상</b></div><div><span>처리 위치</span><b>이 기기</b></div><div><span>결과 형식</span><b>PDF</b></div></div><div class="control-group" style="margin-top:24px"><label for="pdfOutputName">저장할 이름</label><input id="pdfOutputName" class="wide-input" value="복지관_붙임서류" /></div><div class="tool-actions"><button id="pdfMergeButton" class="primary-button" type="button" disabled>PDF 합치기 →</button></div><div class="side-tip"><b>작업 팁</b><p>파일 이름 앞에 01, 02를 붙여두면 순서를 확인하기 쉽습니다.</p></div></aside></div>`;
   if (tool.id === 'pdf-split') return `${toolHeader(tool, 'PDF에서 필요한 페이지만 꺼내기', '페이지 번호를 입력하면 새 PDF로 저장합니다.')}<div class="tool-layout pdf-layout"><section class="tool-panel"><div class="panel-heading"><div><h2>원본 PDF</h2><p>한 파일만 선택합니다.</p></div><span id="splitPdfSummary" class="muted-text">선택 전</span></div><div id="splitDropzone" class="dropzone" data-split-drop><div><span class="dropzone-mark">↓</span><b>PDF 파일을 놓으세요</b><p>예: 1-3, 5, 8-10</p><label class="file-button"><input id="splitPdfInput" type="file" accept="application/pdf,.pdf" />파일 선택</label></div></div><div id="splitFileList" class="file-list"></div><div id="splitNotice"></div></section><aside class="tool-panel"><div class="panel-heading"><div><h2>페이지 선택</h2><p>원본 페이지 번호 기준입니다.</p></div></div><div class="control-group" style="margin-top:22px"><label for="splitRange">추출할 페이지</label><input id="splitRange" class="wide-input" placeholder="예: 1-3, 5" /></div><div class="control-group" style="margin-top:16px"><label for="splitOutputName">저장할 이름</label><input id="splitOutputName" class="wide-input" value="필요페이지_추출" /></div><div class="tool-actions"><button id="splitButton" class="primary-button" type="button" disabled>페이지 추출 →</button></div><div class="side-tip"><b>작업 팁</b><p>페이지를 비워두면 전체 페이지를 새 파일로 다시 저장합니다.</p></div></aside></div>`;
+  if (tool.id === 'document-convert') return renderDocumentConvertWorkspace(tool);
   if (tool.id === 'hwp-inspector') return renderHwpWorkspace(tool);
   if (tool.id === 'template-studio') return renderTemplateStudio(tool);
   if (tool.id === 'image-resize' || tool.id === 'image-compress' || tool.id === 'image-privacy' || tool.id === 'image-rotate') return renderImageWorkspace(tool);
@@ -99,8 +117,14 @@ function renderWorkspace(tool) {
   if (tool.id === 'date-calculator') return renderDateWorkspace(tool);
   if (tool.id === 'attendance') return renderAttendanceWorkspace(tool);
   if (tool.id === 'duty-schedule') return renderDutyWorkspace(tool);
+  if (tool.id === 'case-record') return renderCaseRecordWorkspace(tool);
+  if (tool.id === 'genogram' || tool.id === 'ecomap') return renderDiagramWorkspace(tool);
   if (tool.id === 'ai-setup') return renderAiSetup(tool);
   return '';
+}
+
+function renderDocumentConvertWorkspace(tool) {
+  return `${toolHeader(tool, '문서 형식을 바꿔 저장하기', '간단한 문서 파일은 이 PC에서 바로 변환합니다. 원본 파일은 바뀌지 않습니다.')}<div class="tool-layout convert-layout"><section class="tool-panel"><div class="panel-heading"><div><h2>변환할 파일</h2><p>TXT·Markdown·HTML·CSV·JSON 텍스트 파일을 지원합니다.</p></div><span id="convertFileSummary" class="muted-text">선택 전</span></div><div id="convertDropzone" class="dropzone"><div><span class="dropzone-mark">↔</span><b>파일을 놓으세요</b><p>파일 내용은 브라우저 메모리에서만 읽습니다.</p><label class="file-button"><input id="convertInput" type="file" accept=".txt,.md,.markdown,.html,.htm,.csv,.json,text/plain,text/markdown,text/html,text/csv,application/json" />파일 선택</label></div></div><div id="convertNotice"></div><label class="preview-label" for="convertPreview">미리보기</label><pre id="convertPreview" class="convert-preview">파일을 선택하면 변환 전 내용이 표시됩니다.</pre></section><aside class="tool-panel"><div class="panel-heading"><div><h2>저장 형식</h2><p>기관 내부 공유에 맞는 확장자를 고르세요.</p></div></div><div class="control-group"><label for="convertFormat">변환 형식</label><select id="convertFormat" class="wide-input"><option value="txt">일반 텍스트 (.txt)</option><option value="md">Markdown (.md)</option><option value="html">웹 문서 (.html)</option><option value="csv">표 데이터 (.csv)</option></select></div><div class="control-group"><label for="convertOutputName">저장할 이름</label><input id="convertOutputName" class="wide-input" placeholder="예: 사례회의_공유본" /></div><div class="side-list"><div><span>처리 위치</span><b>이 기기</b></div><div><span>원본 파일</span><b>변경하지 않음</b></div><div><span>지원 범위</span><b>텍스트 계열</b></div></div><div class="tool-actions"><button id="convertButton" class="primary-button" type="button" disabled>변환해 저장 →</button></div><div class="side-tip"><b>HWPX·DOCX·PDF</b><p>기관 양식과 PDF는 각각 한글 양식 확인, PDF 도구에서 원본 구조를 보존해 처리하세요.</p></div></aside></div>`;
 }
 
 function renderImageWorkspace(tool) {
@@ -170,9 +194,20 @@ function renderQrWorkspace(tool) {
   return `${toolHeader(tool, '링크를 QR 코드로 저장하기', '외부 서비스를 호출하지 않고 이 기기에서 QR 이미지를 만듭니다.')}<div class="tool-layout calculator-layout"><section class="calculator-card"><h2>주소 입력</h2><p>신청 링크, 안내 페이지 주소를 입력하세요.</p><div class="control-group"><label for="qrText">링크 또는 짧은 문구</label><input id="qrText" class="wide-input" placeholder="https://" /></div><div class="tool-actions"><button id="qrMake" class="primary-button" type="button">QR 만들기 →</button></div><div id="qrResult" class="calculator-result hidden"></div></section><section class="calculator-reference"><h3>사용 예</h3><div class="reference-row"><b>프로그램 신청</b><span>게시판·문자에 QR을 붙여 신청 페이지로 연결</span></div><div class="reference-row"><b>만족도 조사</b><span>행사 안내문에 설문 링크를 함께 제공</span></div></section></div>`;
 }
 
+function renderCaseRecordWorkspace(tool) {
+  return `${toolHeader(tool, '상담·회의 기록 정리', '원문은 기본적으로 이 기기에서만 처리합니다. 로컬 규칙으로 먼저 만들고, Ollama가 연결된 경우에만 로컬 LLM 보조를 선택할 수 있습니다.')}<div class="tool-layout record-layout"><section class="tool-panel"><div class="panel-heading"><div><h2>원문 입력</h2><p>이름·주민번호 등 식별정보는 필요한 범위에서만 입력하세요.</p></div><span class="local-note">외부 전송 차단</span></div><div class="control-inline"><div class="control-group"><label for="recordKind">기록 유형</label><select id="recordKind" class="wide-input"><option value="counseling">상담일지</option><option value="meeting">회의록</option></select></div><div class="control-group"><label for="recordProvider">처리 방식</label><select id="recordProvider" class="wide-input"><option value="rules">로컬 규칙 (AI 불필요)</option><option value="ollama-local">Ollama 로컬 LLM (선택)</option></select></div></div><div class="control-group"><label for="recordContext">사례·회의 맥락 (선택)</label><input id="recordContext" class="wide-input" placeholder="예: 주거지원 사례회의 / 다음 상담 준비" /></div><div class="control-group"><label for="recordRaw">상담·회의 원문</label><textarea id="recordRaw" class="record-source" rows="13" placeholder="메모나 녹취 전사문을 붙여 넣으세요.\n예: 3월 12일 상담에서 주거비 부담과 신청서류 준비의 어려움을 확인했다. 담당자가 주민센터에 연락하기로 했다."></textarea></div><div class="tool-actions"><button id="recordProcess" class="primary-button" type="button">초안 만들기</button><button id="recordSave" class="secondary-button" type="button" disabled>로컬 기록 저장</button><button id="recordExport" class="secondary-button" type="button" disabled>Markdown 내보내기</button></div><div id="recordNotice" class="notice" hidden></div><p class="field-hint">로컬 LLM을 선택해도 서버는 외부 provider를 허용하지 않으며, Ollama가 없으면 규칙 기반 초안으로 자동 대체합니다.</p></section><section class="tool-panel record-output"><div class="panel-heading"><div><h2>검토용 초안</h2><p>생성 결과는 공식 기록으로 확정하기 전에 담당자가 원문과 대조해야 합니다.</p></div><span id="recordTransfer" class="muted-text">아직 처리하지 않음</span></div><div class="record-facts" id="recordFacts">원문을 입력하고 초안을 만들어 보세요.</div><label for="recordLog">기록·논의</label><textarea id="recordLog" rows="7" placeholder="초안이 여기에 표시됩니다."></textarea><label for="recordAssessment">사정·결정사항</label><textarea id="recordAssessment" rows="6"></textarea><label for="recordPlan">서비스계획·후속 실행</label><textarea id="recordPlan" rows="6"></textarea><label for="recordFollowUp">후속 확인</label><textarea id="recordFollowUp" rows="5"></textarea></section></div>`;
+}
+
+function renderDiagramWorkspace(tool) {
+  const mode = tool.id === 'genogram' ? 'genogram' : 'ecomap';
+  const nodeLabel = mode === 'genogram' ? '사람 추가' : '자원·기관 추가';
+  return `${toolHeader(tool, mode === 'genogram' ? '가계도 직접 편집' : '생태도 직접 편집', '생성형 이미지가 아니라 편집 가능한 SVG 데이터로 작성합니다. 프로젝트와 원문은 이 PC의 localStorage에만 저장됩니다.')}<div class="diagram-layout"><section class="tool-panel diagram-canvas-panel"><div class="diagram-toolbar"><label>프로젝트 이름<input id="diagramTitle" class="wide-input" value="새 ${mode === 'genogram' ? '가계도' : '생태도'}" /></label><div class="tool-actions"><button id="diagramAddNode" class="primary-button" type="button">${nodeLabel}</button><button id="diagramUndo" class="secondary-button" type="button" disabled>되돌리기</button><button id="diagramRedo" class="secondary-button" type="button" disabled>다시 하기</button></div></div><div class="diagram-canvas-wrap"><svg id="diagramCanvas" class="diagram-canvas" viewBox="0 0 1000 620" role="img" aria-label="${mode === 'genogram' ? '가계도' : '생태도'} 편집 캔버스"><g id="diagramLinks"></g><g id="diagramNodes"></g></svg></div><div class="tool-actions diagram-export-actions"><button id="diagramSave" class="secondary-button" type="button">로컬 저장</button><button id="diagramExportJson" class="secondary-button" type="button">JSON 백업</button><button id="diagramExportSvg" class="secondary-button" type="button">SVG 저장</button><button id="diagramExportHtml" class="secondary-button" type="button">HTML 저장</button><label class="file-button">JSON 불러오기<input id="diagramImport" type="file" accept="application/json,.json" /></label></div><div id="diagramNotice" class="notice" hidden></div></section><aside class="tool-panel diagram-inspector"><div class="panel-heading"><div><h2>선택한 항목</h2><p>캔버스의 항목을 끌어 놓거나 속성을 수정하세요.</p></div></div><div id="diagramEmptyInspector" class="muted-text">항목을 선택하면 이름과 메모를 편집할 수 있습니다.</div><div id="diagramNodeInspector" class="hidden"><div class="control-group"><label for="diagramNodeLabel">표시 이름</label><input id="diagramNodeLabel" class="wide-input" /></div><div class="control-group"><label for="diagramNodeKind">항목 종류</label><select id="diagramNodeKind" class="wide-input"><option value="person">사람</option><option value="resource">기관·자원</option><option value="center">중심 가구</option></select></div><div class="control-group"><label for="diagramNodeNote">메모 (선택)</label><textarea id="diagramNodeNote" rows="4"></textarea></div><div class="tool-actions"><button id="diagramDeleteNode" class="secondary-button" type="button">항목 삭제</button></div></div><div class="diagram-link-editor"><h3>관계 연결</h3><div class="control-group"><label for="diagramLinkFrom">시작 항목</label><select id="diagramLinkFrom" class="wide-input"></select></div><div class="control-group"><label for="diagramLinkTo">대상 항목</label><select id="diagramLinkTo" class="wide-input"></select></div><div class="control-group"><label for="diagramLinkType">관계 종류</label><select id="diagramLinkType" class="wide-input">${mode === 'genogram' ? '<option value="partner">배우자·동반자</option><option value="child">부모·자녀</option><option value="adopted">입양·위탁</option><option value="close">정서적 가까움</option><option value="cutoff">단절·거리</option><option value="hostile">갈등</option>' : '<option value="support-strong">강한 지지</option><option value="support-weak">약한 지지</option><option value="stress">긴장·부담</option><option value="cutoff">단절·접근 어려움</option>'}</select></div><button id="diagramAddLink" class="secondary-button" type="button">관계 연결 추가</button></div><div class="diagram-source"><h3>원문에서 후보 찾기</h3><p>규칙 기반 추출은 원문을 외부로 보내지 않습니다. 후보를 확인한 뒤 직접 적용하세요.</p><textarea id="diagramSourceText" rows="5" placeholder="예: 내담자는 친모와 살고 있으며 주민센터와 학교의 지원을 받고 있다."></textarea><div class="tool-actions"><button id="diagramExtract" class="secondary-button" type="button">로컬 규칙으로 찾기</button><button id="diagramLocalAi" class="secondary-button" type="button">로컬 LLM 보조</button></div><div id="diagramCandidates" class="diagram-candidates"></div></div></aside></div>`;
+}
+
 function bindWorkspace(toolId) {
   if (toolId === 'pdf-merge') bindPdfMerge();
   if (toolId === 'pdf-split') bindPdfSplit();
+  if (toolId === 'document-convert') bindDocumentConvert();
   if (toolId === 'hwp-inspector') bindHwpInspector();
   if (toolId === 'image-resize' || toolId === 'image-compress' || toolId === 'image-privacy' || toolId === 'image-rotate') bindImage(toolId);
   if (toolId === 'text-tools') bindText();
@@ -181,6 +216,8 @@ function bindWorkspace(toolId) {
   if (toolId === 'date-calculator') bindDate();
   if (toolId === 'attendance') bindAttendance();
   if (toolId === 'duty-schedule') bindDutySchedule();
+  if (toolId === 'case-record') bindCaseRecord();
+  if (toolId === 'genogram' || toolId === 'ecomap') bindDiagram(toolId);
   if (toolId === 'template-studio') bindTemplateStudio();
   if (toolId === 'ai-setup') bindAiSetup();
 }
@@ -292,6 +329,77 @@ function bindPdfSplit() {
   const add = async (incoming) => { files.splice(0, files.length, ...incoming.filter((file) => file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')).slice(0, 1).map((file) => ({ file, pages: null }))); renderPdfFileList(list, files, '#splitPdfSummary'); $('#splitButton').disabled = !files.length; if (files[0]) { try { files[0].pages = await readPdfPageCount(files[0].file); } catch { files[0].pages = 0; } renderPdfFileList(list, files, '#splitPdfSummary'); } };
   bindDropzone($('#splitDropzone'), $('#splitPdfInput'), add);
   $('#splitButton').addEventListener('click', async () => { if (!files[0]) return; const button = $('#splitButton'); button.disabled = true; button.textContent = '추출 중…'; try { await ensurePdfLib(); const source = await PDFDocument.load(await files[0].file.arrayBuffer()); const indices = parsePageRange($('#splitRange').value, source.getPageCount()); const output = await PDFDocument.create(); const pages = await output.copyPages(source, indices); pages.forEach((page) => output.addPage(page)); const bytes = await output.save(); downloadBlob(new Blob([bytes], { type: 'application/pdf' }), `${($('#splitOutputName').value.trim() || '필요페이지_추출')}.pdf`); showNotice('#splitNotice', `${indices.length}페이지를 새 PDF로 저장했습니다.`); } catch (error) { showNotice('#splitNotice', error.message, true); } finally { button.disabled = !files.length; button.textContent = '페이지 추출 →'; } });
+}
+
+function extensionOf(fileName) {
+  return String(fileName || '').toLowerCase().split('.').pop() || 'txt';
+}
+
+function markdownToHtml(value) {
+  return escapeHtml(value)
+    .replace(/^### (.+)$/gm, '<h3>$1</h3>')
+    .replace(/^## (.+)$/gm, '<h2>$1</h2>')
+    .replace(/^# (.+)$/gm, '<h1>$1</h1>')
+    .replace(/^[-*] (.+)$/gm, '<li>$1</li>')
+    .replace(/(<li>.*<\/li>\n?)+/g, (items) => `<ul>${items}</ul>`)
+    .replace(/\n{2,}/g, '</p><p>')
+    .replace(/\n/g, '<br />');
+}
+
+function convertTextContent(source, from, to) {
+  let text = String(source || '').replace(/^\uFEFF/, '').replace(/\r\n/g, '\n');
+  if (from === 'html' || from === 'htm') {
+    const document = new DOMParser().parseFromString(text, 'text/html');
+    text = document.body?.textContent || text;
+  }
+  if (to === 'txt') return text.replace(/^#{1,6}\s+/gm, '').replace(/[*_`]/g, '').replace(/^[-*]\s+/gm, '• ').trim() + '\n';
+  if (to === 'md') {
+    if (from === 'html' || from === 'htm') return text.split(/\n+/).map((line) => line.trim()).filter(Boolean).join('\n\n') + '\n';
+    return text.trim() + '\n';
+  }
+  if (to === 'html') {
+    const body = from === 'md' || from === 'markdown' ? markdownToHtml(text) : escapeHtml(text).replace(/\n{2,}/g, '</p><p>').replace(/\n/g, '<br />');
+    return `<!doctype html><html lang="ko"><meta charset="utf-8"><title>Dawith 변환 문서</title><style>body{font-family:"Malgun Gothic",Arial,sans-serif;max-width:820px;margin:40px auto;line-height:1.8;color:#26382f}h1,h2,h3{color:#236a4e}pre{white-space:pre-wrap}p{margin:0 0 1em}</style><main><p>${body}</p></main></html>`;
+  }
+  if (to === 'csv') {
+    if (from === 'csv') return text.endsWith('\n') ? text : `${text}\n`;
+    return text.split(/\n+/).filter(Boolean).map((line) => `"${line.replaceAll('"', '""')}"`).join('\n') + '\n';
+  }
+  return text;
+}
+
+function bindDocumentConvert() {
+  const input = $('#convertInput');
+  const preview = $('#convertPreview');
+  const format = $('#convertFormat');
+  const button = $('#convertButton');
+  let selected = null;
+  let content = '';
+  const read = async (file) => {
+    if (!file) return;
+    const sourceExtension = extensionOf(file.name);
+    if (!['txt', 'md', 'markdown', 'html', 'htm', 'csv', 'json'].includes(sourceExtension)) return showNotice('#convertNotice', 'TXT·Markdown·HTML·CSV·JSON 파일만 변환할 수 있습니다.', true);
+    selected = file;
+    content = await file.text();
+    $('#convertFileSummary').textContent = `${file.name} · ${formatBytes(file.size)}`;
+    preview.textContent = content.slice(0, 20_000) || '(내용 없음)';
+    $('#convertOutputName').value = file.name.replace(/\.[^.]+$/, '');
+    button.disabled = false;
+    showNotice('#convertNotice', '파일을 읽었습니다. 저장 형식을 선택하세요.');
+  };
+  bindDropzone($('#convertDropzone'), input, (files) => { void read(files[0]); });
+  format.addEventListener('change', () => { if (selected) preview.textContent = convertTextContent(content, extensionOf(selected.name), format.value).slice(0, 20_000); });
+  button.addEventListener('click', () => {
+    if (!selected) return;
+    try {
+      const target = format.value;
+      const output = convertTextContent(content, extensionOf(selected.name), target);
+      const mime = target === 'html' ? 'text/html;charset=utf-8' : target === 'csv' ? 'text/csv;charset=utf-8' : 'text/plain;charset=utf-8';
+      const name = ($('#convertOutputName').value.trim() || selected.name.replace(/\.[^.]+$/, ''));
+      downloadBlob(new Blob([target === 'csv' ? `\ufeff${output}` : output], { type: mime }), `${name}.${target}`);
+      showNotice('#convertNotice', `.${target} 파일로 저장했습니다. 원본은 바뀌지 않았습니다.`);
+    } catch (error) { showNotice('#convertNotice', `변환하지 못했습니다: ${error.message}`, true); }
+  });
 }
 
 function bindImage(toolId) {
@@ -763,6 +871,73 @@ function bindDutySchedule() {
   render();
 }
 function bindQr() { $('#qrMake').addEventListener('click', () => { const value = $('#qrText').value.trim(); const result = $('#qrResult'); if (!value) return showNotice('#qrResult', '링크나 문구를 입력해 주세요.', true); result.classList.remove('hidden'); result.innerHTML = `<span class="result-label">입력한 내용</span><strong style="font-size:18px;word-break:break-all">${escapeHtml(value)}</strong><small>QR 생성 모듈 연결 준비됨 · 현재는 링크를 복사해 사용할 수 있습니다.</small><div class="tool-actions"><button id="qrCopy" class="secondary-button" type="button">내용 복사</button></div>`; $('#qrCopy').addEventListener('click', async () => { await navigator.clipboard?.writeText(value); showNotice('#qrResult', '내용을 복사했습니다.'); }); }); }
+
+function buildLocalCaseDraft(kind, rawText, contextText = '') {
+  const source = String(rawText).trim();
+  const lines = source.split(/(?<=[.!?。！？])\s+|\n+/).map((line) => line.trim()).filter(Boolean);
+  const relations = ['친모', '친부', '배우자', '자녀', '형제', '자매', '보호자', '내담자'].filter((term) => source.includes(term));
+  const topics = ['이혼', '주거', '경제', '취업', '건강', '양육', '면접교섭', '학교', '폭력', '중독', '서비스'].filter((term) => source.includes(term));
+  const decisions = lines.filter((line) => /결정|합의|확정|하기로|논의/.test(line));
+  const actions = lines.filter((line) => /담당|연락|신청|확인|방문|연계|예정|하기로/.test(line));
+  const subject = relations.includes('내담자') ? '내담자' : (relations.join(', ') || '내담자');
+  const topic = topics.join(', ') || '상담 내용';
+  return { typeLabel: kind === 'meeting' ? '회의록' : '상담일지', reviewRequired: true, facts: { relations, topics, dates: [], plans: [], decisions, actionItems: actions }, counselingLog: kind === 'meeting' ? `주요 안건은 ${topic}이다. ${source}` : `${subject}와의 상담에서 ${topic} 관련 내용을 확인하였다. ${source}`, assessment: decisions.length ? `논의 및 결정사항\n${decisions.map((line, index) => `${index + 1}. ${line}`).join('\n')}` : '확정된 결정사항이 없습니다. 원문을 검토해 주세요.', servicePlan: actions.length ? `후속 실행 항목\n${actions.map((line, index) => `${index + 1}. ${line}`).join('\n')}` : '담당자와 후속 조치를 확인해 주세요.', followUp: '1. 담당자 검토 및 원문 대조\n2. 담당자·기한 확인\n3. 미결정 사항의 후속 일정 확인', sourceSummary: contextText ? `사례 맥락: ${contextText}` : '사례 맥락이 입력되지 않았습니다. 저장 전 확인하세요.' };
+}
+
+function bindCaseRecord() {
+  let draft = null;
+  const render = (result, provider = 'rules', fallback = null) => {
+    draft = { ...result, provider, rawText: $('#recordRaw').value.trim(), contextText: $('#recordContext').value.trim() };
+    $('#recordFacts').innerHTML = `<b>추출 단서</b><span>관계: ${escapeHtml((result.facts?.relations || []).join(', ') || '없음')}</span><span>주제: ${escapeHtml((result.facts?.topics || []).join(', ') || '없음')}</span><span>후속 단서: ${escapeHtml((result.facts?.actionItems || []).length ? '있음' : '없음')}</span>`;
+    $('#recordLog').value = result.counselingLog || ''; $('#recordAssessment').value = result.assessment || ''; $('#recordPlan').value = result.servicePlan || ''; $('#recordFollowUp').value = result.followUp || '';
+    $('#recordSave').disabled = false; $('#recordExport').disabled = false; $('#recordTransfer').textContent = fallback?.used ? '로컬 규칙으로 대체' : provider === 'ollama-local' ? 'Ollama 로컬 처리' : '로컬 규칙 처리'; showNotice('#recordNotice', fallback?.message || '검토용 초안을 만들었습니다. 원문과 대조한 뒤 저장하세요.');
+  };
+  $('#recordProcess').addEventListener('click', async () => {
+    const rawText = $('#recordRaw').value.trim(); if (!rawText) return showNotice('#recordNotice', '상담·회의 원문을 입력해 주세요.', true);
+    const kind = $('#recordKind').value; const provider = $('#recordProvider').value; const button = $('#recordProcess'); button.disabled = true; button.textContent = '초안 만드는 중…';
+    try { const response = await fetch('/api/process', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ kind, provider, rawText, contextText: $('#recordContext').value.trim() }) }); if (!response.ok) throw new Error('local_api_unavailable'); const payload = await response.json(); render(payload.draft, payload.provider || provider, payload.fallback); }
+    catch { render(buildLocalCaseDraft(kind, rawText, $('#recordContext').value.trim()), 'browser-rules'); showNotice('#recordNotice', '로컬 서버에 연결되지 않아 브라우저 규칙으로 처리했습니다. 원문과 대조하세요.'); }
+    finally { button.disabled = false; button.textContent = '초안 만들기'; }
+  });
+  const currentDraft = () => draft ? { ...draft, counselingLog: $('#recordLog').value, assessment: $('#recordAssessment').value, servicePlan: $('#recordPlan').value, followUp: $('#recordFollowUp').value } : null;
+  $('#recordSave').addEventListener('click', () => { const value = currentDraft(); if (!value) return; const saved = JSON.parse(localStorage.getItem('dawith-record-drafts-v1') || '[]'); saved.unshift({ id: `record_${Date.now()}`, createdAt: new Date().toISOString(), kind: $('#recordKind').value, ...value }); localStorage.setItem('dawith-record-drafts-v1', JSON.stringify(saved.slice(0, 30))); showNotice('#recordNotice', '기록을 이 PC의 로컬 저장소에 저장했습니다.'); });
+  $('#recordExport').addEventListener('click', () => { const value = currentDraft(); if (!value) return; const markdown = `# ${value.typeLabel}\n\n## 기록·논의\n${value.counselingLog}\n\n## 사정·결정사항\n${value.assessment}\n\n## 서비스계획·후속 실행\n${value.servicePlan}\n\n## 후속 확인\n${value.followUp}\n\n> 원문\n> ${value.rawText.replaceAll('\n', '\n> ')}`; downloadBlob(new Blob([markdown], { type: 'text/markdown;charset=utf-8' }), `dawith-${$('#recordKind').value}-${compactDate(new Date())}.md`); });
+}
+
+function diagramStorageKey(mode) { return `dawith-${mode}-projects-v1`; }
+function newDiagramProject(mode) { return { version: 1, id: `${mode}_${Date.now()}`, type: mode, title: `새 ${mode === 'genogram' ? '가계도' : '생태도'}`, nodes: [{ id: 'center', x: 500, y: 310, label: mode === 'genogram' ? '내담자' : '중심 가구', kind: mode === 'genogram' ? 'person' : 'center', note: '' }], links: [] }; }
+function loadDiagramProject(mode) { try { const projects = JSON.parse(localStorage.getItem(diagramStorageKey(mode)) || '[]'); if (projects[0]?.nodes?.length) return projects[0]; } catch { /* ignore malformed local data */ } return newDiagramProject(mode); }
+function diagramNode(project, id) { return project.nodes.find((node) => node.id === id); }
+function diagramLinkStyle(type) { if (type === 'hostile' || type === 'stress') return 'stroke:#b34e3b;stroke-width:3;stroke-dasharray:7 4'; if (type === 'cutoff') return 'stroke:#8b5361;stroke-width:3;stroke-dasharray:2 8'; if (type === 'close' || type === 'support-strong') return 'stroke:#2c7654;stroke-width:5'; if (type === 'support-weak' || type === 'adopted') return 'stroke:#547d9e;stroke-width:2;stroke-dasharray:8 5'; return 'stroke:#39453f;stroke-width:3'; }
+function diagramCandidates(text, mode) { const terms = mode === 'genogram' ? ['친모', '친부', '배우자', '자녀', '형제', '자매', '보호자'] : ['주민센터', '복지관', '학교', '병원', '보건소', '고용센터', '주거복지센터', '가족']; return terms.filter((label) => text.includes(label)).map((label) => ({ label, kind: mode === 'genogram' ? 'person' : 'resource' })); }
+
+function bindDiagram(toolId) {
+  const mode = toolId === 'genogram' ? 'genogram' : 'ecomap'; let project = loadDiagramProject(mode); let selectedId = null; let candidates = []; const history = []; const redo = []; const canvas = $('#diagramCanvas');
+  const snapshot = () => JSON.stringify(project); const restore = (value) => { project = JSON.parse(value); selectedId = null; render(); }; const mutate = (change) => { history.push(snapshot()); redo.length = 0; change(); render(); };
+  const render = () => {
+    $('#diagramTitle').value = project.title || '';
+    $('#diagramLinks').innerHTML = project.links.map((link) => { const from = diagramNode(project, link.from); const to = diagramNode(project, link.to); return from && to ? `<line x1="${from.x}" y1="${from.y}" x2="${to.x}" y2="${to.y}" style="${diagramLinkStyle(link.type)}" />` : ''; }).join('');
+    $('#diagramNodes').innerHTML = project.nodes.map((node) => { const selected = node.id === selectedId ? ' selected' : ''; const shape = mode === 'ecomap' && node.kind === 'center' ? '<ellipse cx="0" cy="0" rx="72" ry="38"></ellipse>' : node.kind === 'resource' ? '<rect x="-62" y="-28" width="124" height="56" rx="9"></rect>' : '<rect x="-48" y="-38" width="96" height="76" rx="4"></rect>'; return `<g class="diagram-node${selected}" data-node-id="${escapeHtml(node.id)}" transform="translate(${node.x} ${node.y})" tabindex="0">${shape}<text class="diagram-node-label" x="0" y="4">${escapeHtml(node.label || '이름 없음')}</text>${node.note ? `<title>${escapeHtml(node.note)}</title>` : ''}</g>`; }).join('');
+    const options = project.nodes.map((node) => `<option value="${escapeHtml(node.id)}">${escapeHtml(node.label || '이름 없음')}</option>`).join(''); ['#diagramLinkFrom', '#diagramLinkTo'].forEach((selector) => { const select = $(selector); const before = select.value; select.innerHTML = options; if (project.nodes.some((node) => node.id === before)) select.value = before; });
+    $('#diagramUndo').disabled = !history.length; $('#diagramRedo').disabled = !redo.length; const node = diagramNode(project, selectedId); $('#diagramEmptyInspector').classList.toggle('hidden', Boolean(node)); $('#diagramNodeInspector').classList.toggle('hidden', !node); if (node) { $('#diagramNodeLabel').value = node.label || ''; $('#diagramNodeKind').value = node.kind || 'person'; $('#diagramNodeNote').value = node.note || ''; }
+    $('#diagramCandidates').innerHTML = candidates.map((candidate, index) => `<button class="diagram-candidate" type="button" data-candidate-index="${index}"><span>${escapeHtml(candidate.label)}</span><small>${candidate.kind === 'resource' ? '기관·자원' : '사람'} · 추가</small></button>`).join('');
+  };
+  const point = (event) => { const rect = canvas.getBoundingClientRect(); return { x: Math.max(30, Math.min(970, (event.clientX - rect.left) * 1000 / rect.width)), y: Math.max(35, Math.min(585, (event.clientY - rect.top) * 620 / rect.height)) }; }; let dragging = null;
+  canvas.addEventListener('pointerdown', (event) => { const node = event.target.closest('[data-node-id]'); if (!node) return; selectedId = node.dataset.nodeId; dragging = { id: selectedId, before: snapshot() }; canvas.setPointerCapture(event.pointerId); render(); });
+  canvas.addEventListener('pointermove', (event) => { if (!dragging) return; const node = diagramNode(project, dragging.id); if (!node) return; Object.assign(node, point(event)); render(); }); canvas.addEventListener('pointerup', () => { if (dragging) { history.push(dragging.before); redo.length = 0; dragging = null; render(); } });
+  $('#diagramTitle').addEventListener('input', (event) => { project.title = event.target.value; });
+  $('#diagramAddNode').addEventListener('click', () => mutate(() => { const index = project.nodes.length; project.nodes.push({ id: `node_${Date.now()}`, x: 220 + ((index * 145) % 650), y: 150 + (Math.floor(index / 5) * 125), label: mode === 'genogram' ? '새 가족 구성원' : '새 기관·자원', kind: mode === 'genogram' ? 'person' : 'resource', note: '' }); }));
+  $('#diagramDeleteNode').addEventListener('click', () => { if (!selectedId || selectedId === 'center') return showNotice('#diagramNotice', '중심 항목은 삭제할 수 없습니다.', true); mutate(() => { project.nodes = project.nodes.filter((node) => node.id !== selectedId); project.links = project.links.filter((link) => link.from !== selectedId && link.to !== selectedId); selectedId = null; }); });
+  ['diagramNodeLabel', 'diagramNodeKind', 'diagramNodeNote'].forEach((id) => $(`#${id}`).addEventListener('input', (event) => { const node = diagramNode(project, selectedId); if (!node) return; node[id === 'diagramNodeLabel' ? 'label' : id === 'diagramNodeKind' ? 'kind' : 'note'] = event.target.value; render(); }));
+  $('#diagramAddLink').addEventListener('click', () => { const from = $('#diagramLinkFrom').value; const to = $('#diagramLinkTo').value; if (!from || !to || from === to) return showNotice('#diagramNotice', '서로 다른 항목 두 개를 선택하세요.', true); mutate(() => project.links.push({ id: `link_${Date.now()}`, from, to, type: $('#diagramLinkType').value })); });
+  $('#diagramUndo').addEventListener('click', () => { if (!history.length) return; redo.push(snapshot()); restore(history.pop()); }); $('#diagramRedo').addEventListener('click', () => { if (!redo.length) return; history.push(snapshot()); restore(redo.pop()); });
+  $('#diagramSave').addEventListener('click', () => { localStorage.setItem(diagramStorageKey(mode), JSON.stringify([project])); showNotice('#diagramNotice', '프로젝트를 이 PC의 로컬 저장소에 저장했습니다.'); }); $('#diagramExportJson').addEventListener('click', () => downloadBlob(new Blob([JSON.stringify(project, null, 2)], { type: 'application/json' }), `${mode}-${compactDate(new Date())}.json`));
+  $('#diagramExportSvg').addEventListener('click', () => { const copy = canvas.cloneNode(true); copy.setAttribute('xmlns', 'http://www.w3.org/2000/svg'); downloadBlob(new Blob([copy.outerHTML], { type: 'image/svg+xml;charset=utf-8' }), `${mode}-${compactDate(new Date())}.svg`); }); $('#diagramExportHtml').addEventListener('click', () => { const copy = canvas.cloneNode(true); copy.setAttribute('xmlns', 'http://www.w3.org/2000/svg'); const html = `<!doctype html><meta charset="utf-8"><title>${escapeHtml(project.title)}</title><style>body{font-family:Arial,sans-serif;margin:30px;color:#29372f}svg{max-width:100%;border:1px solid #ccd6ce;background:#fafcf9}.diagram-node rect,.diagram-node ellipse{fill:#fff;stroke:#29372f;stroke-width:2}.diagram-node-label{text-anchor:middle;font-size:16px;dominant-baseline:middle}</style><h1>${escapeHtml(project.title)}</h1>${copy.outerHTML}`; downloadBlob(new Blob([html], { type: 'text/html;charset=utf-8' }), `${mode}-${compactDate(new Date())}.html`); });
+  $('#diagramImport').addEventListener('change', async (event) => { const file = event.target.files?.[0]; if (!file) return; try { const loaded = JSON.parse(await file.text()); if (!Array.isArray(loaded.nodes) || !Array.isArray(loaded.links)) throw new Error('invalid'); history.push(snapshot()); project = { ...loaded, type: mode, version: 1 }; render(); showNotice('#diagramNotice', 'JSON 프로젝트를 불러왔습니다.'); } catch { showNotice('#diagramNotice', '가계도·생태도 JSON 형식을 확인해 주세요.', true); } event.target.value = ''; });
+  const runCandidates = (items, message) => { candidates = [...new Map(items.map((item) => [item.label, item])).values()]; render(); showNotice('#diagramNotice', message); }; $('#diagramExtract').addEventListener('click', () => { const text = $('#diagramSourceText').value.trim(); if (!text) return showNotice('#diagramNotice', '후보를 찾을 원문을 입력하세요.', true); runCandidates(diagramCandidates(text, mode), '로컬 규칙으로 후보를 찾았습니다. 추가할 항목을 선택하세요.'); });
+  $('#diagramLocalAi').addEventListener('click', async () => { const text = $('#diagramSourceText').value.trim(); if (!text) return showNotice('#diagramNotice', '후보를 찾을 원문을 입력하세요.', true); const button = $('#diagramLocalAi'); button.disabled = true; try { const response = await fetch('/api/process', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ kind: 'counseling', provider: 'ollama-local', rawText: text }) }); if (!response.ok) throw new Error('local_ai_unavailable'); const payload = await response.json(); const facts = payload.draft?.facts || {}; const combined = [...(facts.relations || []), ...(facts.topics || [])].map((label) => ({ label, kind: mode === 'genogram' ? 'person' : 'resource' })); runCandidates([...diagramCandidates(text, mode), ...combined], '로컬 Ollama 결과를 후보로 표시했습니다. 사실관계를 확인하세요.'); } catch { runCandidates(diagramCandidates(text, mode), '로컬 LLM을 사용할 수 없어 규칙 기반 후보를 표시했습니다.'); } finally { button.disabled = false; } });
+  $('#diagramCandidates').addEventListener('click', (event) => { const button = event.target.closest('[data-candidate-index]'); if (!button) return; const candidate = candidates[Number(button.dataset.candidateIndex)]; if (!candidate) return; mutate(() => { const node = { id: `node_${Date.now()}`, x: 170 + ((project.nodes.length * 157) % 700), y: 120 + ((project.nodes.length * 83) % 400), label: candidate.label, kind: candidate.kind, note: '원문 후보에서 추가 · 담당자 확인 필요' }; project.nodes.push(node); project.links.push({ id: `link_${Date.now() + 1}`, from: 'center', to: node.id, type: mode === 'genogram' ? 'child' : 'support-weak' }); }); candidates = candidates.filter((item) => item !== candidate); render(); }); render();
+}
 
 function showNotice(target, message, error = false) { const element = typeof target === 'string' ? $(target) : target; if (!element) return; element.classList.remove('hidden'); element.className = error ? 'notice error-notice' : 'notice'; element.textContent = message; }
 

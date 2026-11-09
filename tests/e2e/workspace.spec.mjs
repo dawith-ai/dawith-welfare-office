@@ -23,14 +23,31 @@ async function hwpxBuffer() {
 
 test('홈에서 비AI 로컬 도구를 검색하고 분류할 수 있다', async ({ page }) => {
   await page.goto('/');
-  await expect(page).toHaveTitle(/Dawith Local Tools/);
-  await expect(page.locator('.tool-card')).toHaveCount(15);
+  await expect(page).toHaveTitle(/Dawith 복지 업무 도구함/);
+  await expect(page.locator('.tool-card')).toHaveCount(19);
   await page.locator('#toolSearch').fill('만나이');
   await expect(page.locator('.tool-card')).toHaveCount(1);
   await expect(page.locator('.tool-card')).toContainText('만나이 계산기');
   await page.locator('#privacyButton').click();
   await expect(page.locator('#privacyDialog')).toBeVisible();
   await page.locator('#closePrivacy').click();
+});
+
+test('문서 형식 변환은 파일을 브라우저 안에서 변환해 다운로드한다', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('.tool-card[data-tool="document-convert"]').click();
+  await page.locator('#convertInput').setInputFiles({
+    name: '회의기록.md',
+    mimeType: 'text/markdown',
+    buffer: Buffer.from('# 사례회의\n\n- 서비스 연계 결정\n', 'utf8'),
+  });
+  await expect(page.locator('#convertFileSummary')).toContainText('회의기록.md');
+  await page.locator('#convertFormat').selectOption('html');
+  await expect(page.locator('#convertPreview')).toContainText('<h1>사례회의</h1>');
+  const downloadPromise = page.waitForEvent('download');
+  await page.locator('#convertButton').click();
+  const download = await downloadPromise;
+  expect(download.suggestedFilename()).toBe('회의기록.html');
 });
 
 test('제품 안내 페이지에서 시작 흐름과 데이터 경계를 확인할 수 있다', async ({ page }) => {
@@ -288,6 +305,47 @@ test('텍스트 로컬 AI 보조는 외부가 아닌 로컬 API 결과를 화면
   await page.locator('#textAiAssist').click();
   await expect(page.locator('#textOutput')).toContainText('주거비 부담을 호소');
   await expect(page.locator('#textAiApply')).toBeVisible();
+});
+
+test('상담·회의 기록은 로컬 규칙으로 초안을 만들고 로컬 저장소에 보관한다', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('.tool-card[data-tool="case-record"]').click();
+  await page.locator('#recordKind').selectOption('meeting');
+  await page.locator('#recordRaw').fill('주거비 부담과 신청서류 준비의 어려움을 논의했다. 담당자가 주민센터에 연락하기로 했다.');
+  await page.locator('#recordProcess').click();
+  await expect(page.locator('#recordLog')).toHaveValue(/주요 안건/);
+  await expect(page.locator('#recordPlan')).toHaveValue(/주민센터/);
+  await page.locator('#recordSave').click();
+  await expect(page.locator('#recordNotice')).toContainText('로컬 저장소');
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('dawith-record-drafts-v1')).length)).toBe(1);
+});
+
+test('가계도는 SVG 항목을 직접 추가·수정·연결하고 JSON으로 내보낼 수 있다', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('.tool-card[data-tool="genogram"]').click();
+  await expect(page.locator('.diagram-node')).toHaveCount(1);
+  await page.locator('#diagramAddNode').click();
+  await expect(page.locator('.diagram-node')).toHaveCount(2);
+  await page.locator('.diagram-node').nth(1).click();
+  await page.locator('#diagramNodeLabel').fill('친모');
+  await page.locator('#diagramLinkFrom').selectOption({ label: '내담자' });
+  await page.locator('#diagramLinkTo').selectOption({ label: '친모' });
+  await page.locator('#diagramAddLink').click();
+  await expect(page.locator('#diagramLinks line')).toHaveCount(1);
+  const download = page.waitForEvent('download');
+  await page.locator('#diagramExportJson').click();
+  expect((await download).suggestedFilename()).toMatch(/genogram-.*\.json/);
+});
+
+test('생태도는 원문에서 로컬 후보를 찾아 자원 항목으로 추가한다', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('.tool-card[data-tool="ecomap"]').click();
+  await page.locator('#diagramSourceText').fill('내담자는 주민센터와 학교의 지원을 받고 있다.');
+  await page.locator('#diagramExtract').click();
+  await expect(page.locator('.diagram-candidate')).toHaveCount(2);
+  await page.locator('.diagram-candidate').first().click();
+  await expect(page.locator('.diagram-node')).toHaveCount(2);
+  await expect(page.locator('#diagramLinks line')).toHaveCount(1);
 });
 
 test('작은 화면에서도 도구 작업대가 가로로 넘치지 않는다', async ({ page }) => {

@@ -15,6 +15,20 @@ import { recommendOllamaModel } from '../src/capabilities.mjs';
 import { analyzeTemplate, renderTemplate } from '../src/template-engine.mjs';
 import { createServer, startServer } from '../server.mjs';
 
+function writeFakeCommand(binDir, name, source) {
+  if (process.platform === 'win32') {
+    const modulePath = path.join(binDir, `${name}.mjs`);
+    const commandPath = path.join(binDir, `${name}.cmd`);
+    fs.writeFileSync(modulePath, source);
+    fs.writeFileSync(commandPath, `@echo off\r\n"${process.execPath}" "${modulePath}" %*\r\n`);
+    return commandPath;
+  }
+  const commandPath = path.join(binDir, name);
+  fs.writeFileSync(commandPath, source);
+  fs.chmodSync(commandPath, 0o755);
+  return commandPath;
+}
+
 test('buildDrafts extracts welfare-record facts without a model', () => {
   const draft = buildDrafts({
     kind: 'counseling',
@@ -101,13 +115,11 @@ test('external AI connections require consent and secrets stay encrypted locally
 test('subscription bridge sends only after explicit confirmation and uses the CLI directly', async () => {
   const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'dawith-welfare-subscription-fake-'));
   const binDir = fs.mkdtempSync(path.join(os.tmpdir(), 'dawith-welfare-subscription-bin-'));
-  const fakeClaude = path.join(binDir, 'claude');
-  fs.writeFileSync(fakeClaude, `#!/usr/bin/env node
+  writeFakeCommand(binDir, 'claude', `#!/usr/bin/env node
 import fs from 'node:fs';
 if (process.argv.includes('auth')) { process.stdout.write(JSON.stringify({ loggedIn: true, authMethod: 'claude.ai', apiProvider: 'firstParty', subscriptionType: 'pro' })); process.exit(0); }
 process.stdin.resume(); process.stdin.on('end', () => process.stdout.write('합성 구독 결과'));
 `);
-  fs.chmodSync(fakeClaude, 0o755);
   const previousPath = process.env.PATH;
   process.env.PATH = `${binDir}${path.delimiter}${path.dirname(process.execPath)}`;
   const runtime = await startServer({ port: 0, dataDir });
@@ -130,15 +142,13 @@ process.stdin.resume(); process.stdin.on('end', () => process.stdout.write('합�
 test('subscription bridge supports the Codex app-server one-shot flow', async () => {
   const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'dawith-welfare-codex-fake-'));
   const binDir = fs.mkdtempSync(path.join(os.tmpdir(), 'dawith-welfare-codex-bin-'));
-  const fakeCodex = path.join(binDir, 'codex');
-  fs.writeFileSync(fakeCodex, `#!/usr/bin/env node
+  writeFakeCommand(binDir, 'codex', `#!/usr/bin/env node
 import readline from 'node:readline';
 const args = process.argv.slice(2);
 if (args[0] === 'login' && args[1] === 'status') { process.stdout.write('Logged in using ChatGPT\\n'); process.exit(0); }
 const input = readline.createInterface({ input: process.stdin });
 input.on('line', (line) => { let message; try { message = JSON.parse(line); } catch { return; } if (message.id !== undefined) process.stdout.write(JSON.stringify({ id: message.id, result: message.method === 'thread/start' ? { thread: { id: 'thread-test' } } : {} }) + '\\n'); if (message.method === 'turn/start') process.stdout.write(JSON.stringify({ method: 'turn/completed', params: { turn: { items: [{ type: 'agentMessage', text: '합성 Codex 결과' }] } } }) + '\\n'); });
 `);
-  fs.chmodSync(fakeCodex, 0o755);
   const previousPath = process.env.PATH;
   process.env.PATH = `${binDir}${path.delimiter}${path.dirname(process.execPath)}`;
   const runtime = await startServer({ port: 0, dataDir });
@@ -160,14 +170,12 @@ input.on('line', (line) => { let message; try { message = JSON.parse(line); } ca
 test('subscription bridge supports the Google-login Gemini CLI flow without reading credential files', async () => {
   const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'dawith-welfare-gemini-cli-fake-'));
   const binDir = fs.mkdtempSync(path.join(os.tmpdir(), 'dawith-welfare-gemini-cli-bin-'));
-  const fakeGemini = path.join(binDir, 'gemini');
-  fs.writeFileSync(fakeGemini, `#!/usr/bin/env node
+  writeFakeCommand(binDir, 'gemini', `#!/usr/bin/env node
 import fs from 'node:fs';
 if (process.argv.includes('--version')) { process.stdout.write('0.1.0\\n'); process.exit(0); }
 process.stdin.resume();
 process.stdin.on('end', () => process.stdout.write('합성 Gemini CLI 결과'));
 `);
-  fs.chmodSync(fakeGemini, 0o755);
   const previousPath = process.env.PATH;
   process.env.PATH = `${binDir}${path.delimiter}${path.dirname(process.execPath)}`;
   const runtime = await startServer({ port: 0, dataDir });
