@@ -49,6 +49,15 @@ test('왼쪽 분류를 누르면 머리말과 도구 목록이 함께 바뀐다'
   await expect(page.locator('.category-button.active')).toHaveAttribute('data-category', 'all');
 });
 
+test('내려받기 페이지는 GitHub에 닿지 못해도 릴리스 목록으로 안내한다', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('#downloadLink').click();
+  await expect(page).toHaveURL(/download\.html$/);
+  await expect(page.locator('#primaryDownload')).toHaveAttribute('href', /github\.com\/dawith-ai\/dawith-welfare-office\/releases/);
+  await expect(page.locator('.dl-card')).toHaveCount(4);
+  await expect(page.locator('#help details')).toHaveCount(7);
+});
+
 test('문서 형식 변환은 파일을 브라우저 안에서 변환해 다운로드한다', async ({ page }) => {
   await page.goto('/');
   await page.locator('.tool-card[data-tool="document-convert"]').click();

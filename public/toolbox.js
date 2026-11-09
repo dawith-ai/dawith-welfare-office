@@ -984,6 +984,7 @@ function bindDiagram(toolId) {
 function showNotice(target, message, error = false) { const element = typeof target === 'string' ? $(target) : target; if (!element) return; element.classList.remove('hidden'); element.className = error ? 'notice error-notice' : 'notice'; element.textContent = message; }
 
 document.addEventListener('click', (event) => { const toolButton = event.target.closest('[data-tool]'); if (toolButton) return openTool(toolButton.dataset.tool); const action = event.target.closest('[data-action]')?.dataset.action; if (action === 'home') showHome(); });
+if (navigator.userAgent.includes('Electron')) $('#downloadLink')?.remove();
 $('#homeButton').addEventListener('click', () => { state.category = 'all'; state.search = ''; $('#toolSearch').value = ''; showHome(); });
 $('#privacyButton').addEventListener('click', () => $('#privacyDialog').showModal());
 $('#closePrivacy').addEventListener('click', () => $('#privacyDialog').close());
