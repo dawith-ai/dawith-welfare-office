@@ -17,7 +17,6 @@ export default async function afterPack(context) {
     'vk_swiftshader_icd.json',
     'electron_wer.dll',
     'chrome_200_percent.pak',
-    'ffmpeg.dll',
   ];
 
   for (const file of optionalGraphicsFiles) {

@@ -1,4 +1,4 @@
-# Dawith Welfare Office 0.9.5
+# Dawith Welfare Office 0.9.6
 
 사회복지 현장에서 반복되는 파일·이미지·텍스트·계산 업무를 가볍게 처리하는 로컬 도구 모음입니다. 기본 화면에는 클라우드 LLM을 넣지 않았고, 선택한 파일과 입력 내용은 브라우저 또는 설치된 앱 안에서만 처리합니다.
 
@@ -60,7 +60,7 @@ npm run test:e2e
 npm run dist:win
 ```
 
-- `dist/Dawith-Welfare-Office-0.9.5-x64-Setup.exe`
+- `dist/Dawith-Welfare-Office-0.9.6-x64-Setup.exe`
 
 설치본에는 Electron 런타임과 기본 행정 도구만 포함하며, HWP WASM 엔진·Ollama 모델은 필요할 때만 내려받습니다. 따라서 HWP를 사용하지 않는 기관은 추가 다운로드 없이 바로 시작할 수 있습니다. 현재 Windows 설치본은 100MiB 업로드 제한 아래로 경량화되어 있습니다.
 

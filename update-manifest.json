@@ -1,9 +1,9 @@
 {
-  "version": "0.9.5",
+  "version": "0.9.6",
   "releaseUrl": "https://github.com/dawith-ai/dawith-welfare-office/releases/latest",
   "desktop": {
     "provider": "github",
     "channel": "latest",
-    "notes": "Dawith Welfare Office 0.9.5 · Windows 실행 의존성 수정 및 설치본 경량화"
+    "notes": "Dawith Welfare Office 0.9.6 · Windows 실행 안정성 보강 및 설치본 경량화"
   }
 }
