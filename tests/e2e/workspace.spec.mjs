@@ -33,6 +33,22 @@ test('홈에서 비AI 로컬 도구를 검색하고 분류할 수 있다', async
   await page.locator('#closePrivacy').click();
 });
 
+test('왼쪽 분류를 누르면 머리말과 도구 목록이 함께 바뀐다', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.locator('.hero-row')).toBeVisible();
+  await page.locator('.category-button[data-category="image"]').click();
+  await expect(page.locator('.hero-row')).toBeHidden();
+  await expect(page.locator('.recommendation-row')).toBeHidden();
+  await expect(page.locator('#categoryTitle')).toHaveText('이미지');
+  await expect(page.locator('.tool-card')).toHaveCount(4);
+  await expect(page.locator('.tool-card').first()).toBeInViewport();
+  await page.locator('.tool-card[data-tool="image-resize"]').click();
+  await expect(page.locator('.category-button.active')).toHaveAttribute('data-category', 'image');
+  await page.locator('#homeButton').click();
+  await expect(page.locator('.hero-row')).toBeVisible();
+  await expect(page.locator('.category-button.active')).toHaveAttribute('data-category', 'all');
+});
+
 test('문서 형식 변환은 파일을 브라우저 안에서 변환해 다운로드한다', async ({ page }) => {
   await page.goto('/');
   await page.locator('.tool-card[data-tool="document-convert"]').click();

@@ -23,6 +23,16 @@ const toolCatalog = [
   { id: 'ai-setup', category: 'ai', mark: 'AI', name: 'AI 보조·연결 센터', description: '로컬·구독·무료 AI를 직접 고르고 연결합니다.', keywords: 'ollama 로컬 llm ai 모델 다운로드 상담 회의록 문서 claude codex chatgpt openrouter gemini 구독', label: 'AI CONTROL' },
 ];
 
+const categoryInfo = {
+  document: { label: 'DOCUMENT · CONVERSION', title: '문서·변환', copy: 'PDF 합치기·나누기, 한글(HWP) 양식 확인, 파일 형식 변환과 기관 문서 초안을 한곳에서 처리합니다.' },
+  image: { label: 'IMAGE', title: '이미지', copy: '게시판·보고서용 사진의 크기와 용량을 맞추고, 위치·촬영 정보 같은 개인정보를 지웁니다.' },
+  text: { label: 'TEXT', title: '텍스트', copy: '상담 기록의 공백과 줄바꿈을 정리하고, 이름·연락처 같은 개인정보를 가립니다.' },
+  calculator: { label: 'CALCULATOR', title: '계산·변환', copy: '만나이, 금액 한글 표기, 날짜·기간을 바로 계산합니다.' },
+  field: { label: 'FIELD', title: '현장 관리', copy: '인원 체크, 당직 일정, 상담·회의 기록처럼 매일 반복되는 현장 업무를 정리합니다.' },
+  diagram: { label: 'RELATIONSHIP MAP', title: '관계도', copy: '가계도와 생태도를 직접 그리고 고쳐 사례회의 자료로 씁니다.' },
+  ai: { label: 'AI CONTROL', title: 'AI 보조·연결', copy: '로컬 LLM이나 구독형 AI를 직접 골라 연결하고, 연결 상태를 확인합니다.' },
+};
+
 const state = { category: 'all', search: '', activeTool: null, pdfFiles: [], imageFile: null, imageUrl: '', imageInfo: null, textMode: 'mask' };
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
@@ -68,13 +78,43 @@ function renderToolGrid() {
   const query = state.search.trim().toLowerCase();
   const visible = toolCatalog.filter((tool) => (state.category === 'all' || tool.category === state.category) && (!query || `${tool.name} ${tool.description} ${tool.keywords}`.toLowerCase().includes(query)));
   $('#toolCount').textContent = `도구 ${visible.length}개`;
+  renderHomeLayout(visible.length);
   $('#toolGrid').innerHTML = visible.length ? visible.map((tool) => `<button class="tool-card" data-tool="${tool.id}" data-category="${tool.category}" type="button"><span class="tool-card-mark">${tool.mark}</span><span><b>${tool.name}</b><small>${tool.description}</small><em class="tool-card-ai">${tool.aiMode === 'local-optional' ? '로컬 AI 선택' : 'AI 불필요'}</em></span><span class="tool-card-arrow">→</span></button>`).join('') : '<p class="muted-text" style="grid-column:1/-1;padding:24px 0">찾는 도구가 없습니다. 다른 단어로 검색해보세요.</p>';
+}
+
+// The landing blocks only make sense on the start screen; a category or search
+// should put the matching tools directly under the header so the change is visible.
+function renderHomeLayout(count) {
+  const info = categoryInfo[state.category];
+  const query = state.search.trim();
+  const isLanding = !info && !query;
+  $$('[data-home-only]').forEach((element) => { element.hidden = Boolean(info) || (Boolean(query) && !element.classList.contains('hero-row')); });
+  $('#categoryHeader').hidden = !info;
+  if (info) {
+    $('#categoryOverline').textContent = info.label;
+    $('#categoryTitle').textContent = info.title;
+    $('#categoryCopy').textContent = info.copy;
+  }
+  $('#toolSearch').placeholder = info ? `${info.title} 도구 안에서 찾기…` : '상담 기록, PDF 변환, 개인정보…';
+  $('#directoryHeading').hidden = Boolean(info) && !query;
+  $('#directoryTitle').textContent = query ? `‘${query}’ 검색 결과 ${count}개` : '필요한 것만 골라 쓰세요.';
+  $('#directoryNote').hidden = !isLanding;
+  if (!isLanding) $('#recentToolsSection').hidden = true;
+}
+
+function syncCategoryNav(category) {
+  $$('.category-button').forEach((item) => {
+    const active = item.dataset.category === category;
+    item.classList.toggle('active', active);
+    if (active) item.setAttribute('aria-current', 'page'); else item.removeAttribute('aria-current');
+  });
 }
 
 function renderRecentTools() {
   const section = $('#recentToolsSection');
   const target = $('#recentTools');
   if (!section || !target) return;
+  if (state.category !== 'all' || state.search.trim()) { section.hidden = true; return; }
   let recent = [];
   try { recent = JSON.parse(localStorage.getItem('dawith-tool-recent') || '[]'); } catch { recent = []; }
   const tools = recent.map((id) => toolCatalog.find((tool) => tool.id === id)).filter(Boolean);
@@ -87,6 +127,7 @@ function showHome() {
   $('#homeView').classList.remove('hidden');
   $('#workspaceView').classList.add('hidden');
   $('#workspaceMount').innerHTML = '';
+  syncCategoryNav(state.category);
   renderToolGrid();
   renderRecentTools();
   window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -97,6 +138,7 @@ function openTool(toolId) {
   if (!tool) return;
   state.activeTool = toolId;
   saveRecent(toolId);
+  syncCategoryNav(tool.category);
   $('#homeView').classList.add('hidden');
   $('#workspaceView').classList.remove('hidden');
   $('#workspaceMount').innerHTML = renderWorkspace(tool);
@@ -942,11 +984,11 @@ function bindDiagram(toolId) {
 function showNotice(target, message, error = false) { const element = typeof target === 'string' ? $(target) : target; if (!element) return; element.classList.remove('hidden'); element.className = error ? 'notice error-notice' : 'notice'; element.textContent = message; }
 
 document.addEventListener('click', (event) => { const toolButton = event.target.closest('[data-tool]'); if (toolButton) return openTool(toolButton.dataset.tool); const action = event.target.closest('[data-action]')?.dataset.action; if (action === 'home') showHome(); });
-$('#homeButton').addEventListener('click', showHome);
+$('#homeButton').addEventListener('click', () => { state.category = 'all'; state.search = ''; $('#toolSearch').value = ''; showHome(); });
 $('#privacyButton').addEventListener('click', () => $('#privacyDialog').showModal());
 $('#closePrivacy').addEventListener('click', () => $('#privacyDialog').close());
-$('#toolSearch').addEventListener('input', (event) => { state.search = event.target.value; renderToolGrid(); });
-$$('.category-button').forEach((button) => button.addEventListener('click', () => { state.category = button.dataset.category; state.search = ''; $('#toolSearch').value = ''; $$('.category-button').forEach((item) => item.classList.toggle('active', item === button)); showHome(); }));
+$('#toolSearch').addEventListener('input', (event) => { state.search = event.target.value; renderToolGrid(); renderRecentTools(); });
+$$('.category-button').forEach((button) => button.addEventListener('click', () => { state.category = button.dataset.category; state.search = ''; $('#toolSearch').value = ''; showHome(); }));
 renderToolGrid();
 
 const initialTool = new URLSearchParams(window.location.search).get('tool');

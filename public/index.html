@@ -46,7 +46,13 @@
 
         <main class="main-content">
           <section id="homeView" class="home-view" aria-labelledby="homeTitle">
-            <div class="hero-row">
+            <header id="categoryHeader" class="category-header" hidden>
+              <p id="categoryOverline" class="overline"></p>
+              <h1 id="categoryTitle"></h1>
+              <p id="categoryCopy" class="category-copy"></p>
+            </header>
+
+            <div class="hero-row" data-home-only>
               <div>
                 <p class="overline">SOCIAL WORK · LOCAL FIRST</p>
                 <h1 id="homeTitle">복지 현장의 일을<br /><em>조금 더 가볍게.</em></h1>
@@ -61,14 +67,14 @@
               <span id="toolCount">도구 19개</span>
             </div>
 
-            <section class="recommendation-row" aria-label="추천 도구">
+            <section class="recommendation-row" data-home-only aria-label="추천 도구">
               <div class="recommendation-label"><span>현장에서 자주 이어지는 흐름</span><b>기록부터 제출까지</b></div>
               <button class="recommendation-item" data-tool="text-tools" type="button"><span>01</span><b>상담 기록 정리</b><small>개인정보를 가리고 문장을 정리</small><i>→</i></button>
               <button class="recommendation-item" data-tool="template-studio" type="button"><span>02</span><b>기관 문서 초안</b><small>회의록·사업계획서·결과보고서</small><i>→</i></button>
               <button class="recommendation-item" data-tool="document-convert" type="button"><span>03</span><b>파일 형식 변환</b><small>TXT·MD·HTML·CSV로 저장</small><i>→</i></button>
             </section>
 
-            <section class="workspace-callout" aria-label="기관 양식 작업공간">
+            <section class="workspace-callout" data-home-only aria-label="기관 양식 작업공간">
               <div class="workspace-callout-copy"><p class="overline">WORKSPACE</p><h2>기관 양식을 한 번 저장하고<br /><em>매번 다시 쓰지 마세요.</em></h2><p>기관명·담당자·자주 쓰는 문장과 양식을 이 PC에 저장해 사업계획서·회의록·결과보고서 초안을 빠르게 만듭니다.</p></div>
               <button class="workspace-callout-action" data-tool="template-studio" type="button"><span>내 양식 작업공간 열기</span><b>→</b></button>
             </section>
@@ -81,9 +87,9 @@
               <div id="recentTools" class="recent-tools-grid"></div>
             </section>
 
-            <div class="directory-heading">
-              <div><h2>필요한 것만 골라 쓰세요.</h2></div>
-              <p>기본 기능은 오프라인에서도 작동하고, 외부 AI는 전송 전에 확인합니다.</p>
+            <div id="directoryHeading" class="directory-heading">
+              <div><h2 id="directoryTitle">필요한 것만 골라 쓰세요.</h2></div>
+              <p id="directoryNote">기본 기능은 오프라인에서도 작동하고, 외부 AI는 전송 전에 확인합니다.</p>
             </div>
             <div id="toolGrid" class="tool-grid"></div>
           </section>
