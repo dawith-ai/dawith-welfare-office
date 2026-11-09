@@ -190,7 +190,17 @@ async function loadRhwpRuntime() {
   if (!rhwpRuntimePromise) {
     rhwpRuntimePromise = (async () => {
       const module = await import('./vendor/rhwp/rhwp.js');
-      const response = await fetch('./vendor/rhwp/rhwp_bg.wasm');
+      const localUrl = './vendor/rhwp/rhwp_bg.wasm';
+      const remoteUrl = 'https://raw.githubusercontent.com/dawith-ai/dawith-welfare-office/main/public/vendor/rhwp/rhwp_bg.wasm';
+      let response = await fetch(localUrl);
+      if (!response.ok) {
+        const cache = await caches.open('dawith-optional-runtime-v1');
+        response = await cache.match(remoteUrl);
+        if (!response) {
+          response = await fetch(remoteUrl, { cache: 'no-store' });
+          if (response.ok) await cache.put(remoteUrl, response.clone());
+        }
+      }
       if (!response.ok) throw new Error(`rhwp_wasm_${response.status}`);
       await module.default({ module_or_path: await response.arrayBuffer() });
       return module;

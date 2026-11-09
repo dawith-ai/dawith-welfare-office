@@ -8,6 +8,11 @@ let mainWindow;
 let localRuntime;
 let shuttingDown = false;
 
+// The app is a document/PDF utility, not a WebGPU application. Disabling
+// hardware acceleration lets the slim Windows package omit optional shader
+// runtimes while keeping the UI and file workflows deterministic.
+app.disableHardwareAcceleration();
+
 async function createWindow(url) {
   mainWindow = new BrowserWindow({
     width: 1440,

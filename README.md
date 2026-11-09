@@ -1,4 +1,4 @@
-# Dawith Welfare Office 0.9.4
+# Dawith Welfare Office 0.9.5
 
 사회복지 현장에서 반복되는 파일·이미지·텍스트·계산 업무를 가볍게 처리하는 로컬 도구 모음입니다. 기본 화면에는 클라우드 LLM을 넣지 않았고, 선택한 파일과 입력 내용은 브라우저 또는 설치된 앱 안에서만 처리합니다.
 
@@ -8,7 +8,7 @@
 
 설치된 Claude Code 또는 Codex CLI를 사용자의 구독으로 연결하는 선택 경로도 제공합니다. 추가로 Google 로그인으로 무료 사용을 시작할 수 있는 Gemini CLI, ChatGPT 구독의 브라우저 OAuth, OpenRouter 무료 OAuth, Google Gemini API 키 연결을 AI 연결 센터에서 선택할 수 있습니다. Dawith는 Claude·Codex·Gemini CLI 로그인 파일을 읽지 않고 CLI의 공식 상태 명령과 실행 파일만 사용합니다. 연결·상태 확인은 원문을 보내지 않으며, AI 요청은 사용자가 provider를 선택하고 확인창에 동의한 경우에만 해당 provider로 전달합니다. 연결 정보와 토큰은 이 PC의 암호화된 로컬 저장소에만 보관합니다.
 
-한글 양식 도구는 [rhwp](https://github.com/edwardkim/rhwp) v0.8.7 MIT 엔진을 필요할 때만 불러와 HWP·HWPX의 문단·표 텍스트와 페이지 수를 로컬에서 읽습니다. `{{기관명}}` 같은 표식을 치환해 HWPX로 다시 저장할 수도 있습니다. 원본 파일은 업로드하지 않으며, 엔진 고지와 서드파티 라이선스는 `public/vendor/rhwp/`에 포함되어 있습니다.
+한글 양식 도구는 [rhwp](https://github.com/edwardkim/rhwp) v0.8.7 MIT 엔진을 필요할 때만 불러와 HWP·HWPX의 문단·표 텍스트와 페이지 수를 로컬에서 읽습니다. 설치본은 가볍게 유지하기 위해 약 12MB의 WASM 엔진을 처음 사용할 때만 공식 저장소에서 내려받아 이 PC에 캐시합니다. 파일 내용은 전송하지 않습니다. `{{기관명}}` 같은 표식을 치환해 HWPX로 다시 저장할 수도 있습니다. 엔진 고지와 서드파티 라이선스는 `public/vendor/rhwp/`에 포함되어 있습니다.
 
 ## 포함 도구
 
@@ -60,10 +60,9 @@ npm run test:e2e
 npm run dist:win
 ```
 
-- `dist/Dawith-Welfare-Office-0.9.1-x64-Setup.exe`
-- `dist/Dawith-Welfare-Office-0.9.1-x64-Portable.exe`
+- `dist/Dawith-Welfare-Office-0.9.5-x64-Setup.exe`
 
-Electron 런타임과 HWP 엔진 때문에 설치 파일은 0.7.x보다 커질 수 있지만, HWP 엔진은 해당 도구를 열 때만 초기화되고 AI 모델은 포함하지 않습니다. 모델 다운로드나 Ollama 설치 없이도 기본 도구와 HWP 텍스트 확인을 사용할 수 있습니다.
+설치본에는 Electron 런타임과 기본 행정 도구만 포함하며, HWP WASM 엔진·Ollama 모델은 필요할 때만 내려받습니다. 따라서 HWP를 사용하지 않는 기관은 추가 다운로드 없이 바로 시작할 수 있습니다. 현재 Windows 설치본은 100MiB 업로드 제한 아래로 경량화되어 있습니다.
 
 `public/index-legacy.html`은 이전 상담·문서 작업대 보관본입니다. 새 제품의 기본 진입점은 `public/index.html`입니다.
 
