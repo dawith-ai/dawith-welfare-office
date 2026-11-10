@@ -818,13 +818,18 @@ function asTemplateSummary(summary) {
 function summaryToMarkdown(summary, header = {}) {
   const dateLabel = recordKinds[summary.templateKind]?.dateLabel || '일자';
   const meta = [header.organization && `- 기관: ${header.organization}`, header.author && `- 작성자: ${header.author}`, `- ${dateLabel}: ${header.date || formatDate(new Date())}`].filter(Boolean).join('\n');
-  return `# ${summary.templateName}\n\n${meta}\n\n${summary.sections.map((section) => `## ${section.name}\n\n${section.content || '-'}`).join('\n\n')}\n`;
+  const leftover = summary.unassigned?.length ? `\n\n## 어느 항목에도 넣지 못한 문장\n\n${summary.unassigned.map((line) => `- ${line}`).join('\n')}` : '';
+  return `# ${summary.templateName}\n\n${meta}\n\n${summary.sections.map((section) => `## ${section.name}\n\n${section.content || '-'}`).join('\n\n')}${leftover}\n`;
 }
 
 // Plain text for pasting into documents and case-management systems: section
 // names as their own lines, no Markdown marks.
 function summaryToPlainText(summary) {
-  return summary.sections.map((section) => `${section.name}\n${section.content || '-'}`).join('\n\n');
+  const blocks = summary.sections.map((section) => `${section.name}\n${section.content || '-'}`);
+  // Sentences the template had no place for stay at the end so nothing from
+  // the original note is silently dropped.
+  if (summary.unassigned?.length) blocks.push(`어느 항목에도 넣지 못한 문장\n${summary.unassigned.map((line, index) => `${index + 1}. ${line}`).join('\n')}`);
+  return blocks.join('\n\n');
 }
 
 function summaryRows(value, min) { return Math.min(14, Math.max(min, String(value || '').split('\n').length + 1)); }
@@ -967,7 +972,7 @@ function bindCaseRecord() {
     const button = $('#recordProcess');
     button.disabled = true;
     button.textContent = choice === 'ollama' ? '로컬 AI가 정리하는 중…' : '정리하는 중…';
-    notice(choice === 'ollama' ? '로컬 AI가 이 PC에서 정리하고 있습니다. PC 사양에 따라 1~3분 걸릴 수 있습니다. 창을 닫지 마세요.' : '');
+    notice(choice === 'ollama' ? '로컬 AI가 이 PC에서 정리하고 있습니다. PC 사양에 따라 1~5분 걸릴 수 있습니다. 창을 닫지 마세요.' : '');
     try {
       let response;
       try { response = await fetch('./api/process', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(request) }); }

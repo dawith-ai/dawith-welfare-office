@@ -27,12 +27,12 @@
   "redirects": [
     {
       "source": "/download/setup",
-      "destination": "https://github.com/dawith-ai/dawith-welfare-office/releases/download/v1.0.3/Dawith-Welfare-Office-1.0.3-x64-Setup.exe",
+      "destination": "https://github.com/dawith-ai/dawith-welfare-office/releases/download/v1.0.4/Dawith-Welfare-Office-1.0.4-x64-Setup.exe",
       "permanent": false
     },
     {
       "source": "/download/portable",
-      "destination": "https://github.com/dawith-ai/dawith-welfare-office/releases/download/v1.0.3/Dawith-Welfare-Office-1.0.3-x64-Portable.exe",
+      "destination": "https://github.com/dawith-ai/dawith-welfare-office/releases/download/v1.0.4/Dawith-Welfare-Office-1.0.4-x64-Portable.exe",
       "permanent": false
     },
     {

@@ -22,8 +22,9 @@ const defaultHost = process.env.WELFARE_BIND_HOST || '127.0.0.1';
 const defaultDataDir = process.env.WELFARE_DATA_DIR || path.join(root, '.data');
 // Measured on a CPU-only office PC (qwen2.5:3b): ~8 tokens/s, 40s+ for one
 // record and more on the first run while the model loads. 45s made almost
-// every request fall back to rules, so allow a few minutes.
-const defaultOllamaTimeoutMs = Number(process.env.OLLAMA_TIMEOUT_MS || 180000);
+// every request fall back to rules, so allow a few minutes (7b, the default
+// recommendation for 8-24GB RAM, is roughly twice as slow on CPU).
+const defaultOllamaTimeoutMs = Number(process.env.OLLAMA_TIMEOUT_MS || 300000);
 const defaultAuthRequired = process.env.WELFARE_AUTH_REQUIRED === '1';
 const defaultOllamaUrl = 'http://127.0.0.1:11434';
 const localSecurityHeaders = {

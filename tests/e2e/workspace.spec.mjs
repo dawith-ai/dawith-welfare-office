@@ -450,6 +450,9 @@ test('내 양식을 만들고 항목을 추가·이름 변경·순서 변경·�
   await expect(page.locator('.sum-section[data-section="경제 상황"]')).toHaveValue(/월세가 두 달/);
   await expect(page.locator('.sum-section[data-section="종교 활동"]')).toHaveValue(/찾지 못했습니다/);
   await expect(page.locator('.summary-unassigned')).toContainText('어느 항목에도 넣지 못한 문장');
+  // The combined view (and copy) keeps those sentences too.
+  await page.locator('[data-sum-view="combined"]').click();
+  await expect(page.locator('#sumCombined')).toHaveValue(/어느 항목에도 넣지 못한 문장\n1\. /);
 
   await page.reload();
   await page.locator('.tool-card[data-tool="case-record"]').click();
