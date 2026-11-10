@@ -250,3 +250,4 @@ code, kbd { padding: 1px 6px; border: 1px solid var(--line); border-radius: 5px;
   .ask-panel { right: 16px; bottom: 76px; }
 }
 @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+.lead-gap { max-width: 760px; margin-top: 20px !important; }
