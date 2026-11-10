@@ -52,12 +52,12 @@
   "redirects": [
     {
       "source": "/download/setup",
-      "destination": "/download/Dawith-Welfare-Office-0.9.6-x64-Setup.exe",
+      "destination": "/download/Dawith-Welfare-Office-0.9.7-x64-Setup.exe",
       "permanent": false
     },
     {
       "source": "/download/portable",
-      "destination": "/download/Dawith-Welfare-Office-0.9.6-x64-Portable.exe",
+      "destination": "/download/Dawith-Welfare-Office-0.9.7-x64-Portable.exe",
       "permanent": false
     }
   ]
