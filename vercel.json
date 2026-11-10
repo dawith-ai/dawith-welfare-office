@@ -22,42 +22,22 @@
           "value": "no-referrer"
         }
       ]
-    },
-    {
-      "source": "/download/(.*).exe",
-      "headers": [
-        {
-          "key": "Content-Type",
-          "value": "application/vnd.microsoft.portable-executable"
-        },
-        {
-          "key": "Content-Disposition",
-          "value": "attachment"
-        }
-      ]
-    },
-    {
-      "source": "/download/latest.(yml|json)",
-      "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "no-cache"
-        }
-      ]
     }
   ],
-  "git": {
-    "deploymentEnabled": false
-  },
   "redirects": [
     {
       "source": "/download/setup",
-      "destination": "/download/Dawith-Welfare-Office-0.9.7-x64-Setup.exe",
+      "destination": "https://github.com/dawith-ai/dawith-welfare-office/releases/download/v0.9.7/Dawith-Welfare-Office-0.9.7-x64-Setup.exe",
       "permanent": false
     },
     {
       "source": "/download/portable",
-      "destination": "/download/Dawith-Welfare-Office-0.9.7-x64-Portable.exe",
+      "destination": "https://github.com/dawith-ai/dawith-welfare-office/releases/download/v0.9.7/Dawith-Welfare-Office-0.9.7-x64-Portable.exe",
+      "permanent": false
+    },
+    {
+      "source": "/download/:file",
+      "destination": "https://github.com/dawith-ai/dawith-welfare-office/releases/latest/download/:file",
       "permanent": false
     }
   ]

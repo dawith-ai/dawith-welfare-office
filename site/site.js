@@ -1,6 +1,6 @@
 // Shared behaviour for every page of the product site: download details,
 // the screenshot tabs, the sticky header colour and the help finder.
-const manifestUrl = './download/latest.json';
+const manifestUrl = './release.json';
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
 const formatSize = (bytes) => `${Math.round(bytes / 1024 / 1024)}MB`;
@@ -30,8 +30,8 @@ function showOsNotice() {
   notice.hidden = false;
 }
 
-// The deploy script writes latest.json next to the installers, so version,
-// file name and size always match what /download/setup actually serves.
+// scripts/release.mjs writes release.json when it publishes a GitHub release,
+// so version, file name and size match what /download/setup serves.
 async function loadRelease() {
   try {
     const response = await fetch(manifestUrl, { cache: 'no-cache' });

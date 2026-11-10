@@ -21,8 +21,8 @@
     "dist:win:lite": "electron-builder --win portable --x64 --config.compression=maximum --config.directories.output=dist-lite --publish never",
     "dist:dir": "electron-builder --dir",
     "dist:mac": "electron-builder --mac dmg --arm64 --publish never",
-    "site:deploy": "node scripts/deploy-site.mjs",
-    "dist:win:electron": "npm run dist:win:setup && npm run dist:win:portable"
+    "dist:win:electron": "npm run dist:win:setup && npm run dist:win:portable",
+    "release": "node scripts/release.mjs"
   },
   "main": "desktop/main.mjs",
   "dependencies": {

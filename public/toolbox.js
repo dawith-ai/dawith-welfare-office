@@ -1067,7 +1067,7 @@ const initialTool = new URLSearchParams(window.location.search).get('tool');
 if (initialTool && toolCatalog.some((tool) => tool.id === initialTool)) openTool(initialTool);
 
 let deferredInstallPrompt;
-window.addEventListener('beforeinstallprompt', (event) => { event.preventDefault(); deferredInstallPrompt = event; $('#installButton')?.classList.remove('hidden'); });
+window.addEventListener('beforeinstallprompt', (event) => { event.preventDefault(); if (sessionStorage.getItem('dawith-desktop') === '1') return; deferredInstallPrompt = event; $('#installButton')?.classList.remove('hidden'); });
 $('#installButton')?.addEventListener('click', async () => { if (!deferredInstallPrompt) return; deferredInstallPrompt.prompt(); await deferredInstallPrompt.userChoice; deferredInstallPrompt = null; $('#installButton').classList.add('hidden'); });
 // The desktop app serves files locally; an offline cache would only pile up.
 if ('serviceWorker' in navigator && ['http:', 'https:'].includes(window.location.protocol) && sessionStorage.getItem('dawith-desktop') !== '1') navigator.serviceWorker.register('./sw.js').catch(() => { /* offline cache is optional */ });
