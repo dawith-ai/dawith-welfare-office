@@ -85,7 +85,7 @@ function setupNav() {
 // Answers come only from the help pages below; nothing typed here leaves the
 // browser, so there is no server and no AI behind this panel.
 const helpEntries = [
-  { q: '정말 무료인가요?', k: '무료 비용 가격 요금 결제 유료 돈', a: '<p>네. 앱은 무료이고 기능 제한도 없습니다. AI도 로컬 AI(Ollama)나 이미 쓰는 구독, 무료 AI를 고르면 추가 비용이 없습니다.</p>', link: ['./#cost', '비용 자세히'] },
+  { q: '정말 무료인가요?', k: '무료 비용 가격 요금 결제 유료 돈', a: '<p>네. 앱은 무료이고 기능 제한도 없습니다. AI도 PC 안에서 도는 무료 로컬 AI(Ollama)를 씁니다.</p>', link: ['./#cost', '비용 자세히'] },
   { q: 'Mac에서도 쓸 수 있나요?', k: '맥 mac 애플 리눅스 linux 아이패드 휴대폰 모바일', a: '<p>지금은 Windows 10·11(64비트)만 지원합니다. Mac·Linux용은 준비 중이고, 나오면 업데이트 소식에 알립니다.</p>', link: ['./updates.html', '업데이트 소식'] },
   { q: '파란 경고 창이 떠요', k: '경고 pc 보호 smartscreen 스마트스크린 실행 차단 파란', a: '<p>“Windows의 PC 보호” 창에서 <b>추가 정보</b> → <b>실행</b>을 누르면 설치가 이어집니다. 아직 코드 서명 인증서가 없는 새 프로그램이라 나오는 안내입니다.</p>', link: ['./install.html#smartscreen', '그림으로 보기'] },
   { q: 'Edge에서 안 받아져요', k: 'edge 엣지 다운로드 안됨 유지 일반적으로', a: '<p>다운로드 목록에서 파일 옆 <b>…</b> → <b>유지</b>를 누르고, 한 번 더 <b>그래도 유지</b>를 누르세요.</p>', link: ['./install.html#edge', '그림으로 보기'] },
@@ -93,10 +93,10 @@ const helpEntries = [
   { q: '받은 파일을 못 찾겠어요', k: '파일 찾기 다운로드 폴더 어디', a: '<p>파일 탐색기 왼쪽의 <b>다운로드</b> 폴더를 보세요. 브라우저에서 <kbd>Ctrl</kbd>+<kbd>J</kbd>를 누르면 받은 파일 목록이 열립니다.</p>', link: ['./install.html#find-file', '자세히'] },
   { q: '설치형과 포터블은 뭐가 다른가요?', k: '포터블 설치형 usb 차이 설치 없이', a: '<p>기능은 같습니다. 설치형은 시작 메뉴·바탕화면에 등록되고, 포터블은 설치 없이 파일을 더블클릭해 실행합니다. 설치 권한이 없는 PC에서는 포터블을 쓰세요.</p>', link: ['./install.html#portable', '자세히'] },
   { q: '인터넷이 안 되는 PC에서도 되나요?', k: '인터넷 오프라인 망분리 폐쇄망 내부망', a: '<p>됩니다. 설치 파일만 USB 등으로 옮기면 PDF·한글 양식·이미지·텍스트·계산·기록 초안이 모두 인터넷 없이 작동합니다.</p>', link: ['./faq.html#offline', '자세히'] },
-  { q: '상담 기록이 밖으로 나가나요?', k: '개인정보 보안 서버 전송 유출 원문 저장 암호화', a: '<p>나가지 않습니다. 서버와 계정이 없고, 기록은 이 PC에 암호화해 저장합니다. 외부 AI는 직접 고르고 확인창에서 보낼 내용을 확인한 경우에만 그 회사로 보냅니다.</p>', link: ['./#privacy', '개인정보 자세히'] },
-  { q: 'AI 없이도 쓸 수 있나요?', k: 'ai 없이 꺼도 안써도 규칙', a: '<p>네. 모든 기본 기능은 AI 없이 동작합니다. 상담 기록 초안도 기본은 규칙으로 만듭니다.</p>', link: ['./connect.html', 'AI 연결하기'] },
-  { q: 'Claude·ChatGPT 구독은 어떻게 연결하나요?', k: 'claude 클로드 chatgpt 챗gpt codex 코덱스 gemini 제미나이 구독 연결 openrouter', a: '<p>앱의 <b>AI 보조·연결</b>에서 쓰던 구독을 고르면 됩니다. Claude·Codex는 공식 프로그램으로 로그인하고, ChatGPT·OpenRouter는 브라우저 로그인, Gemini는 키로 연결합니다.</p>', link: ['./connect.html', 'AI 연결하기'] },
-  { q: '로컬 AI(Ollama)는 어떻게 쓰나요?', k: 'ollama 올라마 로컬 llm 모델 설치', a: '<p>앱의 <b>AI 보조·연결</b>에서 PC 사양을 확인하고, 안내대로 Ollama를 설치한 뒤 추천 모델을 준비하면 됩니다.</p>', link: ['./connect.html#local', '자세히'] },
+  { q: '상담 기록이 밖으로 나가나요?', k: '개인정보 보안 서버 전송 유출 원문 저장 암호화', a: '<p>나가지 않습니다. 서버와 계정이 없고, 기록은 이 PC에 암호화해 저장합니다. AI도 이 PC 안의 로컬 AI만 쓰고, 클라우드 AI로 보내는 기능은 없습니다.</p>', link: ['./#privacy', '개인정보 자세히'] },
+  { q: 'AI 없이도 쓸 수 있나요?', k: 'ai 없이 꺼도 안써도 규칙', a: '<p>네. 모든 기본 기능은 AI 없이 동작합니다. 상담 기록 초안도 기본은 규칙으로 만듭니다.</p>', link: ['./connect.html', '로컬 AI 준비하기'] },
+  { q: 'ChatGPT·Claude 같은 클라우드 AI도 쓸 수 있나요?', k: 'claude 클로드 chatgpt 챗gpt codex 코덱스 gemini 제미나이 구독 클라우드 openrouter 외부', a: '<p>쓸 수 없습니다. 상담 원문을 지키려고 클라우드 AI로 보내는 기능을 넣지 않았고, 이 PC 안에서 도는 로컬 AI만 씁니다.</p>', link: ['./connect.html', '로컬 AI 준비하기'] },
+  { q: '로컬 AI(Ollama)는 어떻게 쓰나요?', k: 'ollama 올라마 로컬 llm 모델 설치', a: '<p>앱의 <b>로컬 AI 설정</b>에서 PC 사양을 확인하고, 안내대로 Ollama를 설치한 뒤 추천 모델을 준비하면 됩니다.</p>', link: ['./connect.html#local', '자세히'] },
   { q: '새 버전은 어떻게 받나요?', k: '업데이트 새 버전 갱신 덮어', a: '<p>이 사이트에서 최신 설치 파일을 받아 덮어 설치하면 됩니다. 저장해 둔 기록은 그대로 남습니다.</p>', link: ['./updates.html', '업데이트 소식'] },
   { q: '프로그램은 어떻게 지우나요?', k: '삭제 제거 언인스톨 지우기', a: '<p>Windows <b>설정 → 앱 → 설치된 앱</b>에서 Dawith Welfare Office를 찾아 <b>제거</b>를 누르세요. 포터블은 파일만 지우면 됩니다.</p>', link: ['./faq.html#uninstall', '자세히'] },
   { q: '한글(HWP) 파일을 고칠 수 있나요?', k: '한글 hwp hwpx 한컴 양식 편집', a: '<p>HWP·HWPX 양식을 열어 내용을 확인하고 {{기관명}} 같은 표식을 바꿀 수 있습니다. 한컴 한글처럼 자유롭게 편집하는 기능은 아직 없습니다.</p>', link: ['./faq.html#hwp', '자세히'] },
