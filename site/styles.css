@@ -274,3 +274,8 @@ code, kbd { padding: 1px 6px; border: 1px solid var(--line); border-radius: 5px;
 .story h2 { margin: 52px 0 12px; font-size: 26px; letter-spacing: -.02em; }
 .story blockquote { margin: 26px 0; padding: 4px 0 4px 20px; border-left: 3px solid var(--accent); color: var(--ink); font-size: 20px; font-weight: 700; }
 @media (max-width: 1000px) { .contact { grid-template-columns: 1fr; gap: 26px; } }
+.ref-title { margin: 44px 0 6px; font-size: 20px; }
+.ref-desc { margin: 0 0 14px; color: var(--muted); font-size: 15px; }
+.refs { margin: 0; padding: 0; list-style: none; border-top: 1px solid var(--line); }
+.refs li { padding: 14px 0; border-bottom: 1px solid var(--line); color: var(--muted); font-size: 16px; }
+.refs li a { margin-right: 8px; color: var(--ink); font-weight: 700; }

@@ -1,6 +1,6 @@
 {
   "name": "dawith-welfare-office",
-  "version": "0.9.7",
+  "version": "0.9.8",
   "private": true,
   "type": "module",
   "description": "Dawith lightweight local welfare work tools for files, images, text, dates, and amounts",
@@ -106,7 +106,8 @@
     },
     "publish": {
       "provider": "generic",
-      "url": "https://welfare-office.vercel.app/download/"
+      "url": "https://github.com/dawith-ai/dawith-welfare-office/releases/latest/download/"
     }
-  }
+  },
+  "license": "Apache-2.0"
 }

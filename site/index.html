@@ -34,14 +34,14 @@
     <main id="main">
       <section class="hero">
         <div class="wrap">
-          <a class="release-pill" href="./updates.html"><b id="releaseTag">새 버전 0.9.7</b><span>설치 파일이 25MB로 가벼워지고, 앱에서 바로 업데이트됩니다 →</span></a>
+          <a class="release-pill" href="./updates.html"><b id="releaseTag">새 버전 0.9.8</b><span>설치 파일 26MB, 앱에서 바로 업데이트됩니다 →</span></a>
           <h1>복지관 서류 일,<br />한 프로그램에서.</h1>
           <p class="lede">붙임 서류 PDF 합치기, 한글 양식 확인, 상담 기록 정리, 개인정보 가리기, 가계도까지. 사회복지사가 매일 하는 서류 작업을 인터넷 없이 내 PC에서 끝냅니다. 누구나 무료로 쓸 수 있습니다.</p>
           <div class="hero-actions">
-            <a id="heroDownload" class="btn btn-accent" href="/download/setup"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5M5 19h14" /></svg>Windows용 내려받기</a>
+            <a id="heroDownload" class="btn btn-accent" data-asset="setup" href="https://github.com/dawith-ai/dawith-welfare-office/releases/latest"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5M5 19h14" /></svg>Windows용 내려받기</a>
             <a class="btn btn-ghost" href="https://github.com/dawith-ai/dawith-welfare-office" target="_blank" rel="noreferrer">GitHub</a>
           </div>
-          <p class="hero-meta"><span id="heroVersion">0.9.7</span> · Windows 10·11 (64비트) · 설치 파일 <span id="heroSize">약 26MB</span> · Mac·Linux 준비 중 · <a href="./install.html">설치 도움말</a></p>
+          <p class="hero-meta"><span id="heroVersion">0.9.8</span> · Windows 10·11 (64비트) · 설치 파일 <span id="heroSize">약 26MB</span> · Mac·Linux 준비 중 · <a href="./install.html">설치 도움말</a></p>
           <p id="osNotice" class="os-notice" hidden></p>
 
           <div class="showcase">
@@ -175,12 +175,23 @@
             <p>Dawith도 소스를 공개한 프로그램입니다. 아래 프로젝트 덕분에 만들 수 있었습니다. 라이선스 고지는 <a href="https://github.com/dawith-ai/dawith-welfare-office" target="_blank" rel="noreferrer">저장소</a>에 있습니다.</p>
           </div>
           <dl class="oss">
-            <div><dt>전체</dt><dd><b>Electron</b> 데스크톱 앱의 틀 · MIT</dd></div>
-            <div><dt>PDF</dt><dd><b>pdf-lib</b> PDF 합치기·나누기 · MIT</dd></div>
-            <div><dt>한글</dt><dd><b>rhwp</b> 한글 문서를 읽고 쓰는 엔진 · MIT</dd></div>
-            <div><dt>로컬 AI</dt><dd><b>Ollama</b> PC 안에서 AI 모델 실행 · MIT (따로 설치)</dd></div>
+            <div><dt>실행 환경</dt><dd><b>Node.js</b> 내 PC에서 도는 로컬 서버 · MIT</dd></div>
+            <div><dt>한글</dt><dd><b>rhwp</b> HWP·HWPX 문서를 읽고 표식을 바꾸는 엔진 · MIT</dd></div>
+            <div><dt>PDF</dt><dd><b>pdf-lib</b> PDF 합치기·나누기 · MIT · 안에 <b>pako</b>(MIT·Zlib), <b>tslib</b>(0BSD) 포함</dd></div>
+            <div><dt>워드·양식</dt><dd><b>docx</b> 양식의 {{표식}} 채우기 · MIT · <b>fflate</b>, <b>nanoid</b>(MIT) 포함</dd></div>
+            <div><dt>압축</dt><dd><b>JSZip</b> HWPX 풀기·묶기 · MIT · <b>pako</b>, <b>readable-stream</b> 등 하위 패키지 MIT·ISC</dd></div>
+            <div><dt>화면</dt><dd><b>Microsoft Edge</b> Windows에 들어 있는 브라우저로 앱 창을 엽니다 (프로그램에 포함하지 않음)</dd></div>
+            <div><dt>로컬 AI</dt><dd><b>Ollama</b> PC 안에서 AI 모델 실행 · MIT (따로 설치, 프로그램에 포함하지 않음)</dd></div>
             <div><dt>글꼴</dt><dd><b>Pretendard</b> 이 사이트의 글꼴 · SIL OFL 1.1</dd></div>
           </dl>
+          <p class="small-note">설치 폴더의 <code>THIRD_PARTY_NOTICES.txt</code>에 포함된 모든 오픈소스의 라이선스 전문이 들어 있습니다.</p>
+          <h3 class="ref-title">참고한 프로젝트</h3>
+          <p class="ref-desc">코드는 가져오지 않고 기능과 설계를 참고했습니다.</p>
+          <ul class="refs">
+            <li><a href="https://ieumoffice.com" target="_blank" rel="noreferrer">이음오피스</a> 구독 AI를 직접 고르고 연결하는 흐름, 이 소개 사이트의 구성을 참고했습니다.</li>
+            <li><a href="https://github.com/manor-os/minutes" target="_blank" rel="noreferrer">minutes</a> · LocalScribe · meetmind 회의록 정리 화면과 흐름을 참고했습니다.</li>
+            <li><a href="https://welfare-hub.site" target="_blank" rel="noreferrer">Dawith 복지 허브</a> 같은 제작자의 웹 도구 모음입니다. 현장 도구 구성과 만든 이야기를 이어받았습니다.</li>
+          </ul>
         </section>
 
         <section class="section" id="download">
@@ -195,12 +206,12 @@
           <div class="dl-panel">
             <div class="dl-row">
               <div class="dl-item">
-                <a class="btn btn-accent" href="/download/setup"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5M5 19h14" /></svg><span data-label="setup">Windows용 내려받기</span></a>
+                <a class="btn btn-accent" data-asset="setup" href="https://github.com/dawith-ai/dawith-welfare-office/releases/latest"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5M5 19h14" /></svg><span data-label="setup">Windows용 내려받기</span></a>
                 <p class="dl-file" data-file="setup">설치형 · 약 26MB</p>
                 <p class="dl-sub">바탕화면·시작 메뉴에 등록됩니다. 대부분은 이것을 받으세요.</p>
               </div>
               <div class="dl-item">
-                <a class="btn btn-ghost" href="/download/portable"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5M5 19h14" /></svg>포터블 내려받기</a>
+                <a class="btn btn-ghost" data-asset="portable" href="https://github.com/dawith-ai/dawith-welfare-office/releases/latest"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5M5 19h14" /></svg>포터블 내려받기</a>
                 <p class="dl-file" data-file="portable">설치 없이 실행 · 약 26MB</p>
                 <p class="dl-sub">설치 권한이 없는 PC나 USB에 담아 쓸 때 고르세요.</p>
               </div>

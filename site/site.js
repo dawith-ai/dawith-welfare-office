@@ -31,7 +31,7 @@ function showOsNotice() {
 }
 
 // scripts/release.mjs writes release.json when it publishes a GitHub release,
-// so version, file name and size match what /download/setup serves.
+// so version, file name and download links always match the release.
 async function loadRelease() {
   try {
     const response = await fetch(manifestUrl, { cache: 'no-cache' });
@@ -40,6 +40,7 @@ async function loadRelease() {
     for (const key of ['setup', 'portable']) {
       const asset = manifest[key];
       if (!asset) continue;
+      $$(`[data-asset="${key}"]`).forEach((link) => { link.href = asset.url; });
       $$(`[data-file="${key}"]`).forEach((cell) => { cell.textContent = `${asset.file} (${formatSize(asset.size)})`; });
     }
     if (manifest.setup && $('#heroSize')) $('#heroSize').textContent = formatSize(manifest.setup.size);
@@ -47,7 +48,7 @@ async function loadRelease() {
     if ($('#heroVersion')) $('#heroVersion').textContent = manifest.version;
     if ($('#releaseTag')) $('#releaseTag').textContent = `새 버전 ${manifest.version}`;
   } catch {
-    // The static links already point at /download/setup and /download/portable.
+    // The static links already point at the latest GitHub release page.
   }
 }
 

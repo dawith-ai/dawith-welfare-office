@@ -7,7 +7,7 @@ export function isNewerVersion(candidate, current) {
   return false;
 }
 
-// Installers and latest.yml are published on the product site, so the app
-// updates from the same place people download it.
-export const updateFeedUrl = 'https://welfare-office.vercel.app/download/';
+// Installers and latest.yml are GitHub release assets; releases/latest/download
+// always resolves to the newest release, independent of where the site runs.
+export const updateFeedUrl = 'https://github.com/dawith-ai/dawith-welfare-office/releases/latest/download/';
 export const downloadPageUrl = 'https://welfare-office.vercel.app/#download';

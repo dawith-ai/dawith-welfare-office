@@ -81,8 +81,31 @@ for (const dir of ['jszip/dist', 'pako/dist']) fs.rmSync(path.join(appDir, 'node
 // Node runtime under its own process name so the installer can stop it
 // without touching other Node processes.
 copy(process.execPath, path.join(stage, 'runtime', 'dawith-runtime.exe'));
-const nodeLicense = path.join(path.dirname(process.execPath), 'LICENSE');
-if (fs.existsSync(nodeLicense)) copy(nodeLicense, path.join(stage, 'runtime', 'LICENSE.node.txt'));
+// The Windows Node installer ships no LICENSE file, so the text for the
+// bundled version is kept in the repo.
+const nodeLicense = path.join(root, 'build', 'lite', 'LICENSE.node.txt');
+if (!fs.readFileSync(nodeLicense, 'utf8').includes('Node.js is licensed')) throw new Error('build/lite/LICENSE.node.txt is missing the Node.js license');
+copy(nodeLicense, path.join(stage, 'runtime', 'LICENSE.node.txt'));
+
+// One notices file with the license text of everything bundled.
+const licenseText = (dir) => {
+  const file = fs.readdirSync(dir).find((name) => /^(licen[cs]e|copying)(\.(md|txt))?$/i.test(name));
+  return file ? fs.readFileSync(path.join(dir, file), 'utf8').trim() : null;
+};
+const noticeFor = (dir, role) => {
+  const manifest = JSON.parse(fs.readFileSync(path.join(dir, 'package.json'), 'utf8'));
+  const text = licenseText(dir) || `${manifest.license} license (declared in package.json; no license file is published with this version).`;
+  return `${manifest.name} ${manifest.version} — ${manifest.license}${role ? ` — ${role}` : ''}\n\n${text}`;
+};
+const notices = [
+  `Dawith Welfare Office ${version} — third-party notices`,
+  `Node.js ${process.version} — MIT and bundled licenses — local runtime\n\nSee runtime/LICENSE.node.txt for the full text.`,
+  `rhwp — MIT — HWP/HWPX engine\n\n${fs.readFileSync(path.join(root, 'public', 'vendor', 'rhwp', 'LICENSE'), 'utf8').trim()}\n\nComponents bundled in rhwp are listed in app/public/vendor/rhwp/THIRD_PARTY_LICENSES.md.`,
+  noticeFor(path.join(root, 'node_modules', 'pdf-lib'), 'PDF merge/split (app/public/vendor/pdf-lib.min.js)'),
+  ...['@pdf-lib/standard-fonts', '@pdf-lib/upng', 'tslib'].map((name) => path.join(root, 'node_modules', name)).filter((dir) => fs.existsSync(dir)).map((dir) => noticeFor(dir, 'bundled in pdf-lib.min.js')),
+  ...[...packages].sort().map((dir) => noticeFor(dir)),
+];
+fs.writeFileSync(path.join(stage, 'THIRD_PARTY_NOTICES.txt'), `${notices.join(`\n\n${'='.repeat(72)}\n\n`)}\n`);
 
 const csc = path.join(process.env.WINDIR || 'C:\\Windows', 'Microsoft.NET', 'Framework64', 'v4.0.30319', 'csc.exe');
 execFileSync(csc, ['/nologo', '/optimize+', '/target:winexe', '/r:System.Windows.Forms.dll', `/out:${path.join(stage, 'Dawith Welfare Office.exe')}`, path.join(root, 'build', 'lite', 'Launcher.cs')], { stdio: 'inherit' });
@@ -102,8 +125,19 @@ function findMakensis() {
   throw new Error('makensis.exe not found; run an electron-builder Windows build once to download NSIS');
 }
 const makensis = findMakensis();
+// Antivirus scans of freshly staged files sometimes make makensis fail to read
+// them; a short pause and retry gets past it.
+const runMakensis = (args) => {
+  for (let attempt = 1; ; attempt += 1) {
+    try { return execFileSync(makensis, args, { stdio: 'inherit' }); } catch (error) {
+      if (attempt === 3) throw error;
+      console.warn(`makensis failed (attempt ${attempt}); retrying`);
+      execFileSync(process.execPath, ['-e', 'setTimeout(() => {}, 5000)']);
+    }
+  }
+};
 for (const [script, outfile] of [['installer.nsi', names.setup], ['portable.nsi', names.portable]]) {
-  execFileSync(makensis, ['-V2', '-INPUTCHARSET', 'UTF8', `-DVERSION=${version}`, `-DSTAGE=${stage}`, `-DOUTFILE=${path.join(out, outfile)}`, path.join(root, 'build', 'lite', script)], { stdio: 'inherit' });
+  runMakensis(['-V2', '-INPUTCHARSET', 'UTF8', `-DVERSION=${version}`, `-DSTAGE=${stage}`, `-DOUTFILE=${path.join(out, outfile)}`, path.join(root, 'build', 'lite', script)]);
 }
 
 // Same shape electron-builder writes, so both runtimes read one feed.
