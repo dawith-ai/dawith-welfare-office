@@ -20,7 +20,7 @@ const toolCatalog = [
   { id: 'case-record', category: 'field', mark: 'LOG', name: '상담 기록·회의록 정리', description: '메모를 고른 기록 양식(관찰사항·상담내용·소견 등)대로 정리하고 기관 양식(Word·한글)에 넣어 줍니다.', keywords: '상담기록 상담일지 상담 내용 정리 회의록 사례회의 사례관리 기록 요약 결정사항 할일 조치사항 관찰사항 소견 양식 서식 템플릿 docx hwpx 로컬 ai ollama', label: 'RECORD · MINUTES', aiMode: 'local-optional' },
   { id: 'genogram', category: 'diagram', mark: 'GENO', name: '가계도 편집', description: '생성형 결과에 의존하지 않고 직접 수정하는 가계도 편집기입니다.', keywords: '가계도 genogram 가족관계 mcgoldrick svg pdf json 개인정보', label: 'RELATIONSHIP MAP', aiMode: 'local-optional' },
   { id: 'ecomap', category: 'diagram', mark: 'ECO', name: '생태도 편집', description: '가구와 기관·자원을 직접 배치하고 관계 강도를 표시합니다.', keywords: '생태도 ecomap 자원망 사회적지지 기관관계 svg json', label: 'RELATIONSHIP MAP', aiMode: 'local-optional' },
-  { id: 'ai-setup', category: 'ai', mark: 'AI', name: 'AI 보조·연결 센터', description: '로컬·구독·무료 AI를 직접 고르고 연결합니다.', keywords: 'ollama 로컬 llm ai 모델 다운로드 상담 회의록 문서 claude codex chatgpt openrouter gemini 구독', label: 'AI CONTROL' },
+  { id: 'ai-setup', category: 'ai', mark: 'AI', name: '로컬 AI 설정', description: '이 PC에 Ollama 로컬 AI를 설치·연결하고 모델을 준비합니다.', keywords: 'ollama 로컬 llm ai 모델 다운로드 설치 연결 상담 회의록 문서', label: 'LOCAL AI' },
 ];
 
 const categoryInfo = {
@@ -30,7 +30,7 @@ const categoryInfo = {
   calculator: { label: 'CALCULATOR', title: '계산·변환', copy: '만나이, 금액 한글 표기, 날짜·기간을 바로 계산합니다.' },
   field: { label: 'FIELD', title: '현장 관리', copy: '인원 체크, 당직 일정, 상담·회의 기록처럼 매일 반복되는 현장 업무를 정리합니다.' },
   diagram: { label: 'RELATIONSHIP MAP', title: '관계도', copy: '가계도와 생태도를 직접 그리고 고쳐 사례회의 자료로 씁니다.' },
-  ai: { label: 'AI CONTROL', title: 'AI 보조·연결', copy: '로컬 LLM이나 구독형 AI를 직접 골라 연결하고, 연결 상태를 확인합니다.' },
+  ai: { label: 'LOCAL AI', title: '로컬 AI', copy: '이 PC 안에서만 동작하는 로컬 AI(Ollama)를 설치·연결하고 모델을 준비합니다.' },
 };
 
 const INSTITUTION_PROFILE_KEY = 'dawith-institution-profile-v1';
@@ -38,9 +38,8 @@ const state = { category: 'all', search: '', activeTool: null, pdfFiles: [], ima
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
 const escapeHtml = (value) => String(value ?? '').replace(/[&<>'"]/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' })[char]);
-const providerLabel = (provider) => ({ 'claude-code': 'Claude', codex: 'Codex', 'gemini-cli': 'Gemini CLI', chatgpt: 'ChatGPT', openrouter: 'OpenRouter', gemini: 'Gemini' }[provider] || provider);
 const formatBytes = (bytes) => bytes < 1024 ? `${bytes} B` : bytes < 1024 ** 2 ? `${(bytes / 1024).toFixed(1)} KB` : `${(bytes / 1024 ** 2).toFixed(2)} MB`;
-const aiModeLabel = (tool, fallback) => tool.aiMode === 'choice' ? '규칙 · 로컬 AI · 클라우드 AI 선택' : tool.aiMode === 'local-optional' ? '로컬 AI 선택' : fallback;
+const aiModeLabel = (tool, fallback) => tool.aiMode === 'choice' ? '규칙 · 로컬 AI 선택' : tool.aiMode === 'local-optional' ? '로컬 AI 선택' : fallback;
 const formatDate = (date) => new Intl.DateTimeFormat('ko-KR', { dateStyle: 'long' }).format(date);
 
 function ensurePdfLib() {
@@ -183,7 +182,7 @@ function renderImageWorkspace(tool) {
 }
 
 function renderTextWorkspace(tool) {
-  return `${toolHeader(tool, '텍스트를 정리하고 가리기', '치환·마스킹·목록 정리를 이 기기에서 바로 처리합니다.')}<div class="tool-layout text-layout text-tool-layout"><section class="tool-panel text-editor"><div class="panel-heading"><div><h2>원문</h2><p>상담 메모나 문장을 붙여 넣으세요.</p></div><span id="textCount" class="muted-text">0자</span></div><div class="text-toolbar"><button class="tool-chip active" data-text-mode="mask" type="button">개인정보 마스킹</button><button class="tool-chip" data-text-mode="replace" type="button">찾아 바꾸기</button><button class="tool-chip" data-text-mode="clean" type="button">공백 정리</button><button class="tool-chip" data-text-mode="number" type="button">목록 정리</button><button class="tool-chip" data-text-mode="plain" type="button">서식 지우기</button></div><div id="maskOptions" class="text-options"><div class="text-options-heading"><b>가릴 항목</b><span>필요한 것만 선택</span></div><div class="text-option-list"><label><input id="maskResident" type="checkbox" checked /> 주민등록번호</label><label><input id="maskPhone" type="checkbox" checked /> 전화번호</label><label><input id="maskEmail" type="checkbox" checked /> 이메일</label><label><input id="maskAccount" type="checkbox" checked /> 계좌번호</label></div></div><div id="replaceOptions" class="text-options hidden"><div class="text-options-heading"><b>찾아 바꾸기</b><span>입력 즉시 적용</span></div><div class="replace-grid"><label>찾을 내용<input id="replaceFind" type="text" placeholder="예: 홍길동" /></label><label>바꿀 내용<input id="replaceWith" type="text" placeholder="예: 대상자" /></label></div><label class="text-check"><input id="replaceIgnoreCase" type="checkbox" /> 대소문자 구분 없이 바꾸기</label></div><textarea id="textInput" placeholder="여기에 텍스트를 붙여 넣으세요."></textarea><div class="text-footer"><span id="textPrivacy">입력 내용은 이 기기 안에서만 처리됩니다.</span><button id="textClear" class="icon-text-button" type="button">지우기</button></div></section><section class="tool-panel text-result"><div class="panel-heading"><div><h2>결과</h2><p id="textResultLabel">개인정보 마스킹 결과</p></div><div class="panel-actions"><button id="textAiAssist" class="secondary-button" type="button">로컬 AI로 다듬기</button><button id="textSubscriptionAssist" class="secondary-button external-ai-button" type="button">구독 AI 사용</button><button id="textCopy" class="secondary-button" type="button">복사</button></div></div><div id="textOutput" class="result-content empty">원문을 입력하면 결과가 여기에 표시됩니다.</div><div class="text-result-meta"><span id="textResultCount">결과 0자</span><span id="textResultBytes">UTF-8 0 byte</span></div><div class="tool-actions"><button id="textAiApply" class="secondary-button hidden" type="button">AI 결과를 원문에 적용</button><button id="textDownload" class="primary-button" type="button" disabled>TXT로 저장 →</button></div></section></div>`;
+  return `${toolHeader(tool, '텍스트를 정리하고 가리기', '치환·마스킹·목록 정리를 이 기기에서 바로 처리합니다.')}<div class="tool-layout text-layout text-tool-layout"><section class="tool-panel text-editor"><div class="panel-heading"><div><h2>원문</h2><p>상담 메모나 문장을 붙여 넣으세요.</p></div><span id="textCount" class="muted-text">0자</span></div><div class="text-toolbar"><button class="tool-chip active" data-text-mode="mask" type="button">개인정보 마스킹</button><button class="tool-chip" data-text-mode="replace" type="button">찾아 바꾸기</button><button class="tool-chip" data-text-mode="clean" type="button">공백 정리</button><button class="tool-chip" data-text-mode="number" type="button">목록 정리</button><button class="tool-chip" data-text-mode="plain" type="button">서식 지우기</button></div><div id="maskOptions" class="text-options"><div class="text-options-heading"><b>가릴 항목</b><span>필요한 것만 선택</span></div><div class="text-option-list"><label><input id="maskResident" type="checkbox" checked /> 주민등록번호</label><label><input id="maskPhone" type="checkbox" checked /> 전화번호</label><label><input id="maskEmail" type="checkbox" checked /> 이메일</label><label><input id="maskAccount" type="checkbox" checked /> 계좌번호</label></div></div><div id="replaceOptions" class="text-options hidden"><div class="text-options-heading"><b>찾아 바꾸기</b><span>입력 즉시 적용</span></div><div class="replace-grid"><label>찾을 내용<input id="replaceFind" type="text" placeholder="예: 홍길동" /></label><label>바꿀 내용<input id="replaceWith" type="text" placeholder="예: 대상자" /></label></div><label class="text-check"><input id="replaceIgnoreCase" type="checkbox" /> 대소문자 구분 없이 바꾸기</label></div><textarea id="textInput" placeholder="여기에 텍스트를 붙여 넣으세요."></textarea><div class="text-footer"><span id="textPrivacy">입력 내용은 이 기기 안에서만 처리됩니다.</span><button id="textClear" class="icon-text-button" type="button">지우기</button></div></section><section class="tool-panel text-result"><div class="panel-heading"><div><h2>결과</h2><p id="textResultLabel">개인정보 마스킹 결과</p></div><div class="panel-actions"><button id="textAiAssist" class="secondary-button" type="button">로컬 AI로 다듬기</button><button id="textCopy" class="secondary-button" type="button">복사</button></div></div><div id="textOutput" class="result-content empty">원문을 입력하면 결과가 여기에 표시됩니다.</div><div class="text-result-meta"><span id="textResultCount">결과 0자</span><span id="textResultBytes">UTF-8 0 byte</span></div><div class="tool-actions"><button id="textAiApply" class="secondary-button hidden" type="button">AI 결과를 원문에 적용</button><button id="textDownload" class="primary-button" type="button" disabled>TXT로 저장 →</button></div></section></div>`;
 }
 
 function renderAgeWorkspace(tool) {
@@ -199,11 +198,11 @@ function renderDateWorkspace(tool) {
 }
 
 function renderAiSetup(tool) {
-  return `${toolHeader(tool, 'AI 보조 연결 센터', '로컬·내 구독·무료 연결 중 처리 위치를 먼저 고릅니다.')}<div class="ai-control-layout"><section class="tool-panel ai-setup-main"><div class="panel-heading"><div><h2>이 PC 안에서 처리</h2><p>Ollama 로컬 모델은 상담 원문을 외부로 보내지 않습니다.</p></div><span id="aiSetupStatus" class="local-note">확인 전</span></div><div class="ai-device-summary"><div><span>현재 기기</span><b id="aiSystemSpec">확인 중…</b></div><div><span>추천 모델</span><b id="aiRecommendation">확인 중…</b></div></div><ol class="ai-setup-steps"><li><span>1</span><div><b>Ollama 설치</b><small>공식 설치 파일을 한 번 설치하고 실행합니다.</small></div><a id="aiInstallLink" href="https://ollama.com/download" target="_blank" rel="noreferrer">공식 설치 열기 ↗</a></li><li><span>2</span><div><b>연결 확인</b><small>현재 PC의 RAM·CPU를 읽어 모델을 추천합니다.</small></div><button id="aiRefresh" class="secondary-button" type="button">상태 다시 확인</button></li><li><span>3</span><div><b>추천 모델 준비</b><small id="aiModelHelp">모델이 없으면 규칙 기반 기능만으로도 계속 사용할 수 있습니다.</small></div><div class="ai-model-action"><select id="aiModelSelect" class="wide-input" aria-label="로컬 AI 모델 선택"></select><button id="aiPullModel" class="primary-button" type="button" disabled>모델 준비</button></div></li></ol><div id="aiSetupNotice" class="notice" hidden></div><div class="ai-privacy-note"><b>처리 경계</b><span>상담 원문·문서 내용은 Dawith 서버나 외부 AI로 자동 전송하지 않습니다.</span><span>모델 다운로드 때만 Ollama 공식 저장소와 통신합니다.</span><span>외부 provider는 연결·전송 버튼을 누른 경우에만 사용합니다.</span></div></section><section class="tool-panel subscription-panel"><div class="panel-heading"><div><h2>내 AI 연결</h2><p>Claude·Codex·ChatGPT 구독과 OpenRouter·Gemini 무료 연결을 직접 선택합니다.</p></div><button id="subscriptionRefresh" class="secondary-button" type="button">상태 확인</button></div><div class="subscription-warning"><b>외부 전송은 별도 연결 동의가 필요합니다.</b><span>선택한 텍스트만 해당 provider로 전달하며, Dawith 서버에는 저장하지 않습니다. 개인정보가 포함된 원문은 로컬 처리 후 담당자가 전송 여부를 결정하세요.</span></div><div id="subscriptionCards" class="subscription-cards"><p class="muted-text">상태를 확인하는 중…</p></div><div class="subscription-test"><label for="subscriptionText">선택 전송 테스트</label><textarea id="subscriptionText" class="subscription-input" placeholder="개인정보가 없는 짧은 문장으로 먼저 테스트하세요."></textarea><div class="subscription-actions"><select id="subscriptionProvider" class="wide-input" aria-label="외부 AI provider"><option value="claude-code">Claude</option><option value="codex">Codex</option></select><button id="subscriptionAssist" class="primary-button" type="button">선택한 AI로 정리</button></div><p id="subscriptionNotice" class="field-hint">상태 확인만으로는 원문이 전송되지 않습니다.</p></div></section></div>`;
+  return `${toolHeader(tool, '로컬 AI 설정', '이 PC 안에서만 동작하는 Ollama 로컬 AI를 설치하고 모델을 준비합니다.')}<div class="ai-control-layout ai-local-only"><section class="tool-panel ai-setup-main"><div class="panel-heading"><div><h2>이 PC 안에서 처리</h2><p>Ollama 로컬 모델은 상담 원문을 이 PC 밖으로 보내지 않습니다.</p></div><span id="aiSetupStatus" class="local-note">확인 전</span></div><div class="ai-device-summary"><div><span>현재 기기</span><b id="aiSystemSpec">확인 중…</b></div><div><span>추천 모델</span><b id="aiRecommendation">확인 중…</b></div></div><ol class="ai-setup-steps"><li><span>1</span><div><b>Ollama 설치</b><small>공식 설치 파일을 한 번 설치하고 실행합니다.</small></div><a id="aiInstallLink" href="https://ollama.com/download" target="_blank" rel="noreferrer">공식 설치 열기 ↗</a></li><li><span>2</span><div><b>연결 확인</b><small>현재 PC의 RAM·CPU를 읽어 모델을 추천합니다.</small></div><button id="aiRefresh" class="secondary-button" type="button">상태 다시 확인</button></li><li><span>3</span><div><b>추천 모델 준비</b><small id="aiModelHelp">모델이 없으면 규칙 기반 기능만으로도 계속 사용할 수 있습니다.</small></div><div class="ai-model-action"><select id="aiModelSelect" class="wide-input" aria-label="로컬 AI 모델 선택"></select><button id="aiPullModel" class="primary-button" type="button" disabled>모델 준비</button></div></li></ol><div id="aiSetupNotice" class="notice" hidden></div><div class="ai-privacy-note"><b>처리 경계</b><span>상담 원문·문서 내용은 이 PC의 Ollama(127.0.0.1)에서만 처리하고, Dawith 서버나 외부 AI 서비스로 보내지 않습니다.</span><span>모델을 내려받을 때만 Ollama가 공식 모델 저장소와 통신합니다. 이때 원문은 함께 전송되지 않습니다.</span><span>클라우드 AI 연결 기능은 없습니다.</span></div></section></div>`;
 }
 
 function renderHwpWorkspace(tool) {
-  return `${toolHeader(tool, '한글 기관 양식을 확인하고 채우기', 'HWP·HWPX 파일을 외부로 보내지 않고 이 기기에서 읽고 표식을 치환해 저장합니다.')}<div class="hwp-layout"><section class="tool-panel hwp-entry"><div class="panel-heading"><div><h2>양식 파일</h2><p>기관에서 받은 .hwp 또는 .hwpx 파일을 선택하세요.</p></div><span id="hwpEngineStatus" class="local-note">엔진 준비 전</span></div><div id="hwpDropzone" class="dropzone"><div><span class="dropzone-mark">H</span><b>HWP·HWPX 파일을 놓으세요</b><p>파일은 이 브라우저에서만 읽습니다.</p><label class="file-button"><input id="hwpInput" type="file" accept=".hwp,.hwpx,.hml,application/x-hwp,application/haansofthwp" />파일 선택</label></div></div><div id="hwpNotice" class="notice" hidden></div><div id="hwpMeta" class="hwp-meta hidden"><div><span>파일</span><b id="hwpFileName"></b></div><div><span>페이지</span><b id="hwpPageCount">-</b></div><div><span>처리</span><b>이 기기</b></div></div><div id="hwpReplacePanel" class="hwp-replace hidden"><b>양식 표식 치환</b><p><code>{{기관명}}</code>처럼 양식에 넣은 표식을 찾아 바꿉니다.</p><div class="replace-grid"><label>찾을 표식<input id="hwpQuery" class="wide-input" placeholder="예: {{기관명}}" /></label><label>바꿀 내용<input id="hwpReplacement" class="wide-input" placeholder="예: 다위복지관" /></label></div><button id="hwpReplaceSave" class="primary-button" type="button" disabled>치환한 HWPX 저장 →</button></div></section><section class="tool-panel hwp-result"><div class="panel-heading"><div><h2>양식 내용</h2><p id="hwpResultLabel">파일을 선택하면 텍스트를 추출합니다.</p></div><div class="panel-actions"><button id="hwpCopy" class="secondary-button" type="button" disabled>복사</button><button id="hwpLocalAi" class="secondary-button" type="button" disabled>로컬 AI 요약</button><button id="hwpSubscriptionAi" class="secondary-button external-ai-button" type="button" disabled>구독 AI 요약</button><button id="hwpAiRevert" class="secondary-button hidden" type="button">되돌리기</button></div></div><pre id="hwpPreview" class="hwp-preview">HWP·HWPX 파일을 선택하면 양식 안의 텍스트가 여기에 표시됩니다.</pre><div class="tool-actions"><button id="hwpUseAsSource" class="primary-button" type="button" disabled>내용을 텍스트 도구로 보내기 →</button></div></section></div><aside class="hwp-safety"><b>지원 범위</b><span>HWP 5.0 · HWPX · 일부 HML</span><span>표·문단 텍스트 추출</span><span>AI 버튼은 선택한 텍스트를 초안으로 요약합니다</span><span>rhwp MIT 엔진을 필요할 때만 불러옵니다</span></aside>`;
+  return `${toolHeader(tool, '한글 기관 양식을 확인하고 채우기', 'HWP·HWPX 파일을 외부로 보내지 않고 이 기기에서 읽고 표식을 치환해 저장합니다.')}<div class="hwp-layout"><section class="tool-panel hwp-entry"><div class="panel-heading"><div><h2>양식 파일</h2><p>기관에서 받은 .hwp 또는 .hwpx 파일을 선택하세요.</p></div><span id="hwpEngineStatus" class="local-note">엔진 준비 전</span></div><div id="hwpDropzone" class="dropzone"><div><span class="dropzone-mark">H</span><b>HWP·HWPX 파일을 놓으세요</b><p>파일은 이 브라우저에서만 읽습니다.</p><label class="file-button"><input id="hwpInput" type="file" accept=".hwp,.hwpx,.hml,application/x-hwp,application/haansofthwp" />파일 선택</label></div></div><div id="hwpNotice" class="notice" hidden></div><div id="hwpMeta" class="hwp-meta hidden"><div><span>파일</span><b id="hwpFileName"></b></div><div><span>페이지</span><b id="hwpPageCount">-</b></div><div><span>처리</span><b>이 기기</b></div></div><div id="hwpReplacePanel" class="hwp-replace hidden"><b>양식 표식 치환</b><p><code>{{기관명}}</code>처럼 양식에 넣은 표식을 찾아 바꿉니다.</p><div class="replace-grid"><label>찾을 표식<input id="hwpQuery" class="wide-input" placeholder="예: {{기관명}}" /></label><label>바꿀 내용<input id="hwpReplacement" class="wide-input" placeholder="예: 다위복지관" /></label></div><button id="hwpReplaceSave" class="primary-button" type="button" disabled>치환한 HWPX 저장 →</button></div></section><section class="tool-panel hwp-result"><div class="panel-heading"><div><h2>양식 내용</h2><p id="hwpResultLabel">파일을 선택하면 텍스트를 추출합니다.</p></div><div class="panel-actions"><button id="hwpCopy" class="secondary-button" type="button" disabled>복사</button><button id="hwpLocalAi" class="secondary-button" type="button" disabled>로컬 AI 요약</button><button id="hwpAiRevert" class="secondary-button hidden" type="button">되돌리기</button></div></div><pre id="hwpPreview" class="hwp-preview">HWP·HWPX 파일을 선택하면 양식 안의 텍스트가 여기에 표시됩니다.</pre><div class="tool-actions"><button id="hwpUseAsSource" class="primary-button" type="button" disabled>내용을 텍스트 도구로 보내기 →</button></div></section></div><aside class="hwp-safety"><b>지원 범위</b><span>HWP 5.0 · HWPX · 일부 HML</span><span>표·문단 텍스트 추출</span><span>로컬 AI 요약은 이 PC의 Ollama로만 처리합니다</span><span>rhwp MIT 엔진을 필요할 때만 불러옵니다</span></aside>`;
 }
 
 const builtInTemplates = [
@@ -220,7 +219,7 @@ function getTemplateCatalog() {
 function renderTemplateStudio(tool) {
   const templates = getTemplateCatalog();
   const options = templates.map((template) => `<option value="${escapeHtml(template.id)}">${escapeHtml(template.title)}</option>`).join('');
-  return `${toolHeader(tool, '기관 문서 양식', '기관명·담당자를 한 번 저장하면 회의록·사업계획서·결과보고서 머리말이 자동으로 채워집니다. 회의 메모 정리는 상담 기록·회의록 정리에서 먼저 하세요.')}<div class="template-layout"><aside class="tool-panel template-sidebar"><div class="panel-heading"><div><h2>내 양식</h2><p>저장한 양식은 이 기기에만 남습니다.</p></div></div><div class="control-group template-select-group"><label for="templateSelect">사용할 문서</label><select id="templateSelect" class="wide-input">${options}</select></div><div class="template-save-box"><label for="templateName">내 양식으로 저장</label><input id="templateName" class="wide-input" placeholder="예: 우리 기관 회의록" /><textarea id="templateBody" class="template-body-input" placeholder="{{기관명}}, {{사업명}} 같은 항목을 사용할 수 있습니다."></textarea><button id="templateSave" class="secondary-button" type="button">내 양식 저장</button><p id="templateNotice" class="field-hint">양식 안의 개인정보는 저장하지 마세요.</p></div><div class="template-help"><b>사용 가능한 항목</b><p>{{기관명}} · {{문서일}} · {{사업명}} · {{작성자}} · {{참석자}} · {{목적}} · {{내용}} · {{결정사항}} · {{후속조치}}</p></div><div class="template-help"><b>회의 메모가 있나요?</b><p>상담 기록·회의록 정리에서 결정 사항·할 일을 먼저 나눈 뒤 이 양식으로 보내면 칸이 채워집니다.</p><button class="link-button" data-tool="case-record" type="button">회의록 정리 열기 →</button></div></aside><section class="tool-panel template-editor-panel"><div class="panel-heading"><div><h2>초안 작성</h2><p>입력하는 즉시 결과에 반영됩니다. AI 결과는 검토 전 초안입니다.</p></div><span class="local-note">● 로컬 우선</span></div><div class="profile-strip"><div><b>기관 기본정보</b><span>다음 작업에 다시 입력하지 않도록 이 PC에 저장합니다.</span></div><div class="profile-fields"><input id="profileOrganization" class="wide-input" placeholder="기관명" /><input id="profileManager" class="wide-input" placeholder="기본 작성자" /><button id="profileSave" class="secondary-button" type="button">저장</button></div></div><div class="template-fields"><div class="control-group"><label for="templateDate">문서일</label><input id="templateDate" type="date" class="wide-input" /></div><div class="control-group"><label for="templateProject">사업명·회의명</label><input id="templateProject" class="wide-input" placeholder="예: 2026년 주거취약가구 지원사업" /></div><div class="control-group"><label for="templateAuthor">작성자</label><input id="templateAuthor" class="wide-input" placeholder="담당자 이름" /></div><div class="control-group"><label for="templateAttendees">참석자</label><input id="templateAttendees" class="wide-input" placeholder="예: 김○○, 이○○" /></div><div class="control-group full-field"><label for="templatePurpose">목적·추진 배경</label><textarea id="templatePurpose" placeholder="왜 이 문서를 작성하는지 입력하세요."></textarea></div><div class="control-group full-field"><label for="templateContent">주요 내용</label><textarea id="templateContent" placeholder="논의 내용·추진 내용·상담 내용을 입력하세요."></textarea></div><div class="control-group"><label for="templateDecisions">성과·결정사항</label><textarea id="templateDecisions" placeholder="확인된 성과나 결정사항"></textarea></div><div class="control-group"><label for="templateActions">후속 조치·향후 계획</label><textarea id="templateActions" placeholder="담당자와 다음 일정을 입력하세요."></textarea></div></div><div class="template-preview-heading"><div><b>결과 미리보기</b><span>기본은 로컬 처리 · 구독 AI 사용 시 선택한 문서가 외부로 전송됩니다.</span></div><div class="template-actions"><button id="templateAiAssist" class="secondary-button" type="button">로컬 AI로 초안 다듬기</button><button id="templateSubscriptionAssist" class="secondary-button external-ai-button" type="button">구독 AI 사용</button><button id="templateAiRevert" class="secondary-button hidden" type="button">AI 결과 되돌리기</button><button id="templateCopy" class="secondary-button" type="button">복사</button><button id="templateDownload" class="primary-button" type="button">문서용 HTML 저장 →</button></div></div><pre id="templatePreview" class="template-preview">내용을 입력하면 초안이 여기에 표시됩니다.</pre></section></div>`;
+  return `${toolHeader(tool, '기관 문서 양식', '기관명·담당자를 한 번 저장하면 회의록·사업계획서·결과보고서 머리말이 자동으로 채워집니다. 회의 메모 정리는 상담 기록·회의록 정리에서 먼저 하세요.')}<div class="template-layout"><aside class="tool-panel template-sidebar"><div class="panel-heading"><div><h2>내 양식</h2><p>저장한 양식은 이 기기에만 남습니다.</p></div></div><div class="control-group template-select-group"><label for="templateSelect">사용할 문서</label><select id="templateSelect" class="wide-input">${options}</select></div><div class="template-save-box"><label for="templateName">내 양식으로 저장</label><input id="templateName" class="wide-input" placeholder="예: 우리 기관 회의록" /><textarea id="templateBody" class="template-body-input" placeholder="{{기관명}}, {{사업명}} 같은 항목을 사용할 수 있습니다."></textarea><button id="templateSave" class="secondary-button" type="button">내 양식 저장</button><p id="templateNotice" class="field-hint">양식 안의 개인정보는 저장하지 마세요.</p></div><div class="template-help"><b>사용 가능한 항목</b><p>{{기관명}} · {{문서일}} · {{사업명}} · {{작성자}} · {{참석자}} · {{목적}} · {{내용}} · {{결정사항}} · {{후속조치}}</p></div><div class="template-help"><b>회의 메모가 있나요?</b><p>상담 기록·회의록 정리에서 결정 사항·할 일을 먼저 나눈 뒤 이 양식으로 보내면 칸이 채워집니다.</p><button class="link-button" data-tool="case-record" type="button">회의록 정리 열기 →</button></div></aside><section class="tool-panel template-editor-panel"><div class="panel-heading"><div><h2>초안 작성</h2><p>입력하는 즉시 결과에 반영됩니다. AI 결과는 검토 전 초안입니다.</p></div><span class="local-note">● 로컬 우선</span></div><div class="profile-strip"><div><b>기관 기본정보</b><span>다음 작업에 다시 입력하지 않도록 이 PC에 저장합니다.</span></div><div class="profile-fields"><input id="profileOrganization" class="wide-input" placeholder="기관명" /><input id="profileManager" class="wide-input" placeholder="기본 작성자" /><button id="profileSave" class="secondary-button" type="button">저장</button></div></div><div class="template-fields"><div class="control-group"><label for="templateDate">문서일</label><input id="templateDate" type="date" class="wide-input" /></div><div class="control-group"><label for="templateProject">사업명·회의명</label><input id="templateProject" class="wide-input" placeholder="예: 2026년 주거취약가구 지원사업" /></div><div class="control-group"><label for="templateAuthor">작성자</label><input id="templateAuthor" class="wide-input" placeholder="담당자 이름" /></div><div class="control-group"><label for="templateAttendees">참석자</label><input id="templateAttendees" class="wide-input" placeholder="예: 김○○, 이○○" /></div><div class="control-group full-field"><label for="templatePurpose">목적·추진 배경</label><textarea id="templatePurpose" placeholder="왜 이 문서를 작성하는지 입력하세요."></textarea></div><div class="control-group full-field"><label for="templateContent">주요 내용</label><textarea id="templateContent" placeholder="논의 내용·추진 내용·상담 내용을 입력하세요."></textarea></div><div class="control-group"><label for="templateDecisions">성과·결정사항</label><textarea id="templateDecisions" placeholder="확인된 성과나 결정사항"></textarea></div><div class="control-group"><label for="templateActions">후속 조치·향후 계획</label><textarea id="templateActions" placeholder="담당자와 다음 일정을 입력하세요."></textarea></div></div><div class="template-preview-heading"><div><b>결과 미리보기</b><span>모두 이 PC에서 처리합니다 · AI 다듬기도 로컬 AI(Ollama)만 사용합니다.</span></div><div class="template-actions"><button id="templateAiAssist" class="secondary-button" type="button">로컬 AI로 초안 다듬기</button><button id="templateAiRevert" class="secondary-button hidden" type="button">AI 결과 되돌리기</button><button id="templateCopy" class="secondary-button" type="button">복사</button><button id="templateDownload" class="primary-button" type="button">문서용 HTML 저장 →</button></div></div><pre id="templatePreview" class="template-preview">내용을 입력하면 초안이 여기에 표시됩니다.</pre></section></div>`;
 }
 
 function renderAttendanceWorkspace(tool) {
@@ -355,8 +354,8 @@ function bindHwpInspector() {
     $('#hwpEngineStatus').textContent = '엔진 준비 중…'; notice('HWP 엔진을 처음 불러오는 중입니다. 파일은 외부로 전송하지 않습니다.');
     try {
       const { HwpDocument } = await loadRhwpRuntime(); if (loadedDocument) loadedDocument.free(); loadedDocument = new HwpDocument(new Uint8Array(await file.arrayBuffer()));
-      extracted = hwpTextFromEngine(loadedDocument).replace(/\r\n/g, '\n').trim(); const pages = loadedDocument.pageCount(); $('#hwpFileName').textContent = file.name; $('#hwpPageCount').textContent = `${pages}페이지`; $('#hwpMeta').classList.remove('hidden'); replacePanel.classList.remove('hidden'); replaceSave.disabled = false; preview.textContent = extracted || '텍스트를 찾지 못했습니다. 표·그림 중심 양식일 수 있습니다.'; $('#hwpResultLabel').textContent = `${formatBytes(file.size)} · ${pages}페이지 · 로컬 추출 완료`; copy.disabled = !extracted; useAsSource.disabled = !extracted; $('#hwpLocalAi').disabled = !extracted; $('#hwpSubscriptionAi').disabled = !extracted; $('#hwpEngineStatus').textContent = '엔진 준비됨'; notice('양식 내용을 이 기기에서 읽었습니다.');
-    } catch (error) { if (loadedDocument) { loadedDocument.free(); loadedDocument = null; } extracted = ''; replacePanel.classList.add('hidden'); replaceSave.disabled = true; preview.textContent = '파일을 읽지 못했습니다.'; copy.disabled = true; useAsSource.disabled = true; $('#hwpLocalAi').disabled = true; $('#hwpSubscriptionAi').disabled = true; $('#hwpEngineStatus').textContent = '확인 필요'; notice(error?.message?.includes('rhwp_wasm') ? 'HWP 엔진 파일을 불러오지 못했습니다. 앱을 최신 버전으로 업데이트해 주세요.' : '지원하지 않는 형식이거나 암호가 걸린 파일입니다.', true); }
+      extracted = hwpTextFromEngine(loadedDocument).replace(/\r\n/g, '\n').trim(); const pages = loadedDocument.pageCount(); $('#hwpFileName').textContent = file.name; $('#hwpPageCount').textContent = `${pages}페이지`; $('#hwpMeta').classList.remove('hidden'); replacePanel.classList.remove('hidden'); replaceSave.disabled = false; preview.textContent = extracted || '텍스트를 찾지 못했습니다. 표·그림 중심 양식일 수 있습니다.'; $('#hwpResultLabel').textContent = `${formatBytes(file.size)} · ${pages}페이지 · 로컬 추출 완료`; copy.disabled = !extracted; useAsSource.disabled = !extracted; $('#hwpLocalAi').disabled = !extracted; $('#hwpEngineStatus').textContent = '엔진 준비됨'; notice('양식 내용을 이 기기에서 읽었습니다.');
+    } catch (error) { if (loadedDocument) { loadedDocument.free(); loadedDocument = null; } extracted = ''; replacePanel.classList.add('hidden'); replaceSave.disabled = true; preview.textContent = '파일을 읽지 못했습니다.'; copy.disabled = true; useAsSource.disabled = true; $('#hwpLocalAi').disabled = true; $('#hwpEngineStatus').textContent = '확인 필요'; notice(error?.message?.includes('rhwp_wasm') ? 'HWP 엔진 파일을 불러오지 못했습니다. 앱을 최신 버전으로 업데이트해 주세요.' : '지원하지 않는 형식이거나 암호가 걸린 파일입니다.', true); }
   };
   bindDropzone(zone, input, (files) => { if (files[0]) readFile(files[0]); });
   copy.addEventListener('click', async () => { await navigator.clipboard?.writeText(extracted); notice('추출한 내용을 클립보드에 복사했습니다.'); });
@@ -367,19 +366,6 @@ function bindHwpInspector() {
     try { aiPreviousPreview = preview.textContent; preview.textContent = await runLocalAi('hwp-summary', extracted); $('#hwpAiRevert').classList.remove('hidden'); notice('로컬 AI 요약 초안입니다. 원문과 대조해 검토하세요.'); }
     catch (error) { notice(aiErrorMessage(error), true); }
     finally { button.disabled = false; button.textContent = '로컬 AI 요약'; }
-  });
-  $('#hwpSubscriptionAi').addEventListener('click', async () => {
-    if (!extracted) return;
-    const status = await fetchSubscriptionStatus().catch(() => null);
-    const available = Object.values(status?.providers || {}).filter((item) => item.state === 'ready');
-    if (!available.length) return notice('연결된 외부 AI가 없습니다. AI 보조·연결 센터에서 먼저 연결하세요.', true);
-    const provider = available[0].provider; const label = providerLabel(provider);
-    if (!(await ensureExternalAiConsent())) return;
-    if (!window.confirm(`${label} 구독으로 HWP 원문을 외부 전송해 요약합니다. 기관 승인과 개인정보 보호 기준을 확인했습니까?`)) return;
-    const button = $('#hwpSubscriptionAi'); button.disabled = true; button.textContent = '구독 AI 처리 중…';
-    try { aiPreviousPreview = preview.textContent; preview.textContent = await runSubscriptionAi({ provider, task: 'hwp-summary', text: extracted }); $('#hwpAiRevert').classList.remove('hidden'); notice(`${label} 구독 AI 요약 초안입니다. 외부 전송 결과이므로 원문과 대조하세요.`); }
-    catch (error) { notice(subscriptionErrorMessage(error), true); }
-    finally { button.disabled = false; button.textContent = '구독 AI 요약'; }
   });
   $('#hwpAiRevert').addEventListener('click', () => { if (!aiPreviousPreview) return; preview.textContent = aiPreviousPreview; aiPreviousPreview = ''; $('#hwpAiRevert').classList.add('hidden'); notice('AI 요약을 적용 전 원문으로 되돌렸습니다.'); });
   useAsSource.addEventListener('click', () => { localStorage.setItem('dawith-hwp-source-v1', extracted); openTool('text-tools'); $('#textInput').value = extracted; $('#textInput').dispatchEvent(new Event('input', { bubbles: true })); });
@@ -531,8 +517,8 @@ function transformText(value, mode, options = {}) {
 
 function aiErrorMessage(error) {
   const message = String(error?.message || error || '');
-  if (message.includes('ollama_unavailable') || message.includes('Failed to fetch')) return 'Ollama가 실행 중인지 확인하세요. 로컬 AI 보조 설정에서 설치·연결 상태를 먼저 확인해 주세요.';
-  if (message.includes('ollama_http_404')) return '선택한 모델이 아직 이 PC에 없습니다. 로컬 AI 보조 설정에서 모델을 준비해 주세요.';
+  if (message.includes('ollama_unavailable') || message.includes('Failed to fetch')) return 'Ollama가 실행 중인지 확인하세요. 로컬 AI 설정에서 설치·연결 상태를 먼저 확인해 주세요.';
+  if (message.includes('ollama_http_404')) return '선택한 모델이 아직 이 PC에 없습니다. 로컬 AI 설정에서 모델을 준비해 주세요.';
   if (message.includes('ollama_timeout')) return '모델 응답 시간이 초과되었습니다. 더 작은 모델을 선택하거나 입력을 줄여 다시 시도해 주세요.';
   return message || '로컬 AI 작업을 완료하지 못했습니다.';
 }
@@ -606,35 +592,6 @@ function bindText() {
     } finally {
       button.disabled = false;
       button.textContent = '로컬 AI로 다듬기';
-    }
-  });
-  $('#textSubscriptionAssist').addEventListener('click', async () => {
-    if (!input.value.trim()) return showNotice('#textPrivacy', '원문을 먼저 입력해 주세요.', true);
-    const status = await fetchSubscriptionStatus().catch(() => null);
-    const available = Object.values(status?.providers || {}).filter((item) => item.state === 'ready');
-    if (!available.length) return showNotice('#textPrivacy', '연결된 외부 AI가 없습니다. AI 보조·연결 센터에서 먼저 연결하세요.', true);
-    const provider = available[0].provider;
-    const providerName = providerLabel(provider);
-    if (!(await ensureExternalAiConsent())) return;
-    if (!window.confirm(`${providerName} 연결로 원문을 외부 전송합니다. 기관 승인과 개인정보 보호 기준을 확인했습니까?`)) return;
-    const button = $('#textSubscriptionAssist');
-    button.disabled = true;
-    button.textContent = '구독 AI 처리 중…';
-    try {
-      aiResult = await runSubscriptionAi({ provider, task: 'text-clean', text: input.value });
-      output.textContent = aiResult;
-      output.classList.remove('empty');
-      $('#textResultLabel').textContent = `${providerName} 결과 · 외부 전송 · 검토 필요`;
-      $('#textResultCount').textContent = `결과 ${aiResult.length.toLocaleString()}자`;
-      $('#textResultBytes').textContent = `UTF-8 ${new TextEncoder().encode(aiResult).length.toLocaleString()} byte`;
-      $('#textDownload').disabled = false;
-      $('#textAiApply').classList.remove('hidden');
-      showNotice('#textPrivacy', `${providerName} 결과입니다. 외부 전송 결과이므로 원문과 대조한 뒤 적용하세요.`);
-    } catch (error) {
-      showNotice('#textPrivacy', subscriptionErrorMessage(error), true);
-    } finally {
-      button.disabled = false;
-      button.textContent = '구독 AI 사용';
     }
   });
   $('#textAiApply').addEventListener('click', () => { if (!aiResult) return; input.value = aiResult; aiResult = ''; update(); input.focus(); showNotice('#textPrivacy', 'AI 결과를 원문에 적용했습니다.'); });
@@ -738,137 +695,7 @@ function bindAiSetup() {
       button.textContent = '모델 준비';
     }
   });
-  $('#subscriptionRefresh').addEventListener('click', refreshSubscriptionCards);
-  $('#subscriptionCards').addEventListener('click', async (event) => {
-    const connectButton = event.target.closest('[data-ai-connect]');
-    const disconnectButton = event.target.closest('[data-ai-disconnect]');
-    const cliLoginButton = event.target.closest('[data-ai-cli-login]');
-    const provider = connectButton?.dataset.aiConnect || disconnectButton?.dataset.aiDisconnect || cliLoginButton?.dataset.aiCliLogin;
-    if (!provider) return;
-    if (cliLoginButton) {
-      cliLoginButton.disabled = true;
-      try {
-        const response = await fetch('./api/ai/subscription/login', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ provider }) });
-        const payload = await response.json().catch(() => ({}));
-        if (!response.ok) throw new Error(payload.message || payload.error || 'subscription_login_failed');
-        showSubscriptionNotice(`${providerLabel(provider)} 로그인 창을 열었습니다. 브라우저 또는 터미널에서 로그인을 끝낸 뒤 상태를 다시 확인하세요.`);
-      } catch (error) { showSubscriptionNotice(error.message || '로그인 창을 열지 못했습니다.', true); }
-      finally { cliLoginButton.disabled = false; }
-      return;
-    }
-    if (disconnectButton) {
-      if (!window.confirm('이 기기에서 저장한 AI 연결 정보를 삭제할까요?')) return;
-      await fetch('./api/ai/disconnect', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ provider }) });
-      return refreshSubscriptionCards();
-    }
-    if (!(await ensureExternalAiConsent())) return;
-    let apiKey = '';
-    if (provider === 'gemini') {
-      apiKey = window.prompt('Google AI Studio에서 만든 Gemini API 키를 붙여 넣으세요. 키는 암호화해 이 기기에만 저장합니다.') || '';
-      if (!apiKey) return;
-    }
-    if (!window.confirm(`${provider === 'chatgpt' ? 'ChatGPT' : provider === 'openrouter' ? 'OpenRouter 무료' : 'Google Gemini'} 연결을 시작합니다. 선택한 서비스로 인증 정보 또는 API 요청이 전달됩니다. 계속할까요?`)) return;
-    connectButton.disabled = true;
-    connectButton.textContent = '연결 중…';
-    try {
-      const response = await fetch('./api/ai/connect', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ provider, apiKey, confirmExternal: true }) });
-      const payload = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(payload.message || payload.error || 'ai_connect_failed');
-      showSubscriptionNotice(`${provider} 연결을 완료했습니다. 문서 화면에서 사용할 AI를 선택하세요.`);
-    } catch (error) {
-      showSubscriptionNotice(error.message || 'AI 연결에 실패했습니다.', true);
-    } finally {
-      await refreshSubscriptionCards();
-    }
-  });
-  $('#subscriptionAssist').addEventListener('click', async () => {
-    const text = $('#subscriptionText').value.trim();
-    if (!text) return showSubscriptionNotice('개인정보가 없는 짧은 문장으로 먼저 테스트하세요.', true);
-    if (!(await ensureExternalAiConsent())) return;
-    if (!window.confirm('입력한 텍스트를 선택한 구독 AI 회사로 전송합니다. 계속할까요?')) return;
-    const button = $('#subscriptionAssist');
-    button.disabled = true;
-    button.textContent = '처리 중…';
-    try {
-      const result = await runSubscriptionAi({ provider: $('#subscriptionProvider').value, task: 'text-clean', text });
-      showSubscriptionNotice(`결과를 받았습니다. ${result.slice(0, 240)}${result.length > 240 ? '…' : ''}`);
-    } catch (error) {
-      showSubscriptionNotice(subscriptionErrorMessage(error), true);
-    } finally {
-      button.disabled = false;
-      button.textContent = '선택한 구독으로 정리';
-    }
-  });
   void refresh();
-  void refreshSubscriptionCards();
-}
-
-async function fetchSubscriptionStatus() {
-  const response = await fetch('./api/ai/subscription/status', { cache: 'no-store' });
-  if (!response.ok) throw new Error(`subscription_status_http_${response.status}`);
-  return response.json();
-}
-
-function subscriptionStateLabel(state) {
-  return { ready: '사용 가능', 'not-installed': '설치 필요', 'not-connected': '연결 필요', 'signed-out': '로그인 필요', unknown: '확인 필요', error: '확인 실패' }[state] || '확인 중';
-}
-
-function renderSubscriptionCards(payload) {
-  const providers = Object.values(payload?.providers || {});
-  $('#subscriptionCards').innerHTML = providers.length ? providers.map((item) => {
-    const connected = item.state === 'ready';
-    const action = ['openrouter', 'gemini', 'chatgpt'].includes(item.provider)
-      ? connected ? `<button class="icon-text-button" type="button" data-ai-disconnect="${escapeHtml(item.provider)}">연결 해제</button>` : `<button class="secondary-button" type="button" data-ai-connect="${escapeHtml(item.provider)}">${item.provider === 'chatgpt' ? 'ChatGPT로 계속' : item.provider === 'openrouter' ? '브라우저로 무료 연결' : 'Gemini 키 연결'}</button>`
-      : ['claude-code', 'codex', 'gemini-cli'].includes(item.provider) && item.state !== 'not-installed' ? `<button class="secondary-button" type="button" data-ai-cli-login="${escapeHtml(item.provider)}">${item.provider === 'gemini-cli' ? 'Google 로그인 시작' : 'CLI 로그인 시작'}</button>` : '';
-    const detail = connected ? `${item.model ? `${escapeHtml(item.model)} · ` : ''}이 기기에서 연결됨` : item.state === 'not-installed' ? '공식 프로그램을 설치한 뒤 연결하세요.' : item.state === 'not-connected' ? '연결 버튼을 누르면 공식 인증 화면이 열립니다.' : '공식 프로그램의 로그인 상태를 확인하세요.';
-    const source = item.kind === 'oauth' ? '브라우저 인증' : item.kind === 'key' ? '키는 이 기기에 암호화 저장' : item.installed ? '프로그램 발견' : '프로그램 없음';
-    return `<div class="subscription-card"><div><b>${escapeHtml(item.label)}</b><span>${source}</span></div><strong class="subscription-state-${escapeHtml(item.state)}">${subscriptionStateLabel(item.state)}</strong><small>${detail}</small>${action}${item.state === 'not-installed' ? `<a href="${escapeHtml(item.installUrl)}" target="_blank" rel="noreferrer">공식 설치 안내 ↗</a>` : ''}</div>`;
-  }).join('') : '<p class="muted-text">구독 상태를 읽지 못했습니다.</p>';
-  const select = $('#subscriptionProvider');
-  if (select) {
-    const selected = select.value;
-    const usable = providers.filter((item) => item.state === 'ready');
-    select.innerHTML = usable.length ? usable.map((item) => `<option value="${escapeHtml(item.provider)}">${escapeHtml(item.label)}</option>`).join('') : '<option value="">연결된 외부 AI 없음</option>';
-    if (usable.some((item) => item.provider === selected)) select.value = selected;
-  }
-}
-
-async function refreshSubscriptionCards() {
-  const button = $('#subscriptionRefresh');
-  if (!button) return;
-  button.disabled = true;
-  try { renderSubscriptionCards(await fetchSubscriptionStatus()); }
-  catch { $('#subscriptionCards').innerHTML = '<p class="muted-text">로컬 EXE 또는 localhost에서만 구독 상태를 확인할 수 있습니다.</p>'; }
-  finally { button.disabled = false; }
-}
-
-async function runSubscriptionAi(input) {
-  // Callers ask first; this is the last guard before text leaves the PC.
-  if (!(await ensureExternalAiConsent())) throw new Error('external_ai_consent_required');
-  const response = await fetch('./api/ai/subscription/assist', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ...input, confirmExternal: true }) });
-  const payload = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(payload.error || `subscription_assist_http_${response.status}`);
-  return payload.result;
-}
-
-function showSubscriptionNotice(message, error = false) {
-  const target = $('#subscriptionNotice');
-  if (!target) return;
-  target.textContent = message;
-  target.className = error ? 'field-hint error-text' : 'field-hint';
-}
-
-function subscriptionErrorMessage(error) {
-  const message = String(error?.message || error || '');
-  if (message.includes('consent_required')) return '외부 AI 전송에 동의하지 않아 보내지 않았습니다.';
-  if (message.includes('not_installed')) return '선택한 구독 프로그램이 설치되어 있지 않습니다.';
-  if (message.includes('not_connected')) return '먼저 AI 보조·연결 센터에서 해당 provider를 연결하세요.';
-  if (message.includes('chatgpt')) return 'ChatGPT 연결이 만료되었거나 요금제 사용 권한이 없습니다. 연결을 다시 확인하세요.';
-  if (message.includes('openrouter')) return 'OpenRouter 무료 연결 상태와 무료 모델 한도를 확인하세요.';
-  if (message.includes('gemini')) return 'Gemini 키가 만료되었거나 모델 요청이 거절되었습니다.';
-  if (message.includes('timeout')) return '구독 프로그램 응답 시간이 초과되었습니다.';
-  if (message.includes('signed')) return '구독 프로그램에 로그인한 뒤 다시 시도하세요.';
-  return '구독 AI 결과를 받지 못했습니다. 프로그램 로그인 상태와 설치를 확인하세요.';
 }
 
 function bindTemplateStudio() {
@@ -904,30 +731,6 @@ function bindTemplateStudio() {
     } finally {
       button.disabled = false;
       button.textContent = '로컬 AI로 초안 다듬기';
-    }
-  });
-  $('#templateSubscriptionAssist').addEventListener('click', async () => {
-    const text = $('#templatePreview').textContent.trim();
-    if (!text || text === '내용을 입력하면 초안이 여기에 표시됩니다.') return showNotice('#templateNotice', '먼저 문서 내용을 입력해 주세요.', true);
-    const status = await fetchSubscriptionStatus().catch(() => null);
-    const available = Object.values(status?.providers || {}).filter((item) => item.state === 'ready');
-    if (!available.length) return showNotice('#templateNotice', '연결된 외부 AI가 없습니다. AI 보조·연결 센터에서 먼저 연결하세요.', true);
-    const provider = available[0].provider;
-    const providerName = providerLabel(provider);
-    if (!(await ensureExternalAiConsent())) return;
-    if (!window.confirm(`${providerName} 연결로 문서 초안을 외부 전송합니다. 기관 승인과 개인정보 보호 기준을 확인했습니까?`)) return;
-    const button = $('#templateSubscriptionAssist');
-    button.disabled = true;
-    button.textContent = '구독 AI 처리 중…';
-    try {
-      const result = await runSubscriptionAi({ provider, task: 'document-draft', text, contextText: `${fields.organization.value.trim()} ${fields.project.value.trim()}`.trim() });
-      applyAiPreview(result, `${providerName} 결과`);
-      showNotice('#templateNotice', `${providerName} 결과입니다. 외부 전송 결과이므로 원문과 대조하세요.`);
-    } catch (error) {
-      showNotice('#templateNotice', subscriptionErrorMessage(error), true);
-    } finally {
-      button.disabled = false;
-      button.textContent = '구독 AI 사용';
     }
   });
   const consumeHandoff = () => {
@@ -1728,18 +1531,17 @@ if ('serviceWorker' in navigator && ['http:', 'https:'].includes(window.location
 // item was agreed) is kept on this PC: in the app settings database when the
 // local server is reachable, and mirrored in localStorage so the browser-only
 // build still works. The newer of the two copies wins.
-const CONSENT_POLICY_VERSION = '2026-11-10';
+const CONSENT_POLICY_VERSION = '2026-11-11';
 const CONSENT_STORAGE_KEY = 'dawith-consent-v1';
-const SETUP_STEPS = 5;
-const consentRuntime = { record: null, serverAvailable: false, ready: null, setupStep: 1, externalResolve: null };
+const SETUP_STEPS = 4;
+const consentRuntime = { record: null, serverAvailable: false, ready: null, setupStep: 1 };
 
 function normalizeConsentRecord(value) {
   if (!value || typeof value !== 'object' || !/^\d{4}-\d{2}-\d{2}$/.test(String(value.policyVersion || '')) || Number.isNaN(Date.parse(value.updatedAt))) return null;
   const item = (entry) => (entry?.agreed === true ? { agreed: true, at: entry.at || value.updatedAt } : { agreed: false, at: null });
-  return { policyVersion: String(value.policyVersion), privacy: item(value.privacy), terms: item(value.terms), externalAi: item(value.externalAi), updatedAt: new Date(value.updatedAt).toISOString() };
+  return { policyVersion: String(value.policyVersion), privacy: item(value.privacy), terms: item(value.terms), updatedAt: new Date(value.updatedAt).toISOString() };
 }
 function consentAccepted(record = consentRuntime.record) { return Boolean(record && record.policyVersion === CONSENT_POLICY_VERSION && record.privacy.agreed && record.terms.agreed); }
-function externalAiAllowed(record = consentRuntime.record) { return consentAccepted(record) && record.externalAi.agreed; }
 function readLocalConsent() { try { return normalizeConsentRecord(JSON.parse(localStorage.getItem(CONSENT_STORAGE_KEY) || 'null')); } catch { return null; } }
 function writeLocalConsent(record) { try { localStorage.setItem(CONSENT_STORAGE_KEY, JSON.stringify(record)); } catch { /* storage may be unavailable */ } }
 async function writeServerConsent(record) {
@@ -1768,7 +1570,7 @@ async function loadConsent() {
   return record;
 }
 
-// changes: { privacy?, terms?, externalAi?, renew? }. Items not mentioned keep
+// changes: { privacy?, terms?, renew? }. Items not mentioned keep
 // their previous choice; renew stamps every agreed item with the current time.
 async function saveConsent(changes) {
   const now = new Date().toISOString();
@@ -1779,7 +1581,7 @@ async function saveConsent(changes) {
     const keep = previous?.[key]?.agreed && !changes.renew;
     return { agreed: true, at: keep ? previous[key].at : now };
   };
-  const record = { policyVersion: CONSENT_POLICY_VERSION, privacy: item('privacy'), terms: item('terms'), externalAi: item('externalAi'), updatedAt: now };
+  const record = { policyVersion: CONSENT_POLICY_VERSION, privacy: item('privacy'), terms: item('terms'), updatedAt: now };
   consentRuntime.record = record;
   writeLocalConsent(record);
   await writeServerConsent(record);
@@ -1807,7 +1609,6 @@ function openSetup() {
   $('#setupPolicyChanged').hidden = !(previous && previous.policyVersion !== CONSENT_POLICY_VERSION && previous.privacy.agreed);
   $('#consentPrivacy').checked = false;
   $('#consentTerms').checked = false;
-  $('#consentExternalAi').checked = false;
   const profile = readInstitutionProfile();
   $('#setupOrganization').value = profile.organization || '';
   $('#setupManager').value = profile.manager || '';
@@ -1828,7 +1629,7 @@ async function advanceSetup() {
   if (step < SETUP_STEPS) { consentRuntime.setupStep += 1; renderSetupStep(); return; }
   const button = $('#setupNext');
   button.disabled = true;
-  await saveConsent({ privacy: true, terms: true, externalAi: $('#consentExternalAi').checked, renew: true });
+  await saveConsent({ privacy: true, terms: true, renew: true });
   const organization = $('#setupOrganization').value.trim();
   const manager = $('#setupManager').value.trim();
   if (organization || manager) writeInstitutionProfile({ organization, manager });
@@ -1845,9 +1646,6 @@ function renderSettings() {
   $('#settingsPrivacyStatus').textContent = status('privacy');
   $('#settingsTermsStatus').textContent = status('terms');
   $('#settingsWithdraw').disabled = !accepted;
-  $('#settingsExternalAi').checked = externalAiAllowed(record);
-  $('#settingsExternalAi').disabled = !accepted;
-  $('#settingsExternalAiStatus').textContent = externalAiAllowed(record) ? `${formatConsentTime(record.externalAi.at)}에 동의했습니다. 끄면 외부 AI 버튼을 누를 때 다시 묻습니다.` : '꺼져 있습니다. 외부 AI 버튼을 누르면 보내기 전에 먼저 묻습니다. 로컬 기능은 그대로 쓸 수 있습니다.';
   const profile = readInstitutionProfile();
   $('#settingsOrganization').value = profile.organization || '';
   $('#settingsManager').value = profile.manager || '';
@@ -1868,27 +1666,6 @@ function openSettings() {
   if (!$('#settingsDialog').open) $('#settingsDialog').showModal();
 }
 
-// Every path that sends text to a cloud AI goes through this first. When the
-// optional consent is off it asks once; cancelling sends nothing.
-async function ensureExternalAiConsent() {
-  await consentRuntime.ready;
-  if (externalAiAllowed()) return true;
-  if (!consentAccepted()) { openSetup(); return false; }
-  const dialog = $('#externalConsentDialog');
-  if (consentRuntime.externalResolve) consentRuntime.externalResolve(false);
-  const agreed = await new Promise((resolve) => {
-    consentRuntime.externalResolve = resolve;
-    if (!dialog.open) dialog.showModal();
-  });
-  consentRuntime.externalResolve = null;
-  if (dialog.open) dialog.close();
-  if (!agreed) return false;
-  await saveConsent({ externalAi: true });
-  return true;
-}
-
-function settleExternalConsent(agreed) { if (consentRuntime.externalResolve) consentRuntime.externalResolve(agreed); }
-
 $('#setupNext').addEventListener('click', () => { void advanceSetup(); });
 $('#setupBack').addEventListener('click', () => { consentRuntime.setupStep = Math.max(1, consentRuntime.setupStep - 1); renderSetupStep(); });
 $('#setupDialog').addEventListener('cancel', (event) => { if (!consentAccepted()) event.preventDefault(); });
@@ -1896,15 +1673,9 @@ $('#setupDialog').addEventListener('cancel', (event) => { if (!consentAccepted()
 $('#settingsButton').addEventListener('click', openSettings);
 $('#privacyOpenSettings').addEventListener('click', openSettings);
 $('#closeSettings').addEventListener('click', () => $('#settingsDialog').close());
-$('#settingsExternalAi').addEventListener('change', async (event) => {
-  const agreed = event.target.checked;
-  await saveConsent({ externalAi: agreed });
-  renderSettings();
-  showSettingsNotice(agreed ? '외부 AI 전송 동의를 켰습니다. 보낼 때마다 한 번 더 확인합니다.' : '외부 AI 전송 동의를 철회했습니다. 외부 AI 버튼을 누르면 다시 묻습니다.');
-});
 $('#settingsWithdraw').addEventListener('click', async () => {
   if (!window.confirm('필수 동의를 철회하면 다시 동의할 때까지 도구를 쓸 수 없습니다. 이 PC에 저장된 기록은 지워지지 않습니다. 철회할까요?')) return;
-  await saveConsent({ privacy: false, terms: false, externalAi: false });
+  await saveConsent({ privacy: false, terms: false });
   $('#settingsDialog').close();
   openSetup();
 });
@@ -1912,16 +1683,11 @@ $('#settingsProfileSave').addEventListener('click', () => {
   const saved = writeInstitutionProfile({ organization: $('#settingsOrganization').value, manager: $('#settingsManager').value });
   showSettingsNotice(saved ? '기관 정보를 이 PC에 저장했습니다. 기관 양식 작업공간을 다시 열면 반영됩니다.' : '이 브라우저에서는 저장할 수 없습니다.', !saved);
 });
-$('#externalConsentAccept').addEventListener('click', () => settleExternalConsent(true));
-$('#externalConsentCancel').addEventListener('click', () => settleExternalConsent(false));
-$('#externalConsentDialog').addEventListener('cancel', () => settleExternalConsent(false));
 
-// Public hook so other modules (e.g. a cloud option in 상담·회의 기록) can gate
-// their own external calls: `if (!(await window.dawithConsent.ensureExternalAi())) return;`
+// Read-only consent status for other modules and tests. There is no external
+// AI path, so there is nothing to gate beyond the required consent.
 window.dawithConsent = Object.freeze({
   policyVersion: CONSENT_POLICY_VERSION,
-  ensureExternalAi: ensureExternalAiConsent,
-  isExternalAiAllowed: () => externalAiAllowed(),
   status: () => (consentRuntime.record ? JSON.parse(JSON.stringify(consentRuntime.record)) : null),
   openSettings,
   ready: () => consentRuntime.ready,

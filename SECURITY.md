@@ -3,7 +3,10 @@
 ## 제품이 보장하는 경계
 
 - 기본 서버는 `127.0.0.1`에만 바인딩합니다.
-- 외부 provider, OpenRouter, OpenAI API 호출 경로를 제공하지 않습니다.
+- AI는 로컬 전용입니다. 사용자 텍스트는 `127.0.0.1`의 Ollama로만 보내며, Ollama 주소가 loopback이 아니면 서버가 시작하지 않습니다.
+- 클라우드·구독 AI(Claude Code, Codex, Gemini CLI, ChatGPT, OpenRouter, Gemini API 등) 호출 경로가 없습니다. `/api/process`는 `rules`·`ollama-local` 외의 provider를 400으로 거부하고, 예전 `/api/ai/subscription/*`·`/api/ai/connect`·`/api/ai/disconnect` 경로는 404입니다.
+- 0.9.9 이하가 저장했던 클라우드 AI 연결 정보(토큰·키)는 시작 시 앱 데이터베이스에서 삭제합니다.
+- 앱 자체의 외부 통신은 GitHub 업데이트 확인·설치 파일 내려받기(데스크톱), Ollama 모델 내려받기 요청(로컬 Ollama가 수행)뿐이며 사용자 내용은 담기지 않습니다.
 - 상담 원문·맥락·초안·기관 양식 파일은 AES-256-GCM으로 필드 암호화합니다.
 - Windows 앱은 DB 암호화 키를 데이터 폴더(`%APPDATA%Dawith Welfare Officedata`)의 `.local-key` 파일에 둡니다. OS 보호 저장소는 쓰지 않으므로, 데이터 폴더 접근 권한과 PC 잠금으로 보호해야 합니다.
 - 내부망 모드는 인증 없이는 LAN 바인딩을 허용하지 않습니다.

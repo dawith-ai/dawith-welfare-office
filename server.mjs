@@ -15,8 +15,6 @@ import { analyzeTemplate, isUploadedTemplateId, renderTemplate, uploadedTemplate
 import { buildTemplatePrompt, buildTemplateRuleSummary, extractRecordMeta, formFieldValues, matchPlaceholder, normalizeTemplate, normalizeTemplateSummary, parseTemplateReply } from './src/record-templates.mjs';
 import { transcribeAudio } from './src/transcription.mjs';
 import { authPolicy, can, createSession, hashPassword, publicUser, roles, validatePassword, validateUsername, verifyPassword } from './src/auth.mjs';
-import { createSubscriptionBridge } from './src/subscription.mjs';
-import { createAiConnectionManager } from './src/ai-connections.mjs';
 
 const root = path.dirname(fileURLToPath(import.meta.url));
 const defaultPort = Number(process.env.PORT || 4387);
@@ -114,8 +112,8 @@ async function ollamaSummary(input, timeoutMs = defaultOllamaTimeoutMs, baseUrl 
 }
 
 const ollamaFallbackMessages = {
-  ollama_unavailable: 'Ollama가 실행 중이 아니어서 규칙으로 정리했습니다. Ollama를 켠 뒤 다시 시도하거나 AI 보조·연결에서 설치 상태를 확인하세요.',
-  ollama_http_404: '선택한 로컬 모델이 이 PC에 설치되어 있지 않아 규칙으로 정리했습니다. AI 보조·연결에서 모델을 준비하세요.',
+  ollama_unavailable: 'Ollama가 실행 중이 아니어서 규칙으로 정리했습니다. Ollama를 켠 뒤 다시 시도하거나 로컬 AI 설정에서 설치 상태를 확인하세요.',
+  ollama_http_404: '선택한 로컬 모델이 이 PC에 설치되어 있지 않아 규칙으로 정리했습니다. 로컬 AI 설정에서 모델을 준비하세요.',
   ollama_timeout: '로컬 모델 응답이 너무 오래 걸려 규칙으로 정리했습니다. 더 작은 모델을 쓰거나 원문을 나눠 보세요.',
   ollama_invalid_result: '로컬 모델 응답을 읽지 못해 규칙으로 정리했습니다. 다시 시도하거나 다른 모델을 선택하세요.',
 };
@@ -168,17 +166,15 @@ async function transcribe(payload, store) {
   return transcribeAudio({ fileName: name, data: bytes, binary: config.binary, model: config.model });
 }
 
-// subscriptionBridge / aiConnectionManager / ollamaBaseUrl are test seams; the
-// app always uses the real bridges and the loopback Ollama address.
-export function createServer({ dataDir = defaultDataDir, ollamaTimeoutMs = defaultOllamaTimeoutMs, host = defaultHost, authRequired = defaultAuthRequired, encryptionKey, updater = null, onHeartbeat = null, subscriptionBridge = null, aiConnectionManager = null, ollamaBaseUrl = defaultOllamaUrl } = {}) {
+// ollamaBaseUrl is a test seam; it must stay a loopback address. The app has no
+// cloud AI path: AI text only ever goes to the local Ollama on this PC.
+export function createServer({ dataDir = defaultDataDir, ollamaTimeoutMs = defaultOllamaTimeoutMs, host = defaultHost, authRequired = defaultAuthRequired, encryptionKey, updater = null, onHeartbeat = null, ollamaBaseUrl = defaultOllamaUrl } = {}) {
   if (!isLoopbackHost(host) && host !== '0.0.0.0' && !authRequired) throw new Error('network_bind_requires_auth');
   if (host === '0.0.0.0' && !authRequired) throw new Error('network_bind_requires_auth');
   if (!isLoopbackHost(new URL(ollamaBaseUrl).hostname)) throw new Error('ollama_must_be_loopback');
   const store = openStore(dataDir, { encryptionKey });
   const sessions = new Map();
   const loginFailures = new Map();
-  const subscription = subscriptionBridge || createSubscriptionBridge();
-  const aiConnections = aiConnectionManager || createAiConnectionManager({ store });
   const sessionUser = (request) => {
     const token = parseCookies(request.headers.cookie).dawith_session;
     if (!token) return null;
@@ -336,43 +332,6 @@ export function createServer({ dataDir = defaultDataDir, ollamaTimeoutMs = defau
             ? 'ollama_timeout'
             : String(error.message || '').startsWith('ollama_http_') ? error.message : 'ollama_unavailable';
           return json(response, 503, { error: reason, message: 'Ollama가 실행 중이고 선택한 모델이 준비되어 있는지 확인하세요.' });
-        }
-      }
-      if (url.pathname === '/api/ai/subscription/status' && request.method === 'GET') {
-        const [subscriptionStatus, connectionStatus] = await Promise.all([subscription.status(), aiConnections.status()]);
-        return json(response, 200, { providers: { ...subscriptionStatus.providers, ...connectionStatus.providers }, policy: 'explicit-user-choice', credentials: connectionStatus.credentials });
-      }
-      if (url.pathname === '/api/ai/connect' && request.method === 'POST') {
-        const input = safeJson(await body(request, 32 * 1024));
-        if (input.confirmExternal !== true) return json(response, 400, { error: 'external_transfer_confirmation_required', message: '외부 연결 동의가 필요합니다.' });
-        try {
-          return json(response, 200, { ...(await aiConnections.connect(String(input.provider || ''), input)), transfer: { external: true, destination: String(input.provider || ''), userInitiated: true } });
-        } catch (error) {
-          const known = new Set(['ai_provider_invalid', 'gemini_key_invalid', 'gemini_key_rejected', 'openrouter_exchange_failed', 'openrouter_key_missing', 'chatgpt_plan_not_granted', 'chatgpt_token_rejected']);
-          return json(response, known.has(error.message) ? 400 : 502, { error: error.message || 'ai_connect_failed', message: 'AI 연결을 완료하지 못했습니다. 브라우저 로그인 또는 키 상태를 확인하세요.' });
-        }
-      }
-      if (url.pathname === '/api/ai/disconnect' && request.method === 'POST') {
-        const input = safeJson(await body(request, 16 * 1024));
-        try { return json(response, 200, await aiConnections.disconnect(String(input.provider || ''))); }
-        catch (error) { return json(response, 400, { error: error.message || 'ai_disconnect_failed' }); }
-      }
-      if (url.pathname === '/api/ai/subscription/login' && request.method === 'POST') {
-        const input = safeJson(await body(request, 16 * 1024));
-        try { return json(response, 200, await subscription.login(String(input.provider || ''))); }
-        catch (error) { return json(response, error.message === 'subscription_not_installed' ? 409 : 400, { error: error.message || 'subscription_login_failed', message: '공식 CLI 로그인 창을 열지 못했습니다.' }); }
-      }
-      if (url.pathname === '/api/ai/subscription/assist' && request.method === 'POST') {
-        const input = safeJson(await body(request, 2 * 1024 * 1024));
-        if (input.confirmExternal !== true) return json(response, 400, { error: 'external_transfer_confirmation_required', message: '외부 전송 동의가 필요합니다.' });
-        try {
-          const provider = String(input.provider || '');
-          const result = ['openrouter', 'gemini', 'chatgpt'].includes(provider) ? await aiConnections.assist(input) : await subscription.assist(input);
-          return json(response, 200, result);
-        } catch (error) {
-          const known = new Set(['assist_text_required', 'assist_text_too_large', 'subscription_provider_invalid', 'subscription_not_installed', 'subscription_empty_result', 'subscription_request_failed', 'subscription_process_timeout', 'ai_provider_invalid', 'ai_provider_not_connected', 'ai_provider_empty_result', 'chatgpt_not_connected', 'chatgpt_refresh_failed', 'openrouter_request_failed', 'gemini_request_failed', 'chatgpt_request_failed']);
-          const status = known.has(error.message) ? (error.message === 'subscription_not_installed' ? 409 : 400) : 502;
-          return json(response, status, { error: error.message || 'subscription_assist_failed', message: error.message === 'subscription_not_installed' ? '선택한 구독 프로그램이 설치되어 있지 않습니다.' : '구독 프로그램에서 결과를 받지 못했습니다.' });
         }
       }
       if (url.pathname === '/api/auth/users' && request.method === 'GET') return json(response, 200, { users: store.listUsers() });
@@ -614,7 +573,7 @@ export function createServer({ dataDir = defaultDataDir, ollamaTimeoutMs = defau
       return json(response, status, { error: error.message || 'internal_error' });
     }
   });
-  server.on('close', () => { sessions.clear(); loginFailures.clear(); subscription.close?.(); store.close(); });
+  server.on('close', () => { sessions.clear(); loginFailures.clear(); store.close(); });
   return { server, store };
 }
 
@@ -629,8 +588,8 @@ function recordToHtml(record) {
   return `<!doctype html><meta charset="utf-8"><title>${escape(draft.typeLabel || 'Dawith 복지 기록')}</title><style>body{font-family:Arial,sans-serif;max-width:820px;margin:40px auto;line-height:1.7;color:#26382f}pre{white-space:pre-wrap;background:#f4f7f4;padding:16px;border-radius:8px}h1{color:#1d6a50}</style><h1>${escape(draft.typeLabel || '복지 기록')}</h1><p>작성일: ${escape(record.createdAt)} · 처리 방식: ${escape(record.provider)}</p><h2>초안</h2><h3>기록</h3><pre>${escape(draft.counselingLog)}</pre><h3>사정·논의</h3><pre>${escape(draft.assessment)}</pre><h3>서비스계획·후속 실행</h3><pre>${escape(draft.servicePlan)}</pre><h3>후속 확인</h3><pre>${escape(draft.followUp)}</pre><h2>원문</h2><pre>${escape(record.rawText)}</pre>`;
 }
 
-export function startServer({ port = 0, host = defaultHost, dataDir = defaultDataDir, ollamaTimeoutMs = defaultOllamaTimeoutMs, authRequired = defaultAuthRequired, encryptionKey, updater, onHeartbeat, subscriptionBridge, aiConnectionManager, ollamaBaseUrl } = {}) {
-  const { server } = createServer({ dataDir, host, ollamaTimeoutMs, authRequired, encryptionKey, updater, onHeartbeat, subscriptionBridge, aiConnectionManager, ollamaBaseUrl });
+export function startServer({ port = 0, host = defaultHost, dataDir = defaultDataDir, ollamaTimeoutMs = defaultOllamaTimeoutMs, authRequired = defaultAuthRequired, encryptionKey, updater, onHeartbeat, ollamaBaseUrl } = {}) {
+  const { server } = createServer({ dataDir, host, ollamaTimeoutMs, authRequired, encryptionKey, updater, onHeartbeat, ollamaBaseUrl });
   return new Promise((resolve, reject) => {
     server.once('error', reject);
     server.listen(port, host, () => {

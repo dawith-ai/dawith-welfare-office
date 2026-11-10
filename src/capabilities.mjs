@@ -77,7 +77,7 @@ export async function getCapabilities(store) {
       recommendation,
     },
     whisper: { available: Boolean(whisperPath && modelPath && fs.existsSync(modelPath)), binary: whisperPath || null, modelConfigured: Boolean(modelPath && fs.existsSync(modelPath)), name: 'whisper.cpp local CLI' },
-    cloud: { available: false, name: '외부 클라우드 LLM (차단됨)' },
+    cloud: { available: false, name: '외부 클라우드 AI 없음 (로컬 전용)' },
   };
 }
 

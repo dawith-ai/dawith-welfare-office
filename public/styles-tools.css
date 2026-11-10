@@ -283,8 +283,6 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .result-content { min-height: 380px; padding: 16px 0; color: var(--ink); font-size: 13px; line-height: 1.85; white-space: pre-wrap; }
 .result-content.empty { color: var(--faint); }
 .text-result-meta { display: flex; gap: 12px; padding-top: 10px; border-top: 1px solid var(--line); color: var(--muted); font-size: 11px; }
-.external-ai-button { color: #8d4d2b; border-color: #d8b69f; background: #fff9f2; }
-.external-ai-button:hover { border-color: #8d4d2b; }
 .preview-label { display: block; margin: 18px 0 8px; color: var(--muted); font-size: 11px; font-weight: 750; }
 .convert-preview { min-height: 260px; margin: 0; padding: 13px; overflow: auto; border: 1px solid var(--line); background: #fbfbf9; color: var(--ink); font: 12px/1.7 ui-monospace, SFMono-Regular, Menlo, monospace; white-space: pre-wrap; }
 
@@ -363,25 +361,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .template-actions .primary-button { margin-left: 0; }
 .panel-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 7px; }
 .ai-setup-layout { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(260px, .75fr); gap: 22px; margin-top: 28px; }
-.ai-control-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(360px, .9fr); gap: 22px; margin-top: 28px; align-items: start; }
-.subscription-panel { border-top: 3px solid #8d4d2b; }
-.subscription-warning { display: grid; gap: 4px; margin: 16px 0; padding: 12px; border-left: 3px solid #c67e45; background: #fff6eb; color: #704522; font-size: 11px; line-height: 1.6; }
-.subscription-warning span { color: var(--muted); }
-.subscription-cards { display: grid; gap: 8px; }
-.subscription-card { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 10px; padding: 12px; border: 1px solid var(--line); background: #fffdf9; }
-.subscription-card div { display: grid; gap: 3px; }
-.subscription-card b { font-size: 12px; }
-.subscription-card span, .subscription-card small, .subscription-card a { color: var(--muted); font-size: 11px; }
-.subscription-card small, .subscription-card a { grid-column: 1 / -1; line-height: 1.5; }
-.subscription-card a { color: #8d4d2b; }
-.subscription-card strong { align-self: start; font-size: 11px; }
-.subscription-state-ready { color: var(--green); }
-.subscription-state-signed-out, .subscription-state-not-installed { color: #8d4d2b; }
-.subscription-state-error, .subscription-state-unknown { color: var(--muted); }
-.subscription-test { margin-top: 18px; padding-top: 18px; border-top: 1px solid var(--line); }
-.subscription-test > label { display: block; margin-bottom: 7px; color: var(--muted); font-size: 12px; font-weight: 750; }
-.subscription-input { width: 100%; min-height: 116px; padding: 10px; border: 1px solid var(--line-dark); border-radius: 4px; resize: vertical; font-size: 12px; line-height: 1.6; }
-.subscription-actions { display: grid; grid-template-columns: 1fr auto; gap: 8px; margin-top: 8px; }
+.ai-control-layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: 22px; margin-top: 28px; align-items: start; max-width: 880px; }
 .ai-setup-main, .ai-setup-side { align-self: start; }
 .ai-device-summary { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin: 22px 0; }
 .ai-device-summary > div { display: grid; gap: 5px; padding: 14px; border: 1px solid var(--line); background: #fafaf7; }
@@ -441,7 +421,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .setup-progress { display: flex; gap: 5px; margin: 0; padding: 0; list-style: none; }
 .setup-progress li { width: 22px; height: 4px; border-radius: 999px; background: var(--line); }
 .setup-progress li.done { background: var(--green); }
-.setup-dialog h2, .external-consent-dialog h2 { margin: 14px 0 14px; line-height: 1.35; }
+.setup-dialog h2 { margin: 14px 0 14px; line-height: 1.35; }
 .setup-lede { margin: 0 0 16px; color: var(--ink); font-size: 14px; line-height: 1.75; }
 .setup-facts { display: grid; gap: 0; margin: 0 0 16px; padding: 0; border-top: 2px solid var(--ink); list-style: none; }
 .setup-facts li { display: grid; gap: 3px; padding: 12px 0; border-bottom: 1px solid var(--line); }
