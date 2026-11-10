@@ -20,7 +20,7 @@ function showOsNotice() {
   const notice = $('#osNotice');
   if (!notice) return;
   const messages = {
-    mac: 'Mac을 쓰고 계시네요. Mac용은 아직 준비 중입니다. 지금은 Windows PC에서 설치해 주세요.',
+    mac: 'Mac을 쓰고 계시네요. Apple Silicon(arm64)용 설치 파일을 내려받을 수 있습니다.',
     linux: 'Linux용은 아직 준비 중입니다. 지금은 Windows PC에서 설치해 주세요.',
     mobile: '휴대폰에서는 설치할 수 없습니다. 기관 PC(Windows)에서 이 페이지를 열어 주세요.',
   };
@@ -37,7 +37,7 @@ async function loadRelease() {
     const response = await fetch(manifestUrl, { cache: 'no-cache' });
     if (!response.ok) return;
     const manifest = await response.json();
-    for (const key of ['setup', 'portable']) {
+    for (const key of ['setup', 'portable', 'mac']) {
       const asset = manifest[key];
       if (!asset) continue;
       $$(`[data-asset="${key}"]`).forEach((link) => { link.href = asset.url; });
@@ -45,6 +45,7 @@ async function loadRelease() {
     }
     if (manifest.setup && $('#heroSize')) $('#heroSize').textContent = formatSize(manifest.setup.size);
     if ($('[data-label="setup"]')) $('[data-label="setup"]').textContent = `Windows용 ${manifest.version} 내려받기`;
+    if ($('[data-label="mac"]') && manifest.mac) $('[data-label="mac"]').textContent = `Mac용 ${manifest.version} 내려받기`;
     if ($('#heroVersion')) $('#heroVersion').textContent = manifest.version;
     if ($('#releaseTag')) $('#releaseTag').textContent = `새 버전 ${manifest.version}`;
   } catch {
@@ -86,7 +87,7 @@ function setupNav() {
 // browser, so there is no server and no AI behind this panel.
 const helpEntries = [
   { q: '정말 무료인가요?', k: '무료 비용 가격 요금 결제 유료 돈', a: '<p>네. 앱은 무료이고 기능 제한도 없습니다. AI도 PC 안에서 도는 무료 로컬 AI(Ollama)를 씁니다.</p>', link: ['./#cost', '비용 자세히'] },
-  { q: 'Mac에서도 쓸 수 있나요?', k: '맥 mac 애플 리눅스 linux 아이패드 휴대폰 모바일', a: '<p>지금은 Windows 10·11(64비트)만 지원합니다. Mac·Linux용은 준비 중이고, 나오면 업데이트 소식에 알립니다.</p>', link: ['./updates.html', '업데이트 소식'] },
+  { q: 'Mac에서도 쓸 수 있나요?', k: '맥 mac 애플 apple silicon arm64 리눅스 linux 아이패드 휴대폰 모바일', a: '<p>네. Apple Silicon(M1·M2·M3·M4)용 arm64 설치 파일을 내려받을 수 있습니다. Intel Mac과 Linux는 아직 지원하지 않습니다.</p>', link: ['./#download', 'Mac용 내려받기'] },
   { q: '파란 경고 창이 떠요', k: '경고 pc 보호 smartscreen 스마트스크린 실행 차단 파란', a: '<p>“Windows의 PC 보호” 창에서 <b>추가 정보</b> → <b>실행</b>을 누르면 설치가 이어집니다. 아직 코드 서명 인증서가 없는 새 프로그램이라 나오는 안내입니다.</p>', link: ['./install.html#smartscreen', '그림으로 보기'] },
   { q: 'Edge에서 안 받아져요', k: 'edge 엣지 다운로드 안됨 유지 일반적으로', a: '<p>다운로드 목록에서 파일 옆 <b>…</b> → <b>유지</b>를 누르고, 한 번 더 <b>그래도 유지</b>를 누르세요.</p>', link: ['./install.html#edge', '그림으로 보기'] },
   { q: '스마트 앱 컨트롤이 막았어요', k: '스마트 앱 컨트롤 smart app control 안전하지 않을 차단', a: '<p>Windows 11의 스마트 앱 컨트롤은 서명되지 않은 프로그램을 막습니다. PC 보안 설정을 바꾸는 일이니 기관 PC라면 전산 담당자와 먼저 상의하세요.</p>', link: ['./install.html#smart-app-control', '자세히'] },

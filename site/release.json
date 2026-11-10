@@ -10,5 +10,10 @@
     "file": "Dawith-Welfare-Office-1.0.4-x64-Portable.exe",
     "url": "https://github.com/dawith-ai/dawith-welfare-office/releases/download/v1.0.4/Dawith-Welfare-Office-1.0.4-x64-Portable.exe",
     "size": 26929164
+  },
+  "mac": {
+    "file": "Dawith.Welfare.Office-1.0.4-arm64.dmg",
+    "url": "https://github.com/dawith-ai/dawith-welfare-office/releases/download/v1.0.4/Dawith.Welfare.Office-1.0.4-arm64.dmg",
+    "size": 114480841
   }
 }

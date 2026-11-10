@@ -36,6 +36,11 @@
       "permanent": false
     },
     {
+      "source": "/download/mac",
+      "destination": "https://github.com/dawith-ai/dawith-welfare-office/releases/download/v1.0.4/Dawith.Welfare.Office-1.0.4-arm64.dmg",
+      "permanent": false
+    },
+    {
       "source": "/download/:file",
       "destination": "https://github.com/dawith-ai/dawith-welfare-office/releases/latest/download/:file",
       "permanent": false
