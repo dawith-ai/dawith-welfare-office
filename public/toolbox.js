@@ -72,7 +72,7 @@ function downloadBlob(blob, filename) {
 }
 
 function toolHeader(tool, title = tool.name, description = tool.description, { nav = '● 이 기기에서만 처리', mark = '외부 전송 없음' } = {}) {
-  return `<div class="workspace-nav"><button class="back-button" data-action="home" type="button">← 도구 목록</button><span class="local-note">${nav}</span></div><header class="workspace-header"><div><p class="overline">${tool.label}</p><h1>${title}</h1><p>${description}</p></div><div class="workspace-mark"><b>${tool.mark}</b>${mark}</div></header>`;
+  return `<div class="workspace-nav"><button class="back-button" data-action="home" type="button">← 도구 목록</button><span class="local-note">${nav}</span></div><header class="workspace-header"><div><h1>${title}</h1><p>${description}</p></div><div class="workspace-mark"><b>${tool.mark}</b>${mark}</div></header>`;
 }
 
 function renderToolGrid() {
@@ -92,7 +92,6 @@ function renderHomeLayout(count) {
   $$('[data-home-only]').forEach((element) => { element.hidden = Boolean(info) || (Boolean(query) && !element.classList.contains('hero-row')); });
   $('#categoryHeader').hidden = !info;
   if (info) {
-    $('#categoryOverline').textContent = info.label;
     $('#categoryTitle').textContent = info.title;
     $('#categoryCopy').textContent = info.copy;
   }
@@ -716,7 +715,7 @@ function bindTemplateStudio() {
   templateBody.addEventListener('input', update);
   $('#templateSave').addEventListener('click', () => { const title = $('#templateName').value.trim(); const body = templateBody.value.trim(); if (!title || !body) return showNotice('#templateNotice', '양식 이름과 본문을 모두 입력해 주세요.', true); let custom = []; try { custom = JSON.parse(localStorage.getItem('dawith-custom-templates-v1') || '[]'); } catch { custom = []; } const saved = { id: `custom-${Date.now()}`, title, body }; custom.push(saved); try { localStorage.setItem('dawith-custom-templates-v1', JSON.stringify(custom)); } catch { return showNotice('#templateNotice', '저장 공간을 사용할 수 없습니다.', true); } templateSelect.innerHTML = getTemplateCatalog().map((template) => `<option value="${escapeHtml(template.id)}">${escapeHtml(template.title)}</option>`).join(''); templateSelect.value = saved.id; showNotice('#templateNotice', '내 양식으로 저장했습니다.'); });
   $('#templateCopy').addEventListener('click', async () => { await navigator.clipboard?.writeText($('#templatePreview').textContent || ''); showNotice('#templateNotice', '초안을 클립보드에 복사했습니다.'); });
-  $('#templateDownload').addEventListener('click', () => { const title = currentTemplate().title || '기관문서'; const html = `<!doctype html><meta charset="utf-8"><title>${escapeHtml(title)}</title><body style="font-family:Arial,sans-serif;line-height:1.75;white-space:pre-wrap">${escapeHtml($('#templatePreview').textContent || '').replace(/\n/g, '<br>')}</body>`; downloadBlob(new Blob([html], { type: 'application/msword;charset=utf-8' }), `${title}_${compactDate(new Date())}.doc`); });
+  $('#templateDownload').addEventListener('click', () => { const title = currentTemplate().title || '기관문서'; const html = `<!doctype html><meta charset="utf-8"><title>${escapeHtml(title)}</title><body style="font-family:Pretendard,sans-serif;line-height:1.75;white-space:pre-wrap">${escapeHtml($('#templatePreview').textContent || '').replace(/\n/g, '<br>')}</body>`; downloadBlob(new Blob([html], { type: 'application/msword;charset=utf-8' }), `${title}_${compactDate(new Date())}.doc`); });
   $('#templateAiAssist').addEventListener('click', async () => {
     const text = $('#templatePreview').textContent.trim();
     if (!text || text === '내용을 입력하면 초안이 여기에 표시됩니다.') return showNotice('#templateNotice', '먼저 문서 내용을 입력해 주세요.', true);

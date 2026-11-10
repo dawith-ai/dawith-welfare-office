@@ -50,14 +50,12 @@
         <main class="main-content">
           <section id="homeView" class="home-view" aria-labelledby="homeTitle">
             <header id="categoryHeader" class="category-header" hidden>
-              <p id="categoryOverline" class="overline"></p>
               <h1 id="categoryTitle"></h1>
               <p id="categoryCopy" class="category-copy"></p>
             </header>
 
             <div class="hero-row" data-home-only>
               <div>
-                <p class="overline">사회복지 현장 업무 도구함</p>
                 <h1 id="homeTitle">서류 일은 줄이고,<br /><em>사람 만나는 시간은 늘리고.</em></h1>
                 <p class="hero-copy">PDF·한글 양식·사진·상담 기록을 이 PC 안에서 정리합니다.<br />왼쪽에서 업무를 고르거나, 아래 검색창에 하려는 일을 적어 보세요.</p>
               </div>
@@ -82,13 +80,13 @@
             </section>
 
             <section class="workspace-callout" data-home-only aria-label="상담 기록·회의록 정리">
-              <div class="workspace-callout-copy"><p class="overline">RECORD · MINUTES</p><h2>메모를 붙여 넣으면<br /><em>상담 기록과 회의록이 됩니다.</em></h2><p>상담은 개요·주요 호소·사정(욕구·강점·위험)·개입·향후 계획으로, 회의는 개요·논의·결정 사항·할 일(담당·기한)로 나눕니다. 기본은 AI 없이 이 PC에서, 원할 때만 이 PC의 로컬 AI(Ollama)를 고릅니다.</p></div>
+              <div class="workspace-callout-copy"><h2>메모를 붙여 넣으면<br /><em>상담 기록과 회의록이 됩니다.</em></h2><p>상담은 개요·주요 호소·사정(욕구·강점·위험)·개입·향후 계획으로, 회의는 개요·논의·결정 사항·할 일(담당·기한)로 나눕니다. 기본은 AI 없이 이 PC에서, 원할 때만 이 PC의 로컬 AI(Ollama)를 고릅니다.</p></div>
               <button class="workspace-callout-action" data-tool="case-record" type="button"><span>상담·회의 기록 정리하기</span><b>→</b></button>
             </section>
 
             <section id="recentToolsSection" class="recent-tools" aria-label="최근 사용한 도구" hidden>
               <div class="recent-tools-heading">
-                <div><p class="overline">MY WORKFLOW</p><h2>내가 자주 쓰는 도구</h2></div>
+                <div><h2>내가 자주 쓰는 도구</h2></div>
                 <button id="clearRecentTools" class="plain-button" type="button">기록 초기화</button>
               </div>
               <div id="recentTools" class="recent-tools-grid"></div>
@@ -119,7 +117,6 @@
 
     <dialog id="updateDialog" class="privacy-dialog update-dialog" aria-labelledby="updateTitle">
       <button class="dialog-close" id="closeUpdate" type="button" aria-label="닫기">×</button>
-      <p class="overline">UPDATE</p>
       <h2 id="updateTitle">업데이트</h2>
       <p id="updateMessage" class="update-message">새 버전을 확인하는 중입니다…</p>
       <div id="updateProgress" class="update-progress hidden" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span></span></div>
@@ -129,7 +126,6 @@
 
     <dialog id="privacyDialog" class="privacy-dialog">
       <button class="dialog-close" id="closePrivacy" type="button" aria-label="닫기">×</button>
-      <p class="overline">DATA BOUNDARY</p>
       <h2>이 도구는 어디에서 처리되나요?</h2>
       <div class="boundary-list">
         <div><span>PDF·이미지·텍스트</span><b>이 기기</b></div>
@@ -206,7 +202,6 @@
 
     <dialog id="settingsDialog" class="privacy-dialog settings-dialog" aria-labelledby="settingsTitle">
       <button class="dialog-close" id="closeSettings" type="button" aria-label="닫기">×</button>
-      <p class="overline">SETTINGS</p>
       <h2 id="settingsTitle">설정 · 동의 관리</h2>
       <div class="settings-group">
         <h3>필수 동의</h3>
