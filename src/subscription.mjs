@@ -317,6 +317,18 @@ export function createSubscriptionBridge() {
       const program = await locate(provider);
       if (!program) throw new Error('subscription_not_installed');
       const prompt = promptFor({ task: String(input.task || ''), text, contextText: String(input.contextText || '') });
+      return this.complete({ provider, prompt });
+    },
+    // Sends a caller-built prompt as-is (used by 상담 기록·회의록 정리, whose
+    // prompt asks for a JSON reply). Callers must have the user's consent.
+    async complete(input) {
+      const provider = String(input.provider || '');
+      if (!isProvider(provider)) throw new Error('subscription_provider_invalid');
+      const prompt = String(input.prompt || '').trim();
+      if (!prompt) throw new Error('assist_text_required');
+      if (prompt.length > MAX_PROMPT_LENGTH) throw new Error('assist_text_too_large');
+      const program = await locate(provider);
+      if (!program) throw new Error('subscription_not_installed');
       const result = provider === 'claude-code' ? await claudeAssist(program, prompt) : provider === 'codex' ? await codexAssist(program, prompt) : await geminiCliAssist(program, prompt);
       if (!result) throw new Error('subscription_empty_result');
       return { result: result.slice(0, MAX_OUTPUT_LENGTH), provider, transfer: { external: true, destination: provider, userInitiated: true } };

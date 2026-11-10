@@ -4,8 +4,13 @@ import {
   HeadingLevel,
   Packer,
   Paragraph,
+  Table,
+  TableCell,
+  TableRow,
   TextRun,
+  WidthType,
 } from 'docx';
+import { summarySections, summaryTitle } from './record-summary.mjs';
 
 const escapeHtml = (value) => String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
 const asLines = (value) => String(value ?? '').split(/\r?\n/).filter((line) => line.trim());
@@ -35,5 +40,40 @@ export async function documentToDocx(document) {
     if (section.note) children.push(new Paragraph({ text: `검토 메모: ${section.note}`, spacing: { before: 60, after: 120 }, run: { font: 'Malgun Gothic', size: 18, color: '876D3F', italics: true } }));
   }
   const output = new Document({ creator: 'Dawith Welfare Office', title: draft.title || document.title, description: '기관 내부 검토용 복지 문서 초안', styles: { default: { document: { run: { font: 'Malgun Gothic', size: 22 } } } }, sections: [{ properties: {}, children }] });
+  return Packer.toBuffer(output);
+}
+
+const FONT = 'Malgun Gothic';
+const textParagraphs = (value, size = 22) => (asLines(value).length ? asLines(value) : ['']).map((line) => new Paragraph({ spacing: { after: 60 }, children: [new TextRun({ text: line, font: FONT, size })] }));
+const cell = (value, { bold = false, shade = false, width } = {}) => new TableCell({
+  width: width ? { size: width, type: WidthType.PERCENTAGE } : undefined,
+  shading: shade ? { fill: 'E8F0EA' } : undefined,
+  children: bold ? [new Paragraph({ children: [new TextRun({ text: String(value ?? ''), bold: true, font: FONT, size: 20 })] })] : textParagraphs(value, 20),
+});
+
+// 상담 기록 / 회의록 summary -> Word. header: { organization, author } (optional).
+export async function summaryToDocx(summary, header = {}) {
+  const title = summaryTitle(summary.kind);
+  const meta = [header.organization && `기관: ${header.organization}`, header.author && `작성자: ${header.author}`, `작성일: ${new Date().toLocaleDateString('ko-KR')}`].filter(Boolean).join(' · ');
+  const children = [
+    new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 120 }, children: [new TextRun({ text: title, bold: true, size: 34, font: FONT, color: '205B47' })] }),
+    new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 300 }, children: [new TextRun({ text: meta, size: 20, font: FONT, color: '728078' })] }),
+  ];
+  for (const section of summarySections(summary)) {
+    children.push(new Paragraph({ heading: HeadingLevel.HEADING_2, spacing: { before: 240, after: 100 }, children: [new TextRun({ text: section.heading, bold: true, font: FONT, size: 26, color: '205B47' })] }));
+    if (section.rows) {
+      children.push(new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, rows: section.rows.map(([label, value]) => new TableRow({ children: [cell(label, { bold: true, shade: true, width: 18 }), cell(value || '-', { width: 82 })] })) }));
+    } else if (section.table) {
+      const rows = section.table.rows.length ? section.table.rows : [['(할 일 없음)', '', '']];
+      children.push(new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, rows: [
+        new TableRow({ tableHeader: true, children: section.table.columns.map((label, index) => cell(label, { bold: true, shade: true, width: index === 0 ? 60 : 20 })) }),
+        ...rows.map((row) => new TableRow({ children: row.map((value, index) => cell(value || '-', { width: index === 0 ? 60 : 20 })) })),
+      ] }));
+    } else {
+      children.push(...textParagraphs(section.content || '-'));
+    }
+  }
+  children.push(new Paragraph({ spacing: { before: 300 }, children: [new TextRun({ text: '이 문서는 검토용 초안입니다. 담당자가 원문과 대조한 뒤 확정하세요.', italics: true, size: 18, font: FONT, color: '876D3F' })] }));
+  const output = new Document({ creator: 'Dawith Welfare Office', title, description: '기관 내부 검토용 기록 초안', styles: { default: { document: { run: { font: FONT, size: 22 } } } }, sections: [{ properties: {}, children }] });
   return Packer.toBuffer(output);
 }

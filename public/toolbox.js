@@ -6,7 +6,7 @@ const toolCatalog = [
   { id: 'pdf-split', category: 'document', mark: 'PDF', name: 'PDF 나누기', description: '필요한 페이지만 추출하거나 낱장으로 나눕니다.', keywords: 'pdf 분할 페이지 추출', label: 'DOCUMENT' },
   { id: 'document-convert', category: 'document', mark: 'CONV', name: '문서 형식 변환', description: 'TXT·Markdown·HTML·CSV 파일을 서로 바꿔 저장합니다.', keywords: '변환 확장자 txt markdown md html csv 문서 파일 형식', label: 'CONVERSION' },
   { id: 'hwp-inspector', category: 'document', mark: 'HWP', name: '한글 양식 확인', description: 'HWP·HWPX 기관 양식을 이 기기에서 열고 내용을 확인합니다.', keywords: '한글 hwp hwpx hml 양식 문서 텍스트 추출', label: 'DOCUMENT' },
-  { id: 'template-studio', category: 'document', mark: 'FORM', name: '기관 양식 작업공간', description: '기관 정보를 저장하고 회의록·사업 문서 초안을 만듭니다.', keywords: '기관 양식 사업계획서 결과보고서 회의록 문서 초안 템플릿', label: 'WORKSPACE' },
+  { id: 'template-studio', category: 'document', mark: 'FORM', name: '기관 문서 양식', description: '기관명·담당자를 저장해 회의록·계획서 머리말을 자동으로 채웁니다.', keywords: '기관 양식 사업계획서 결과보고서 회의록 문서 초안 템플릿 머리말 기관명 담당자', label: 'DOCUMENT TEMPLATE' },
   { id: 'image-resize', category: 'image', mark: 'IMG', name: '이미지 크기 조절', description: '게시판·보고서 규격에 맞춰 크기를 바꿉니다.', keywords: '이미지 사진 크기 리사이즈', label: 'IMAGE' },
   { id: 'image-compress', category: 'image', mark: 'IMG', name: '이미지 용량 줄이기', description: '화질을 보면서 파일 크기를 줄입니다.', keywords: '이미지 사진 압축 용량', label: 'IMAGE' },
   { id: 'image-privacy', category: 'image', mark: 'SAFE', name: '사진 정보 지우기', description: '사진 속 위치·촬영정보를 제거해 새 파일로 저장합니다.', keywords: '이미지 사진 개인정보 exif 메타데이터 보안', label: 'IMAGE' },
@@ -17,7 +17,7 @@ const toolCatalog = [
   { id: 'date-calculator', category: 'calculator', mark: 'D+', name: '날짜·기간 계산', description: '두 날짜 사이 기간과 기준일을 계산합니다.', keywords: '날짜 기간 일수 d-day', label: 'CALCULATOR' },
   { id: 'attendance', category: 'field', mark: '✓', name: '인원 체크', description: '식사·프로그램 명단을 로컬에서 체크하고 CSV로 저장합니다.', keywords: '인원 출석 신규 종결 대기 수령 명단 현황 csv', label: 'FIELD' },
   { id: 'duty-schedule', category: 'field', mark: 'CAL', name: '당직 일정', description: '직원 순서를 기준으로 당직표를 만들고 CSV로 저장합니다.', keywords: '당직 근무 일정 스케줄 직원 배치 csv', label: 'FIELD' },
-  { id: 'case-record', category: 'field', mark: 'LOG', name: '상담·회의 기록', description: '상담·회의 원문을 로컬 규칙 또는 로컬 LLM으로 기록 초안으로 정리합니다.', keywords: '상담기록 회의록 사례관리 기록 결정사항 조치사항 로컬 ai ollama', label: 'CASE RECORD', aiMode: 'local-optional' },
+  { id: 'case-record', category: 'field', mark: 'LOG', name: '상담 기록·회의록 정리', description: '메모를 상담 기록(개요·호소·사정·개입·계획)과 회의록(결정 사항·할 일)으로 정리합니다.', keywords: '상담기록 상담일지 상담 내용 정리 회의록 사례회의 사례관리 기록 요약 결정사항 할일 조치사항 로컬 ai ollama 클라우드 claude chatgpt gemini codex openrouter', label: 'RECORD · MINUTES', aiMode: 'choice' },
   { id: 'genogram', category: 'diagram', mark: 'GENO', name: '가계도 편집', description: '생성형 결과에 의존하지 않고 직접 수정하는 가계도 편집기입니다.', keywords: '가계도 genogram 가족관계 mcgoldrick svg pdf json 개인정보', label: 'RELATIONSHIP MAP', aiMode: 'local-optional' },
   { id: 'ecomap', category: 'diagram', mark: 'ECO', name: '생태도 편집', description: '가구와 기관·자원을 직접 배치하고 관계 강도를 표시합니다.', keywords: '생태도 ecomap 자원망 사회적지지 기관관계 svg json', label: 'RELATIONSHIP MAP', aiMode: 'local-optional' },
   { id: 'ai-setup', category: 'ai', mark: 'AI', name: 'AI 보조·연결 센터', description: '로컬·구독·무료 AI를 직접 고르고 연결합니다.', keywords: 'ollama 로컬 llm ai 모델 다운로드 상담 회의록 문서 claude codex chatgpt openrouter gemini 구독', label: 'AI CONTROL' },
@@ -39,6 +39,7 @@ const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
 const escapeHtml = (value) => String(value ?? '').replace(/[&<>'"]/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' })[char]);
 const providerLabel = (provider) => ({ 'claude-code': 'Claude', codex: 'Codex', 'gemini-cli': 'Gemini CLI', chatgpt: 'ChatGPT', openrouter: 'OpenRouter', gemini: 'Gemini' }[provider] || provider);
 const formatBytes = (bytes) => bytes < 1024 ? `${bytes} B` : bytes < 1024 ** 2 ? `${(bytes / 1024).toFixed(1)} KB` : `${(bytes / 1024 ** 2).toFixed(2)} MB`;
+const aiModeLabel = (tool, fallback) => tool.aiMode === 'choice' ? '규칙 · 로컬 AI · 클라우드 AI 선택' : tool.aiMode === 'local-optional' ? '로컬 AI 선택' : fallback;
 const formatDate = (date) => new Intl.DateTimeFormat('ko-KR', { dateStyle: 'long' }).format(date);
 
 function ensurePdfLib() {
@@ -70,8 +71,8 @@ function downloadBlob(blob, filename) {
   setTimeout(() => URL.revokeObjectURL(url), 1200);
 }
 
-function toolHeader(tool, title = tool.name, description = tool.description) {
-  return `<div class="workspace-nav"><button class="back-button" data-action="home" type="button">← 도구 목록</button><span class="local-note">● 이 기기에서만 처리</span></div><header class="workspace-header"><div><p class="overline">${tool.label}</p><h1>${title}</h1><p>${description}</p></div><div class="workspace-mark"><b>${tool.mark}</b>외부 전송 없음</div></header>`;
+function toolHeader(tool, title = tool.name, description = tool.description, { nav = '● 이 기기에서만 처리', mark = '외부 전송 없음' } = {}) {
+  return `<div class="workspace-nav"><button class="back-button" data-action="home" type="button">← 도구 목록</button><span class="local-note">${nav}</span></div><header class="workspace-header"><div><p class="overline">${tool.label}</p><h1>${title}</h1><p>${description}</p></div><div class="workspace-mark"><b>${tool.mark}</b>${mark}</div></header>`;
 }
 
 function renderToolGrid() {
@@ -79,7 +80,7 @@ function renderToolGrid() {
   const visible = toolCatalog.filter((tool) => (state.category === 'all' || tool.category === state.category) && (!query || `${tool.name} ${tool.description} ${tool.keywords}`.toLowerCase().includes(query)));
   $('#toolCount').textContent = `도구 ${visible.length}개`;
   renderHomeLayout(visible.length);
-  $('#toolGrid').innerHTML = visible.length ? visible.map((tool) => `<button class="tool-card" data-tool="${tool.id}" data-category="${tool.category}" type="button"><span class="tool-card-mark">${tool.mark}</span><span><b>${tool.name}</b><small>${tool.description}</small><em class="tool-card-ai">${tool.aiMode === 'local-optional' ? '로컬 AI 선택' : 'AI 불필요'}</em></span><span class="tool-card-arrow">→</span></button>`).join('') : '<p class="muted-text" style="grid-column:1/-1;padding:24px 0">찾는 도구가 없습니다. 다른 단어로 검색해보세요.</p>';
+  $('#toolGrid').innerHTML = visible.length ? visible.map((tool) => `<button class="tool-card" data-tool="${tool.id}" data-category="${tool.category}" type="button"><span class="tool-card-mark">${tool.mark}</span><span><b>${tool.name}</b><small>${tool.description}</small><em class="tool-card-ai">${aiModeLabel(tool, 'AI 불필요')}</em></span><span class="tool-card-arrow">→</span></button>`).join('') : '<p class="muted-text" style="grid-column:1/-1;padding:24px 0">찾는 도구가 없습니다. 다른 단어로 검색해보세요.</p>';
 }
 
 // The landing blocks only make sense on the start screen; a category or search
@@ -119,7 +120,7 @@ function renderRecentTools() {
   try { recent = JSON.parse(localStorage.getItem('dawith-tool-recent') || '[]'); } catch { recent = []; }
   const tools = recent.map((id) => toolCatalog.find((tool) => tool.id === id)).filter(Boolean);
   section.hidden = !tools.length;
-  target.innerHTML = tools.map((tool) => `<button class="recent-tool" data-tool="${tool.id}" type="button"><span>${tool.mark}</span><b>${tool.name}</b><small>${tool.aiMode === 'local-optional' ? '로컬 AI 선택' : '기기 안에서 처리'}</small></button>`).join('');
+  target.innerHTML = tools.map((tool) => `<button class="recent-tool" data-tool="${tool.id}" type="button"><span>${tool.mark}</span><b>${tool.name}</b><small>${aiModeLabel(tool, '기기 안에서 처리')}</small></button>`).join('');
 }
 
 function showHome() {
@@ -218,7 +219,7 @@ function getTemplateCatalog() {
 function renderTemplateStudio(tool) {
   const templates = getTemplateCatalog();
   const options = templates.map((template) => `<option value="${escapeHtml(template.id)}">${escapeHtml(template.title)}</option>`).join('');
-  return `${toolHeader(tool, '기관 양식 작업공간', '기관 정보와 자주 쓰는 문장을 이 PC에 저장하고 행정문서 초안을 만듭니다.')}<div class="template-layout"><aside class="tool-panel template-sidebar"><div class="panel-heading"><div><h2>내 양식</h2><p>저장한 양식은 이 기기에만 남습니다.</p></div></div><div class="control-group template-select-group"><label for="templateSelect">사용할 문서</label><select id="templateSelect" class="wide-input">${options}</select></div><div class="template-save-box"><label for="templateName">내 양식으로 저장</label><input id="templateName" class="wide-input" placeholder="예: 우리 기관 회의록" /><textarea id="templateBody" class="template-body-input" placeholder="{{기관명}}, {{사업명}} 같은 항목을 사용할 수 있습니다."></textarea><button id="templateSave" class="secondary-button" type="button">내 양식 저장</button><p id="templateNotice" class="field-hint">양식 안의 개인정보는 저장하지 마세요.</p></div><div class="template-help"><b>사용 가능한 항목</b><p>{{기관명}} · {{문서일}} · {{사업명}} · {{작성자}} · {{참석자}} · {{목적}} · {{내용}} · {{결정사항}} · {{후속조치}}</p></div></aside><section class="tool-panel template-editor-panel"><div class="panel-heading"><div><h2>초안 작성</h2><p>입력하는 즉시 결과에 반영됩니다. AI 결과는 검토 전 초안입니다.</p></div><span class="local-note">● 로컬 우선</span></div><div class="profile-strip"><div><b>기관 기본정보</b><span>다음 작업에 다시 입력하지 않도록 이 PC에 저장합니다.</span></div><div class="profile-fields"><input id="profileOrganization" class="wide-input" placeholder="기관명" /><input id="profileManager" class="wide-input" placeholder="기본 작성자" /><button id="profileSave" class="secondary-button" type="button">저장</button></div></div><div class="template-fields"><div class="control-group"><label for="templateDate">문서일</label><input id="templateDate" type="date" class="wide-input" /></div><div class="control-group"><label for="templateProject">사업명·회의명</label><input id="templateProject" class="wide-input" placeholder="예: 2026년 주거취약가구 지원사업" /></div><div class="control-group"><label for="templateAuthor">작성자</label><input id="templateAuthor" class="wide-input" placeholder="담당자 이름" /></div><div class="control-group"><label for="templateAttendees">참석자</label><input id="templateAttendees" class="wide-input" placeholder="예: 김○○, 이○○" /></div><div class="control-group full-field"><label for="templatePurpose">목적·추진 배경</label><textarea id="templatePurpose" placeholder="왜 이 문서를 작성하는지 입력하세요."></textarea></div><div class="control-group full-field"><label for="templateContent">주요 내용</label><textarea id="templateContent" placeholder="논의 내용·추진 내용·상담 내용을 입력하세요."></textarea></div><div class="control-group"><label for="templateDecisions">성과·결정사항</label><textarea id="templateDecisions" placeholder="확인된 성과나 결정사항"></textarea></div><div class="control-group"><label for="templateActions">후속 조치·향후 계획</label><textarea id="templateActions" placeholder="담당자와 다음 일정을 입력하세요."></textarea></div></div><div class="template-preview-heading"><div><b>결과 미리보기</b><span>기본은 로컬 처리 · 구독 AI 사용 시 선택한 문서가 외부로 전송됩니다.</span></div><div class="template-actions"><button id="templateAiAssist" class="secondary-button" type="button">로컬 AI로 초안 다듬기</button><button id="templateSubscriptionAssist" class="secondary-button external-ai-button" type="button">구독 AI 사용</button><button id="templateAiRevert" class="secondary-button hidden" type="button">AI 결과 되돌리기</button><button id="templateCopy" class="secondary-button" type="button">복사</button><button id="templateDownload" class="primary-button" type="button">문서용 HTML 저장 →</button></div></div><pre id="templatePreview" class="template-preview">내용을 입력하면 초안이 여기에 표시됩니다.</pre></section></div>`;
+  return `${toolHeader(tool, '기관 문서 양식', '기관명·담당자를 한 번 저장하면 회의록·사업계획서·결과보고서 머리말이 자동으로 채워집니다. 회의 메모 정리는 상담 기록·회의록 정리에서 먼저 하세요.')}<div class="template-layout"><aside class="tool-panel template-sidebar"><div class="panel-heading"><div><h2>내 양식</h2><p>저장한 양식은 이 기기에만 남습니다.</p></div></div><div class="control-group template-select-group"><label for="templateSelect">사용할 문서</label><select id="templateSelect" class="wide-input">${options}</select></div><div class="template-save-box"><label for="templateName">내 양식으로 저장</label><input id="templateName" class="wide-input" placeholder="예: 우리 기관 회의록" /><textarea id="templateBody" class="template-body-input" placeholder="{{기관명}}, {{사업명}} 같은 항목을 사용할 수 있습니다."></textarea><button id="templateSave" class="secondary-button" type="button">내 양식 저장</button><p id="templateNotice" class="field-hint">양식 안의 개인정보는 저장하지 마세요.</p></div><div class="template-help"><b>사용 가능한 항목</b><p>{{기관명}} · {{문서일}} · {{사업명}} · {{작성자}} · {{참석자}} · {{목적}} · {{내용}} · {{결정사항}} · {{후속조치}}</p></div><div class="template-help"><b>회의 메모가 있나요?</b><p>상담 기록·회의록 정리에서 결정 사항·할 일을 먼저 나눈 뒤 이 양식으로 보내면 칸이 채워집니다.</p><button class="link-button" data-tool="case-record" type="button">회의록 정리 열기 →</button></div></aside><section class="tool-panel template-editor-panel"><div class="panel-heading"><div><h2>초안 작성</h2><p>입력하는 즉시 결과에 반영됩니다. AI 결과는 검토 전 초안입니다.</p></div><span class="local-note">● 로컬 우선</span></div><div class="profile-strip"><div><b>기관 기본정보</b><span>다음 작업에 다시 입력하지 않도록 이 PC에 저장합니다.</span></div><div class="profile-fields"><input id="profileOrganization" class="wide-input" placeholder="기관명" /><input id="profileManager" class="wide-input" placeholder="기본 작성자" /><button id="profileSave" class="secondary-button" type="button">저장</button></div></div><div class="template-fields"><div class="control-group"><label for="templateDate">문서일</label><input id="templateDate" type="date" class="wide-input" /></div><div class="control-group"><label for="templateProject">사업명·회의명</label><input id="templateProject" class="wide-input" placeholder="예: 2026년 주거취약가구 지원사업" /></div><div class="control-group"><label for="templateAuthor">작성자</label><input id="templateAuthor" class="wide-input" placeholder="담당자 이름" /></div><div class="control-group"><label for="templateAttendees">참석자</label><input id="templateAttendees" class="wide-input" placeholder="예: 김○○, 이○○" /></div><div class="control-group full-field"><label for="templatePurpose">목적·추진 배경</label><textarea id="templatePurpose" placeholder="왜 이 문서를 작성하는지 입력하세요."></textarea></div><div class="control-group full-field"><label for="templateContent">주요 내용</label><textarea id="templateContent" placeholder="논의 내용·추진 내용·상담 내용을 입력하세요."></textarea></div><div class="control-group"><label for="templateDecisions">성과·결정사항</label><textarea id="templateDecisions" placeholder="확인된 성과나 결정사항"></textarea></div><div class="control-group"><label for="templateActions">후속 조치·향후 계획</label><textarea id="templateActions" placeholder="담당자와 다음 일정을 입력하세요."></textarea></div></div><div class="template-preview-heading"><div><b>결과 미리보기</b><span>기본은 로컬 처리 · 구독 AI 사용 시 선택한 문서가 외부로 전송됩니다.</span></div><div class="template-actions"><button id="templateAiAssist" class="secondary-button" type="button">로컬 AI로 초안 다듬기</button><button id="templateSubscriptionAssist" class="secondary-button external-ai-button" type="button">구독 AI 사용</button><button id="templateAiRevert" class="secondary-button hidden" type="button">AI 결과 되돌리기</button><button id="templateCopy" class="secondary-button" type="button">복사</button><button id="templateDownload" class="primary-button" type="button">문서용 HTML 저장 →</button></div></div><pre id="templatePreview" class="template-preview">내용을 입력하면 초안이 여기에 표시됩니다.</pre></section></div>`;
 }
 
 function renderAttendanceWorkspace(tool) {
@@ -236,8 +237,27 @@ function renderQrWorkspace(tool) {
   return `${toolHeader(tool, '링크를 QR 코드로 저장하기', '외부 서비스를 호출하지 않고 이 기기에서 QR 이미지를 만듭니다.')}<div class="tool-layout calculator-layout"><section class="calculator-card"><h2>주소 입력</h2><p>신청 링크, 안내 페이지 주소를 입력하세요.</p><div class="control-group"><label for="qrText">링크 또는 짧은 문구</label><input id="qrText" class="wide-input" placeholder="https://" /></div><div class="tool-actions"><button id="qrMake" class="primary-button" type="button">QR 만들기 →</button></div><div id="qrResult" class="calculator-result hidden"></div></section><section class="calculator-reference"><h3>사용 예</h3><div class="reference-row"><b>프로그램 신청</b><span>게시판·문자에 QR을 붙여 신청 페이지로 연결</span></div><div class="reference-row"><b>만족도 조사</b><span>행사 안내문에 설문 링크를 함께 제공</span></div></section></div>`;
 }
 
+const summaryModes = {
+  counseling: {
+    title: '상담 기록',
+    contextLabel: '상담 맥락 (선택)',
+    contextPlaceholder: '예: 3월 12일 가정방문 / 주거지원 사례 2회기',
+    rawLabel: '상담 메모·녹취 원문',
+    rawPlaceholder: '상담 중 적은 메모나 녹취 전사문을 붙여 넣으세요.\n예: 내담자는 월세가 두 달 밀려 퇴거가 걱정된다고 호소함. 주거급여 신청 절차를 안내함. 다음 주에 주민센터와 연계하기로 함.',
+    sample: { context: '주거지원 사례 2회기 · 가정방문', raw: '3월 12일 가정방문 상담. 내담자는 월세가 두 달 밀려 퇴거가 걱정된다고 호소함. 자녀 양육은 꾸준히 하고 있으며 취업 의지가 있음. 연락처 010-1234-5678. 주거급여 신청 절차와 필요 서류를 안내하였음. 다음 주에 주민센터와 연계하여 신청서류를 확인하기로 함.' },
+  },
+  meeting: {
+    title: '회의록',
+    contextLabel: '회의명 (선택)',
+    contextPlaceholder: '예: 11월 통합사례회의',
+    rawLabel: '회의 메모 원문',
+    rawPlaceholder: '회의 중 적은 메모를 붙여 넣으세요. "일시:", "장소:", "참석자:", "안건:" 줄이 있으면 개요에 바로 들어갑니다.\n예: 방문 횟수를 주 2회로 늘리기로 결정함. 이사회복지사가 11월 15일까지 명단을 정리함.',
+    sample: { context: '11월 통합사례회의', raw: '일시: 11월 10일 오후 2시\n장소: 2층 회의실\n참석자: 김팀장, 이사회복지사, 박간호사\n안건: 독거 어르신 겨울철 안부 확인\n어르신 12가구의 난방 상태를 점검함. 방문 횟수를 주 2회로 늘리기로 결정함. 이사회복지사가 11월 15일까지 대상 명단을 정리함. 박간호사는 다음 주에 건강 상태를 확인하기로 함.' },
+  },
+};
+
 function renderCaseRecordWorkspace(tool) {
-  return `${toolHeader(tool, '상담·회의 기록 정리', '원문은 기본적으로 이 기기에서만 처리합니다. 로컬 규칙으로 먼저 만들고, Ollama가 연결된 경우에만 로컬 LLM 보조를 선택할 수 있습니다.')}<div class="tool-layout record-layout"><section class="tool-panel"><div class="panel-heading"><div><h2>원문 입력</h2><p>이름·주민번호 등 식별정보는 필요한 범위에서만 입력하세요.</p></div><span class="local-note">외부 전송 차단</span></div><div class="control-inline"><div class="control-group"><label for="recordKind">기록 유형</label><select id="recordKind" class="wide-input"><option value="counseling">상담일지</option><option value="meeting">회의록</option></select></div><div class="control-group"><label for="recordProvider">처리 방식</label><select id="recordProvider" class="wide-input"><option value="rules">로컬 규칙 (AI 불필요)</option><option value="ollama-local">Ollama 로컬 LLM (선택)</option></select></div></div><div class="control-group"><label for="recordContext">사례·회의 맥락 (선택)</label><input id="recordContext" class="wide-input" placeholder="예: 주거지원 사례회의 / 다음 상담 준비" /></div><div class="control-group"><label for="recordRaw">상담·회의 원문</label><textarea id="recordRaw" class="record-source" rows="13" placeholder="메모나 녹취 전사문을 붙여 넣으세요.\n예: 3월 12일 상담에서 주거비 부담과 신청서류 준비의 어려움을 확인했다. 담당자가 주민센터에 연락하기로 했다."></textarea></div><div class="tool-actions"><button id="recordProcess" class="primary-button" type="button">초안 만들기</button><button id="recordSave" class="secondary-button" type="button" disabled>로컬 기록 저장</button><button id="recordExport" class="secondary-button" type="button" disabled>Markdown 내보내기</button></div><div id="recordNotice" class="notice" hidden></div><p class="field-hint">로컬 LLM을 선택해도 서버는 외부 provider를 허용하지 않으며, Ollama가 없으면 규칙 기반 초안으로 자동 대체합니다.</p></section><section class="tool-panel record-output"><div class="panel-heading"><div><h2>검토용 초안</h2><p>생성 결과는 공식 기록으로 확정하기 전에 담당자가 원문과 대조해야 합니다.</p></div><span id="recordTransfer" class="muted-text">아직 처리하지 않음</span></div><div class="record-facts" id="recordFacts">원문을 입력하고 초안을 만들어 보세요.</div><label for="recordLog">기록·논의</label><textarea id="recordLog" rows="7" placeholder="초안이 여기에 표시됩니다."></textarea><label for="recordAssessment">사정·결정사항</label><textarea id="recordAssessment" rows="6"></textarea><label for="recordPlan">서비스계획·후속 실행</label><textarea id="recordPlan" rows="6"></textarea><label for="recordFollowUp">후속 확인</label><textarea id="recordFollowUp" rows="5"></textarea></section></div>`;
+  return `${toolHeader(tool, '상담 기록·회의록 정리', '메모나 녹취 전사문을 붙여 넣으면 정해진 항목으로 나눠 정리합니다. 기본은 AI 없이 이 PC에서 처리하고, 원할 때만 로컬 AI나 클라우드 AI를 고릅니다.', { nav: '● 기본은 이 기기에서 처리', mark: '외부 전송은 확인 후' })}<div class="summary-layout"><section class="tool-panel summary-input"><div class="summary-modes" role="tablist" aria-label="정리 종류"><button class="summary-mode active" role="tab" aria-selected="true" data-summary-mode="counseling" type="button"><b>상담 기록 정리</b><small>호소 · 사정 · 개입 · 계획</small></button><button class="summary-mode" role="tab" aria-selected="false" data-summary-mode="meeting" type="button"><b>회의록 정리</b><small>개요 · 논의 · 결정 사항 · 할 일</small></button></div><div class="control-group"><label for="recordContext" id="recordContextLabel">${summaryModes.counseling.contextLabel}</label><input id="recordContext" class="wide-input" placeholder="${escapeHtml(summaryModes.counseling.contextPlaceholder)}" /></div><div class="control-group"><div class="label-row"><label for="recordRaw" id="recordRawLabel">${summaryModes.counseling.rawLabel}</label><span id="recordRawCount" class="muted-text">0자</span></div><textarea id="recordRaw" class="record-source" rows="11" placeholder="${escapeHtml(summaryModes.counseling.rawPlaceholder)}"></textarea></div><fieldset class="engine-picker"><legend>정리 방식</legend><label class="engine-option"><input type="radio" name="recordEngine" value="rules" checked /><span><b>규칙 · AI 없음 <i>기본</i></b><small>이 PC에서 바로 처리합니다. 문장을 항목별로 나누기만 합니다.</small></span></label><label class="engine-option"><input type="radio" name="recordEngine" value="ollama" /><span><b>로컬 AI · Ollama</b><small>PC 밖으로 나가지 않습니다. <em id="engineOllamaStatus">상태 확인 중…</em></small></span></label><label class="engine-option"><input type="radio" name="recordEngine" value="cloud" /><span><b>클라우드 AI</b><small>보내기 전에 전송할 내용을 보여 드립니다. <em id="engineCloudStatus">연결 확인 중…</em></small></span></label><div id="engineCloudPicker" class="engine-cloud-picker" hidden><label for="recordCloudProvider">사용할 클라우드 AI</label><select id="recordCloudProvider" class="wide-input"></select></div><p id="engineCloudEmpty" class="engine-empty" hidden>연결된 클라우드 AI가 없습니다. <button type="button" class="link-button" data-tool="ai-setup">AI 보조·연결에서 연결하기 →</button></p></fieldset><div class="tool-actions"><button id="recordProcess" class="primary-button" type="button">정리하기 →</button><button id="recordSample" class="secondary-button" type="button">예시 넣기</button></div><p id="recordNotice" class="notice" hidden></p></section><section class="tool-panel summary-output"><div class="panel-heading"><div><h2 id="summaryTitle">상담 기록</h2><p>결과는 바로 고칠 수 있습니다. 확정 전 원문과 대조하세요.</p></div><span id="recordTransfer" class="engine-badge">정리 전</span></div><div id="summaryBody" class="summary-body"><div class="summary-empty"><b>왼쪽에 원문을 넣고 정리하기를 누르세요.</b><span id="summaryEmptyHint">상담 개요 · 주요 호소 · 사정(욕구·강점·위험) · 개입 내용 · 향후 계획·후속 조치로 나눠 드립니다.</span></div></div><div class="summary-actions"><button id="recordCopy" class="secondary-button" type="button" disabled>복사</button><button id="recordSave" class="secondary-button" type="button" disabled>이 PC에 저장</button><button id="recordExport" class="secondary-button" type="button" disabled>Markdown 저장</button><button id="recordDocx" class="primary-button" type="button" disabled>Word(DOCX) 저장 →</button><button id="recordToTemplate" class="secondary-button hidden" type="button" disabled>기관 문서 양식으로 보내기</button></div><div class="summary-saved"><label for="recordSavedList">저장한 기록 불러오기</label><select id="recordSavedList" class="wide-input"><option value="">저장한 기록 없음</option></select></div></section></div><dialog id="cloudConfirmDialog" class="privacy-dialog cloud-confirm" aria-labelledby="cloudConfirmTitle"><p class="overline">EXTERNAL TRANSFER · 외부 전송 확인</p><h2 id="cloudConfirmTitle"><span id="cloudConfirmProvider"></span>에 아래 내용을 보냅니다</h2><label class="option-line cloud-mask-option"><input id="cloudMask" type="checkbox" checked /> 보내기 전에 개인정보 가리기 <small>주민등록번호 · 전화번호 · 이메일 · 계좌번호</small></label><p class="field-hint">이름·주소·기관명은 자동으로 가려지지 않습니다. 아래 내용을 끝까지 확인하세요.</p><pre id="cloudPreview" class="cloud-preview" tabindex="0"></pre><p class="dialog-footnote">위 내용과 정리 지시문(개인정보 없음)만 전송됩니다. 결과는 이 PC로 돌아오며 Dawith 서버에는 저장되지 않습니다. 기관의 외부 전송 기준을 확인한 뒤 보내세요.</p><div class="dialog-actions"><button id="cloudCancel" class="secondary-button" type="button">취소</button><button id="cloudSend" class="primary-button" type="button">이 내용으로 보내기</button></div></dialog>`;
 }
 
 function renderDiagramWorkspace(tool) {
@@ -869,8 +889,26 @@ function bindTemplateStudio() {
       button.textContent = '구독 AI 사용';
     }
   });
+  const consumeHandoff = () => {
+    let handoff = null;
+    try { handoff = JSON.parse(sessionStorage.getItem('dawith-template-handoff-v1') || 'null'); sessionStorage.removeItem('dawith-template-handoff-v1'); } catch { handoff = null; }
+    if (!handoff) return;
+    if (getTemplateCatalog().some((template) => template.id === handoff.templateId)) templateSelect.value = handoff.templateId;
+    loadTemplate();
+    if (handoff.organization) fields.organization.value = handoff.organization;
+    if (handoff.author) fields.author.value = handoff.author;
+    fields.project.value = handoff.project || '';
+    fields.attendees.value = handoff.attendees || '';
+    fields.purpose.value = handoff.purpose || '';
+    fields.content.value = handoff.content || '';
+    fields.decisions.value = handoff.decisions || '';
+    fields.actions.value = handoff.actions || '';
+    update();
+    showNotice('#templateNotice', '정리한 회의록을 양식에 채웠습니다. 기관명·작성자를 확인하세요.');
+  };
   $('#templateAiRevert').addEventListener('click', () => { if (!aiPreviousPreview) return; $('#templatePreview').textContent = aiPreviousPreview; aiPreviousPreview = ''; $('#templateAiRevert').classList.add('hidden'); showNotice('#templateNotice', 'AI 결과를 적용 전 미리보기로 되돌렸습니다.'); });
   loadTemplate();
+  consumeHandoff();
 }
 function bindAttendance() {
   const storageKey = 'dawith-attendance-v1';
@@ -914,36 +952,243 @@ function bindDutySchedule() {
 }
 function bindQr() { $('#qrMake').addEventListener('click', () => { const value = $('#qrText').value.trim(); const result = $('#qrResult'); if (!value) return showNotice('#qrResult', '링크나 문구를 입력해 주세요.', true); result.classList.remove('hidden'); result.innerHTML = `<span class="result-label">입력한 내용</span><strong style="font-size:18px;word-break:break-all">${escapeHtml(value)}</strong><small>QR 생성 모듈 연결 준비됨 · 현재는 링크를 복사해 사용할 수 있습니다.</small><div class="tool-actions"><button id="qrCopy" class="secondary-button" type="button">내용 복사</button></div>`; $('#qrCopy').addEventListener('click', async () => { await navigator.clipboard?.writeText(value); showNotice('#qrResult', '내용을 복사했습니다.'); }); }); }
 
-function buildLocalCaseDraft(kind, rawText, contextText = '') {
+const recordStorageKey = 'dawith-record-drafts-v1';
+const institutionProfileKey = 'dawith-institution-profile-v1';
+const templateHandoffKey = 'dawith-template-handoff-v1';
+const cloudProviderOrder = ['claude-code', 'codex', 'chatgpt', 'gemini-cli', 'gemini', 'openrouter'];
+
+function readInstitutionProfile() {
+  try { return JSON.parse(localStorage.getItem(institutionProfileKey) || '{}'); } catch { return {}; }
+}
+
+function readSavedRecords() {
+  try { const saved = JSON.parse(localStorage.getItem(recordStorageKey) || '[]'); return Array.isArray(saved) ? saved : []; } catch { return []; }
+}
+
+// Browser-only fallback for the static web build where /api is unavailable.
+function buildBrowserSummary(kind, rawText, contextText = '') {
   const source = String(rawText).trim();
-  const lines = source.split(/(?<=[.!?。！？])\s+|\n+/).map((line) => line.trim()).filter(Boolean);
-  const relations = ['친모', '친부', '배우자', '자녀', '형제', '자매', '보호자', '내담자'].filter((term) => source.includes(term));
-  const topics = ['이혼', '주거', '경제', '취업', '건강', '양육', '면접교섭', '학교', '폭력', '중독', '서비스'].filter((term) => source.includes(term));
-  const decisions = lines.filter((line) => /결정|합의|확정|하기로|논의/.test(line));
-  const actions = lines.filter((line) => /담당|연락|신청|확인|방문|연계|예정|하기로/.test(line));
-  const subject = relations.includes('내담자') ? '내담자' : (relations.join(', ') || '내담자');
-  const topic = topics.join(', ') || '상담 내용';
-  return { typeLabel: kind === 'meeting' ? '회의록' : '상담일지', reviewRequired: true, facts: { relations, topics, dates: [], plans: [], decisions, actionItems: actions }, counselingLog: kind === 'meeting' ? `주요 안건은 ${topic}이다. ${source}` : `${subject}와의 상담에서 ${topic} 관련 내용을 확인하였다. ${source}`, assessment: decisions.length ? `논의 및 결정사항\n${decisions.map((line, index) => `${index + 1}. ${line}`).join('\n')}` : '확정된 결정사항이 없습니다. 원문을 검토해 주세요.', servicePlan: actions.length ? `후속 실행 항목\n${actions.map((line, index) => `${index + 1}. ${line}`).join('\n')}` : '담당자와 후속 조치를 확인해 주세요.', followUp: '1. 담당자 검토 및 원문 대조\n2. 담당자·기한 확인\n3. 미결정 사항의 후속 일정 확인', sourceSummary: contextText ? `사례 맥락: ${contextText}` : '사례 맥락이 입력되지 않았습니다. 저장 전 확인하세요.' };
+  const lines = source.split(/(?<=[.!?。！？])\s+|\n+/).map((line) => line.replace(/^\s*(?:[-*•·]|\d+[.)])\s*/, '').trim()).filter(Boolean);
+  const label = (name) => source.match(new RegExp(`^\\s*(?:${name})\\s*[:：]\\s*(.+)$`, 'm'))?.[1]?.trim() || '';
+  const pick = (pattern, exclude = []) => lines.filter((line) => pattern.test(line) && !exclude.includes(line) && !/^\s*(?:일시|장소|참석자?|안건)\s*[:：]/.test(line));
+  const list = (items, empty = '[확인 필요]') => items.length ? items.map((item, index) => `${index + 1}. ${item}`).join('\n') : empty;
+  if (kind === 'meeting') {
+    const decisions = pick(/결정|합의|확정|하기로|승인/);
+    return { kind, overview: { datetime: label('일시|날짜') || '[확인 필요]', place: label('장소') || '[확인 필요]', attendees: label('참석자?') || '[확인 필요]', agenda: label('안건|회의명') || contextText || '[확인 필요]' }, discussion: list(pick(/./, decisions)), decisions: list(decisions), actions: pick(/담당|연락|신청|확인|방문|연계|예정|하기로|까지/).map((task) => ({ task, owner: '', due: task.match(/\d{1,2}월\s*\d{1,2}일(?:까지)?|다음\s*주|이번\s*주/)?.[0] || '' })) };
+  }
+  const future = pick(/하기로|예정|다음|계획/);
+  return { kind: 'counseling', overview: contextText ? `맥락: ${contextText}` : '[확인 필요]', complaint: list(pick(/어렵|불안|걱정|힘들|호소|부담|문제|부족/)), assessment: { needs: list(pick(/필요|원함|원하|희망|요청/)), strengths: list(pick(/의지|노력|꾸준|가능|지지|참여/)), risks: list(pick(/위험|위기|폭력|학대|자해|자살|체납|퇴거|중독/), '원문에서 위험 단서를 찾지 못했습니다. 담당자 [확인 필요]') }, intervention: list(pick(/안내|설명|연계|제공|공감|격려|교육/, future)), plan: list(future) };
+}
+
+function summaryToMarkdown(summary, header = {}) {
+  const title = summary.kind === 'meeting' ? '회의록' : '상담 기록';
+  const meta = [header.organization && `- 기관: ${header.organization}`, header.author && `- 작성자: ${header.author}`, `- 작성일: ${formatDate(new Date())}`].filter(Boolean).join('\n');
+  const cellText = (value) => String(value || '-').replace(/\|/g, '\\|').replace(/\n+/g, ' ');
+  if (summary.kind === 'meeting') {
+    const o = summary.overview;
+    const actions = summary.actions.length ? summary.actions.map((item) => `| ${cellText(item.task)} | ${cellText(item.owner)} | ${cellText(item.due)} |`).join('\n') : '| (할 일 없음) | - | - |';
+    return `# ${title}\n\n${meta}\n\n## 회의 개요\n\n- 일시: ${o.datetime || '-'}\n- 장소: ${o.place || '-'}\n- 참석자: ${o.attendees || '-'}\n- 안건: ${o.agenda || '-'}\n\n## 논의 내용\n\n${summary.discussion || '-'}\n\n## 결정 사항\n\n${summary.decisions || '-'}\n\n## 할 일\n\n| 할 일 | 담당 | 기한 |\n| --- | --- | --- |\n${actions}\n`;
+  }
+  const a = summary.assessment;
+  return `# ${title}\n\n${meta}\n\n## 상담 개요\n\n${summary.overview || '-'}\n\n## 주요 호소\n\n${summary.complaint || '-'}\n\n## 사정\n\n### 욕구\n\n${a.needs || '-'}\n\n### 강점\n\n${a.strengths || '-'}\n\n### 위험\n\n${a.risks || '-'}\n\n## 개입 내용\n\n${summary.intervention || '-'}\n\n## 향후 계획·후속 조치\n\n${summary.plan || '-'}\n`;
+}
+
+function summaryRows(value, min) { return Math.min(12, Math.max(min, String(value || '').split('\n').length + 1)); }
+function summaryField(id, label, value, rows = 4) {
+  return `<div class="summary-section"><label for="${id}">${label}</label><textarea id="${id}" rows="${summaryRows(value, rows)}">${escapeHtml(value)}</textarea></div>`;
+}
+
+function actionRow(item = {}) {
+  return `<tr><td><input class="action-task" aria-label="할 일" value="${escapeHtml(item.task || '')}" /></td><td><input class="action-owner" aria-label="담당" placeholder="담당" value="${escapeHtml(item.owner || '')}" /></td><td><input class="action-due" aria-label="기한" placeholder="기한" value="${escapeHtml(item.due || '')}" /></td><td><button class="icon-text-button action-remove" type="button" aria-label="이 할 일 지우기">삭제</button></td></tr>`;
+}
+
+function renderSummaryBody(summary, header = {}) {
+  if (summary.kind === 'meeting') {
+    const o = summary.overview;
+    return `<div class="summary-header-strip"><div class="control-group"><label for="sumOrg">기관명</label><input id="sumOrg" class="wide-input" value="${escapeHtml(header.organization || '')}" placeholder="기관 문서 양식에 저장하면 자동 입력" /></div><div class="control-group"><label for="sumAuthor">작성자</label><input id="sumAuthor" class="wide-input" value="${escapeHtml(header.author || '')}" placeholder="담당자 이름" /></div><button id="sumRememberProfile" class="icon-text-button" type="button">기관명·작성자 기억하기</button></div><fieldset class="summary-section summary-grid"><legend>회의 개요</legend><label>일시<input id="sumDatetime" class="wide-input" value="${escapeHtml(o.datetime)}" /></label><label>장소<input id="sumPlace" class="wide-input" value="${escapeHtml(o.place)}" /></label><label>참석자<input id="sumAttendees" class="wide-input" value="${escapeHtml(o.attendees)}" /></label><label>안건<input id="sumAgenda" class="wide-input" value="${escapeHtml(o.agenda)}" /></label></fieldset>${summaryField('sumDiscussion', '논의 내용', summary.discussion, 6)}${summaryField('sumDecisions', '결정 사항', summary.decisions, 4)}<div class="summary-section"><div class="label-row"><span class="summary-label">할 일 (담당·기한)</span><button id="sumAddAction" class="icon-text-button" type="button">+ 할 일 추가</button></div><div class="attendance-table-wrap"><table class="attendance-table action-table"><thead><tr><th>할 일</th><th>담당</th><th>기한</th><th aria-label="삭제"></th></tr></thead><tbody id="sumActions">${summary.actions.map(actionRow).join('')}</tbody></table></div></div>`;
+  }
+  const a = summary.assessment;
+  return `${summaryField('sumOverview', '상담 개요', summary.overview, 3)}${summaryField('sumComplaint', '주요 호소', summary.complaint, 4)}<fieldset class="summary-section summary-assessment"><legend>사정</legend><label for="sumNeeds">욕구</label><textarea id="sumNeeds" rows="${summaryRows(a.needs, 2)}">${escapeHtml(a.needs)}</textarea><label for="sumStrengths">강점</label><textarea id="sumStrengths" rows="${summaryRows(a.strengths, 2)}">${escapeHtml(a.strengths)}</textarea><label for="sumRisks">위험</label><textarea id="sumRisks" rows="${summaryRows(a.risks, 2)}">${escapeHtml(a.risks)}</textarea></fieldset>${summaryField('sumIntervention', '개입 내용', summary.intervention, 4)}${summaryField('sumPlan', '향후 계획·후속 조치', summary.plan, 4)}`;
+}
+
+function collectSummary(kind) {
+  const value = (id) => $(`#${id}`)?.value.trim() || '';
+  if (kind === 'meeting') {
+    return { kind, overview: { datetime: value('sumDatetime'), place: value('sumPlace'), attendees: value('sumAttendees'), agenda: value('sumAgenda') }, discussion: value('sumDiscussion'), decisions: value('sumDecisions'), actions: $$('#sumActions tr').map((row) => ({ task: $('.action-task', row).value.trim(), owner: $('.action-owner', row).value.trim(), due: $('.action-due', row).value.trim() })).filter((item) => item.task || item.owner || item.due) };
+  }
+  return { kind: 'counseling', overview: value('sumOverview'), complaint: value('sumComplaint'), assessment: { needs: value('sumNeeds'), strengths: value('sumStrengths'), risks: value('sumRisks') }, intervention: value('sumIntervention'), plan: value('sumPlan') };
+}
+
+function engineErrorMessage(payload, status) {
+  if (payload?.message) return payload.message;
+  if (status === 401) return '기관 로그인 후 사용할 수 있습니다.';
+  if (status === 403) return '이 계정에는 기록을 만들 권한이 없습니다.';
+  return '정리하지 못했습니다. 잠시 뒤 다시 시도하세요.';
 }
 
 function bindCaseRecord() {
-  let draft = null;
-  const render = (result, provider = 'rules', fallback = null) => {
-    draft = { ...result, provider, rawText: $('#recordRaw').value.trim(), contextText: $('#recordContext').value.trim() };
-    $('#recordFacts').innerHTML = `<b>추출 단서</b><span>관계: ${escapeHtml((result.facts?.relations || []).join(', ') || '없음')}</span><span>주제: ${escapeHtml((result.facts?.topics || []).join(', ') || '없음')}</span><span>후속 단서: ${escapeHtml((result.facts?.actionItems || []).length ? '있음' : '없음')}</span>`;
-    $('#recordLog').value = result.counselingLog || ''; $('#recordAssessment').value = result.assessment || ''; $('#recordPlan').value = result.servicePlan || ''; $('#recordFollowUp').value = result.followUp || '';
-    $('#recordSave').disabled = false; $('#recordExport').disabled = false; $('#recordTransfer').textContent = fallback?.used ? '로컬 규칙으로 대체' : provider === 'ollama-local' ? 'Ollama 로컬 처리' : '로컬 규칙 처리'; showNotice('#recordNotice', fallback?.message || '검토용 초안을 만들었습니다. 원문과 대조한 뒤 저장하세요.');
+  let mode = 'counseling';
+  let result = null; // { summary, provider, engine, rawText, contextText }
+  const notice = (message, error = false) => { const target = $('#recordNotice'); target.hidden = !message; target.className = error ? 'notice error-notice' : 'notice'; target.textContent = message; };
+  const engine = () => $('input[name="recordEngine"]:checked')?.value || 'rules';
+  const header = () => mode === 'meeting' ? { organization: $('#sumOrg')?.value.trim() || '', author: $('#sumAuthor')?.value.trim() || '' } : {};
+  const setActions = (enabled) => { ['#recordCopy', '#recordSave', '#recordExport', '#recordDocx', '#recordToTemplate'].forEach((id) => { $(id).disabled = !enabled; }); $('#recordToTemplate').classList.toggle('hidden', mode !== 'meeting'); };
+  const badge = (text, external = false) => { const target = $('#recordTransfer'); target.textContent = text; target.classList.toggle('external', external); };
+  const showEmpty = () => {
+    result = null;
+    $('#summaryTitle').textContent = summaryModes[mode].title;
+    $('#summaryBody').innerHTML = `<div class="summary-empty"><b>왼쪽에 원문을 넣고 정리하기를 누르세요.</b><span>${mode === 'meeting' ? '회의 개요(일시·장소·참석자·안건) · 논의 내용 · 결정 사항 · 할 일(담당·기한)로 나눠 드립니다.' : '상담 개요 · 주요 호소 · 사정(욕구·강점·위험) · 개입 내용 · 향후 계획·후속 조치로 나눠 드립니다.'}</span></div>`;
+    badge('정리 전');
+    setActions(false);
   };
-  $('#recordProcess').addEventListener('click', async () => {
-    const rawText = $('#recordRaw').value.trim(); if (!rawText) return showNotice('#recordNotice', '상담·회의 원문을 입력해 주세요.', true);
-    const kind = $('#recordKind').value; const provider = $('#recordProvider').value; const button = $('#recordProcess'); button.disabled = true; button.textContent = '초안 만드는 중…';
-    try { const response = await fetch('/api/process', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ kind, provider, rawText, contextText: $('#recordContext').value.trim() }) }); if (!response.ok) throw new Error('local_api_unavailable'); const payload = await response.json(); render(payload.draft, payload.provider || provider, payload.fallback); }
-    catch { render(buildLocalCaseDraft(kind, rawText, $('#recordContext').value.trim()), 'browser-rules'); showNotice('#recordNotice', '로컬 서버에 연결되지 않아 브라우저 규칙으로 처리했습니다. 원문과 대조하세요.'); }
-    finally { button.disabled = false; button.textContent = '초안 만들기'; }
+  const showResult = (summary, meta) => {
+    const profile = readInstitutionProfile();
+    result = { ...meta, summary };
+    $('#summaryTitle').textContent = summaryModes[summary.kind].title;
+    $('#summaryBody').innerHTML = renderSummaryBody(summary, meta.header || { organization: profile.organization || '', author: profile.manager || '' });
+    setActions(true);
+  };
+  const setMode = (next) => {
+    mode = next === 'meeting' ? 'meeting' : 'counseling';
+    $$('.summary-mode').forEach((button) => { const active = button.dataset.summaryMode === mode; button.classList.toggle('active', active); button.setAttribute('aria-selected', String(active)); });
+    const info = summaryModes[mode];
+    $('#recordContextLabel').textContent = info.contextLabel; $('#recordContext').placeholder = info.contextPlaceholder;
+    $('#recordRawLabel').textContent = info.rawLabel; $('#recordRaw').placeholder = info.rawPlaceholder;
+    showEmpty();
+  };
+  const updateCount = () => { $('#recordRawCount').textContent = `${$('#recordRaw').value.length.toLocaleString()}자`; };
+  const syncEngine = () => { const cloud = engine() === 'cloud'; const hasProviders = $('#recordCloudProvider').options.length > 0; $('#engineCloudPicker').hidden = !cloud || !hasProviders; $('#engineCloudEmpty').hidden = !cloud || hasProviders; $('#recordProcess').textContent = cloud ? '보낼 내용 확인 →' : '정리하기 →'; };
+  const loadEngineStatus = async () => {
+    fetchLocalAiCapabilities().then((capabilities) => {
+      const ollama = capabilities.ollama || {};
+      $('#engineOllamaStatus').textContent = ollama.available ? `연결됨 · ${preferredAiModel()}` : '꺼져 있음 · 고르면 규칙으로 대신 정리';
+      $('#engineOllamaStatus').classList.toggle('ok', Boolean(ollama.available));
+    }).catch(() => { $('#engineOllamaStatus').textContent = '확인할 수 없음 · PC용 앱에서 사용'; });
+    try {
+      const status = await fetchSubscriptionStatus();
+      const ready = Object.values(status.providers || {}).filter((item) => item.state === 'ready' || item.connected === true)
+        .sort((a, b) => cloudProviderOrder.indexOf(a.provider) - cloudProviderOrder.indexOf(b.provider));
+      $('#recordCloudProvider').innerHTML = ready.map((item) => `<option value="${escapeHtml(item.provider)}">${escapeHtml(item.label || providerLabel(item.provider))}</option>`).join('');
+      $('#engineCloudStatus').textContent = ready.length ? `연결됨: ${ready.map((item) => providerLabel(item.provider)).join(', ')}` : '연결된 AI 없음';
+      $('#engineCloudStatus').classList.toggle('ok', ready.length > 0);
+    } catch {
+      $('#recordCloudProvider').innerHTML = '';
+      $('#engineCloudStatus').textContent = '연결된 AI 없음';
+    }
+    syncEngine();
+  };
+  const confirmCloud = (provider, rawText, contextText) => new Promise((resolve) => {
+    const dialog = $('#cloudConfirmDialog');
+    const outgoing = () => { const mask = $('#cloudMask').checked; const apply = (text) => mask ? transformText(text, 'mask') : text; return { rawText: apply(rawText), contextText: apply(contextText) }; };
+    const render = () => { const value = outgoing(); $('#cloudPreview').textContent = `${value.contextText ? `[${mode === 'meeting' ? '회의명' : '상담 맥락'}]\n${value.contextText}\n\n` : ''}[원문]\n${value.rawText}`; };
+    $('#cloudConfirmProvider').textContent = providerLabel(provider);
+    $('#cloudMask').checked = true;
+    render();
+    const finish = (value) => { $('#cloudMask').removeEventListener('change', render); $('#cloudSend').removeEventListener('click', onSend); $('#cloudCancel').removeEventListener('click', onCancel); dialog.removeEventListener('cancel', onCancel); if (dialog.open) dialog.close(); resolve(value); };
+    const onSend = () => finish(outgoing());
+    const onCancel = (event) => { event?.preventDefault?.(); finish(null); };
+    $('#cloudMask').addEventListener('change', render);
+    $('#cloudSend').addEventListener('click', onSend);
+    $('#cloudCancel').addEventListener('click', onCancel);
+    dialog.addEventListener('cancel', onCancel);
+    dialog.showModal();
+    $('#cloudCancel').focus();
   });
-  const currentDraft = () => draft ? { ...draft, counselingLog: $('#recordLog').value, assessment: $('#recordAssessment').value, servicePlan: $('#recordPlan').value, followUp: $('#recordFollowUp').value } : null;
-  $('#recordSave').addEventListener('click', () => { const value = currentDraft(); if (!value) return; const saved = JSON.parse(localStorage.getItem('dawith-record-drafts-v1') || '[]'); saved.unshift({ id: `record_${Date.now()}`, createdAt: new Date().toISOString(), kind: $('#recordKind').value, ...value }); localStorage.setItem('dawith-record-drafts-v1', JSON.stringify(saved.slice(0, 30))); showNotice('#recordNotice', '기록을 이 PC의 로컬 저장소에 저장했습니다.'); });
-  $('#recordExport').addEventListener('click', () => { const value = currentDraft(); if (!value) return; const markdown = `# ${value.typeLabel}\n\n## 기록·논의\n${value.counselingLog}\n\n## 사정·결정사항\n${value.assessment}\n\n## 서비스계획·후속 실행\n${value.servicePlan}\n\n## 후속 확인\n${value.followUp}\n\n> 원문\n> ${value.rawText.replaceAll('\n', '\n> ')}`; downloadBlob(new Blob([markdown], { type: 'text/markdown;charset=utf-8' }), `dawith-${$('#recordKind').value}-${compactDate(new Date())}.md`); });
+  const process = async () => {
+    const rawText = $('#recordRaw').value.trim();
+    const contextText = $('#recordContext').value.trim();
+    if (!rawText) { notice(mode === 'meeting' ? '회의 메모를 먼저 붙여 넣으세요.' : '상담 메모를 먼저 붙여 넣으세요.', true); $('#recordRaw').focus(); return; }
+    const choice = engine();
+    const request = { kind: mode, rawText, contextText, provider: 'rules' };
+    if (choice === 'ollama') { request.provider = 'ollama-local'; request.model = preferredAiModel(); }
+    if (choice === 'cloud') {
+      const provider = $('#recordCloudProvider').value;
+      if (!provider) { notice('연결된 클라우드 AI가 없습니다. AI 보조·연결에서 먼저 연결하거나 다른 정리 방식을 고르세요.', true); return; }
+      const outgoing = await confirmCloud(provider, rawText, contextText);
+      if (!outgoing) { notice('전송을 취소했습니다. 아무것도 보내지 않았습니다.'); return; }
+      Object.assign(request, outgoing, { provider: `cloud:${provider}`, confirmExternal: true });
+    }
+    const button = $('#recordProcess');
+    button.disabled = true;
+    button.textContent = choice === 'rules' ? '정리하는 중…' : choice === 'ollama' ? '로컬 AI가 정리하는 중…' : `${providerLabel(request.provider.slice(6))}에서 정리하는 중…`;
+    notice('');
+    try {
+      let response;
+      try { response = await fetch('./api/process', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(request) }); }
+      catch { response = null; }
+      if (!response && choice === 'rules') {
+        showResult(buildBrowserSummary(mode, rawText, contextText), { provider: 'browser-rules', engine: 'rules', rawText, contextText });
+        badge('규칙 · 이 브라우저');
+        notice('로컬 서버에 연결되지 않아 브라우저 규칙으로 정리했습니다. 원문과 대조하세요.');
+        return;
+      }
+      if (!response) throw Object.assign(new Error('offline'), { userMessage: 'PC용 앱의 로컬 서버에 연결되지 않았습니다. 규칙 방식은 계속 사용할 수 있습니다.' });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload.summary) throw Object.assign(new Error(payload.error || `http_${response.status}`), { userMessage: engineErrorMessage(payload, response.status) });
+      showResult(payload.summary, { provider: payload.provider, engine: payload.engine, rawText: request.rawText, contextText: request.contextText });
+      if (payload.fallback?.used) { badge(payload.transfer?.external ? '규칙으로 대체 · 원문은 전송됨' : '규칙으로 대체', Boolean(payload.transfer?.external)); notice(payload.fallback.message, true); }
+      else if (payload.engine === 'ollama') { badge(`로컬 AI · ${payload.model || 'Ollama'}`); notice('로컬 AI가 만든 초안입니다. PC 밖으로 나가지 않았습니다. 원문과 대조한 뒤 확정하세요.'); }
+      else if (payload.engine === 'cloud') { badge(`클라우드 AI · ${providerLabel(payload.transfer?.destination)}`, true); notice(`${providerLabel(payload.transfer?.destination)} 결과입니다. 확인한 내용만 전송했습니다. 원문과 대조한 뒤 확정하세요.`); }
+      else { badge('규칙 · 이 PC'); notice('규칙으로 항목을 나눴습니다. [확인 필요] 표시는 직접 채워 주세요.'); }
+    } catch (error) {
+      notice(error.userMessage || '정리하지 못했습니다. 잠시 뒤 다시 시도하세요.', true);
+    } finally {
+      button.disabled = false;
+      syncEngine();
+    }
+  };
+  const currentSummary = () => result ? collectSummary(result.summary.kind) : null;
+  const refreshSavedList = () => {
+    const saved = readSavedRecords().filter((item) => item.summary);
+    $('#recordSavedList').innerHTML = saved.length ? `<option value="">저장한 기록 ${saved.length}건 · 선택해 불러오기</option>${saved.map((item) => `<option value="${escapeHtml(item.id)}">${escapeHtml(new Date(item.createdAt).toLocaleString('ko-KR', { dateStyle: 'short', timeStyle: 'short' }))} · ${item.summary.kind === 'meeting' ? '회의록' : '상담 기록'} · ${escapeHtml(String(item.rawText || '').slice(0, 24))}</option>`).join('')}` : '<option value="">저장한 기록 없음</option>';
+  };
+  $$('.summary-mode').forEach((button) => button.addEventListener('click', () => setMode(button.dataset.summaryMode)));
+  $$('input[name="recordEngine"]').forEach((input) => input.addEventListener('change', syncEngine));
+  $('#recordRaw').addEventListener('input', updateCount);
+  $('#recordSample').addEventListener('click', () => { const sample = summaryModes[mode].sample; $('#recordContext').value = sample.context; $('#recordRaw').value = sample.raw; updateCount(); notice('합성 예시를 넣었습니다. 실제 개인정보가 아닙니다.'); });
+  $('#recordProcess').addEventListener('click', process);
+  $('#summaryBody').addEventListener('click', (event) => {
+    if (event.target.closest('#sumAddAction')) { $('#sumActions').insertAdjacentHTML('beforeend', actionRow()); $$('#sumActions .action-task').at(-1)?.focus(); }
+    const remove = event.target.closest('.action-remove'); if (remove) remove.closest('tr').remove();
+    if (event.target.closest('#sumRememberProfile')) { try { localStorage.setItem(institutionProfileKey, JSON.stringify({ ...readInstitutionProfile(), organization: $('#sumOrg').value.trim(), manager: $('#sumAuthor').value.trim() })); notice('기관명·작성자를 이 PC에 저장했습니다. 기관 문서 양식에서도 같은 정보를 씁니다.'); } catch { notice('이 브라우저에서는 저장할 수 없습니다.', true); } }
+  });
+  $('#recordCopy').addEventListener('click', async () => { const summary = currentSummary(); if (!summary) return; try { await navigator.clipboard.writeText(summaryToMarkdown(summary, header())); notice('정리 결과를 클립보드에 복사했습니다.'); } catch { notice('클립보드를 사용할 수 없습니다. Markdown 저장을 이용하세요.', true); } });
+  $('#recordSave').addEventListener('click', () => {
+    const summary = currentSummary(); if (!summary) return;
+    const entry = { id: `record_${Date.now()}`, createdAt: new Date().toISOString(), kind: summary.kind, provider: result.provider, engine: result.engine, summary, header: header(), rawText: result.rawText, contextText: result.contextText };
+    try { localStorage.setItem(recordStorageKey, JSON.stringify([entry, ...readSavedRecords()].slice(0, 30))); } catch { notice('이 PC의 저장 공간을 사용할 수 없습니다. Markdown이나 Word로 저장하세요.', true); return; }
+    refreshSavedList();
+    notice('이 PC의 로컬 저장소에 저장했습니다. 공용 PC라면 Word로 내려받은 뒤 지우세요.');
+  });
+  $('#recordExport').addEventListener('click', () => { const summary = currentSummary(); if (!summary) return; downloadBlob(new Blob([summaryToMarkdown(summary, header())], { type: 'text/markdown;charset=utf-8' }), `${summary.kind === 'meeting' ? '회의록' : '상담기록'}_${compactDate(new Date())}.md`); });
+  $('#recordDocx').addEventListener('click', async () => {
+    const summary = currentSummary(); if (!summary) return;
+    const button = $('#recordDocx'); button.disabled = true;
+    try {
+      const response = await fetch('./api/summary/export', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ kind: summary.kind, summary, header: header() }) });
+      if (!response.ok) throw new Error(`docx_http_${response.status}`);
+      downloadBlob(await response.blob(), `${summary.kind === 'meeting' ? '회의록' : '상담기록'}_${compactDate(new Date())}.docx`);
+    } catch { notice('Word 파일은 PC용 앱(로컬 서버)에서 만들 수 있습니다. 지금은 Markdown 저장을 이용하세요.', true); }
+    finally { button.disabled = false; }
+  });
+  $('#recordToTemplate').addEventListener('click', () => {
+    const summary = currentSummary(); if (!summary || summary.kind !== 'meeting') return;
+    const actions = summary.actions.map((item, index) => { const meta = [item.owner && `담당: ${item.owner}`, item.due && `기한: ${item.due}`].filter(Boolean).join(', '); return `${index + 1}. ${item.task}${meta ? ` (${meta})` : ''}`; }).join('\n');
+    try { sessionStorage.setItem(templateHandoffKey, JSON.stringify({ templateId: 'meeting-minutes', organization: header().organization, author: header().author, project: summary.overview.agenda, attendees: summary.overview.attendees, purpose: [summary.overview.datetime && `일시: ${summary.overview.datetime}`, summary.overview.place && `장소: ${summary.overview.place}`, summary.overview.agenda && `안건: ${summary.overview.agenda}`].filter(Boolean).join('\n'), content: summary.discussion, decisions: summary.decisions, actions })); } catch { notice('이 브라우저에서는 양식으로 보낼 수 없습니다.', true); return; }
+    openTool('template-studio');
+  });
+  $('#recordSavedList').addEventListener('change', (event) => {
+    const entry = readSavedRecords().find((item) => item.id === event.target.value); if (!entry?.summary) return;
+    setMode(entry.summary.kind);
+    $('#recordRaw').value = entry.rawText || ''; $('#recordContext').value = entry.contextText || ''; updateCount();
+    showResult(entry.summary, { provider: entry.provider, engine: entry.engine, rawText: entry.rawText, contextText: entry.contextText, header: entry.header?.organization || entry.header?.author ? entry.header : null });
+    badge(`저장본 · ${new Date(entry.createdAt).toLocaleString('ko-KR', { dateStyle: 'short', timeStyle: 'short' })}`);
+    notice('저장한 기록을 불러왔습니다.');
+  });
+  setMode('counseling');
+  refreshSavedList();
+  syncEngine();
+  loadEngineStatus();
 }
 
 function diagramStorageKey(mode) { return `dawith-${mode}-projects-v1`; }
