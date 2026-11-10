@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#f6f5f0" />
+    <meta name="description" content="내려받기부터 설치까지 막히는 화면별 해결 방법" />
+    <title>설치가 막혔을 때 · Dawith 복지 업무 도구함</title>
+    <link rel="icon" href="./favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <a class="skip-link" href="#main">본문으로 건너뛰기</a>
+    <header class="nav" id="siteNav">
+      <div class="wrap">
+        <a class="brand" href="./"><img src="./dawith-ci.svg" alt="" />Dawith 복지 업무 도구함</a>
+        <nav aria-label="주요 메뉴">
+          <a class="opt" href="./updates.html">업데이트 소식</a>
+          <a href="./install.html" aria-current="page">설치 도움말</a>
+          <a href="./connect.html">AI 연결</a>
+          <a class="opt" href="./faq.html">자주 묻는 질문</a>
+          <a class="nav-cta" href="./#download">내려받기</a>
+        </nav>
+      </div>
+    </header>
+
+    <main id="main">
+      <div class="wrap">
+        <section class="page-hero">
+          <h1>설치가 막혔을 때</h1>
+          <p>지금 보이는 화면을 고르세요. 대부분은 버튼 두어 번이면 넘어갑니다. 새로 나온 무료 프로그램이라 Windows가 조심스럽게 묻는 것이지, 파일이 잘못된 것은 아닙니다.</p>
+          <nav class="toc" aria-label="이 페이지 목차"><a href="#edge">Edge에서 안 받아져요</a><a href="#smartscreen">파란 경고 창</a><a href="#smart-app-control">스마트 앱 컨트롤</a><a href="#find-file">받은 파일 찾기</a><a href="#installer">설치 창</a><a href="#portable">포터블로 쓰기</a></nav>
+        </section>
+        <div class="doc">
+          <section id="edge">
+            <h2>“일반적으로 다운로드되지 않습니다”가 떠요</h2>
+            <p>Edge는 내려받은 사람이 적은 프로그램을 일단 멈춰 둡니다. 아래 순서대로 누르면 저장됩니다.</p>
+            <div class="mock edge" aria-hidden="true"><div class="file"><span>Dawith-Welfare-Office-Setup.exe</span><span class="hl">…</span></div><div class="menu"><span>삭제</span><span class="hl">유지</span><span>Microsoft에 보고</span></div></div>
+            <ol><li>오른쪽 위 다운로드 목록에서 파일 옆 <b>…</b>을 누릅니다.</li><li><b>유지</b>를 누릅니다.</li><li>한 번 더 묻는 창에서 <b>자세히 표시</b> → <b>그래도 유지</b>를 누릅니다.</li></ol>
+            <p class="callout">Chrome에서는 다운로드 목록의 <b>계속</b> 또는 <b>유지</b>를 누르면 됩니다.</p>
+          </section>
+          <section id="smartscreen">
+            <h2>“Windows의 PC 보호”가 떠요</h2>
+            <p>설치 파일을 처음 열면 파란 창이 뜰 수 있습니다. 아직 코드 서명 인증서가 없는 새 프로그램이라 나오는 안내입니다.</p>
+            <div class="mock smartscreen" aria-hidden="true"><b>Windows의 PC 보호</b>Microsoft Defender SmartScreen에서 인식할 수 없는 앱의 시작을 차단했습니다.<br /><u class="hl">추가 정보</u><div class="row"><span class="hl">실행</span><span>실행 안 함</span></div></div>
+            <ol><li>창 안의 <b>추가 정보</b>를 누릅니다.</li><li>아래에 생긴 <b>실행</b>을 누릅니다.</li></ol>
+            <p class="callout">기관 보안 정책 때문에 <b>실행</b> 버튼이 보이지 않으면 전산 담당자에게 설치 허용을 요청하세요. 그동안은 <a href="#portable">포터블</a>도 같은 이유로 막힐 수 있습니다.</p>
+          </section>
+          <section id="smart-app-control">
+            <h2>“스마트 앱 컨트롤이 차단했습니다”가 떠요</h2>
+            <p>Windows 11의 <b>스마트 앱 컨트롤</b>이 켜져 있으면 서명되지 않은 프로그램을 실행하지 못하게 막습니다. 위의 파란 창과 달리 ‘실행’ 버튼이 없습니다.</p>
+            <ol><li><b>설정 → 개인 정보 및 보안 → Windows 보안 → 앱 및 브라우저 컨트롤</b>로 갑니다.</li><li><b>스마트 앱 컨트롤 설정</b>에서 상태를 확인합니다.</li></ol>
+            <p class="callout">스마트 앱 컨트롤을 끄는 것은 PC 전체의 보안 설정을 바꾸는 일입니다. 기관 PC라면 직접 바꾸지 말고 전산 담당자와 먼저 상의하세요.</p>
+          </section>
+          <section id="find-file">
+            <h2>받은 파일을 못 찾겠어요</h2>
+            <ol><li>브라우저에서 <kbd>Ctrl</kbd> + <kbd>J</kbd>를 누르면 받은 파일 목록이 열립니다. 파일 이름을 누르면 바로 실행됩니다.</li><li>또는 파일 탐색기(<kbd>Windows</kbd> + <kbd>E</kbd>)를 열고 왼쪽의 <b>다운로드</b> 폴더를 보세요.</li></ol>
+            <p>파일 이름은 <code>Dawith-Welfare-Office-버전-x64-Setup.exe</code>입니다. 포터블은 이름 끝이 <code>Portable.exe</code>입니다.</p>
+          </section>
+          <section id="installer">
+            <h2>설치 창에서는 무엇을 누르나요?</h2>
+            <ol><li><b>설치 범위</b>: 그대로 두고 <b>다음</b>을 누릅니다.</li><li><b>설치 위치</b>: 바꿀 필요가 없으면 그대로 두고 <b>설치</b>를 누릅니다.</li><li><b>마침</b>을 누르면 앱이 열립니다. 다음부터는 바탕화면의 <b>Dawith Welfare Office</b> 아이콘으로 엽니다.</li></ol>
+            <p class="callout">새 버전을 받을 때도 같은 방법으로 덮어 설치하면 됩니다. 저장해 둔 기록은 그대로 남습니다.</p>
+          </section>
+          <section id="portable">
+            <h2>설치 없이 쓰고 싶어요 (포터블)</h2>
+            <p>설치 권한이 없는 PC나 USB에 담아 쓰려면 <a href="./#download">포터블</a>을 받으세요. 파일을 더블클릭하면 바로 실행됩니다. 처음 열 때 압축을 푸느라 몇 초 더 걸리고, 기능은 설치형과 같습니다.</p>
+          </section>
+          <section>
+            <h2>Mac과 Linux</h2>
+            <p>지금은 Windows 10·11(64비트)만 지원합니다. Mac·Linux용은 준비 중이며, 나오면 <a href="./updates.html">업데이트 소식</a>에 올립니다.</p>
+          </section>
+        </div>
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="wrap">
+        <div class="maker"><img src="./dawith-ci.svg" alt="" /><div><p><b>Dawith 복지 업무 도구함</b> · 사회복지 현장의 기록과 행정을 위한 로컬 우선 도구</p><p>PDF는 pdf-lib(MIT), 한글 문서는 rhwp(MIT)를 바탕으로 합니다. 이 사이트의 글꼴은 Pretendard(SIL OFL 1.1)입니다.</p></div></div>
+        <nav aria-label="바닥글 메뉴">
+          <a href="https://github.com/dawith-ai/dawith-welfare-office" target="_blank" rel="noreferrer">GitHub</a>
+          <a href="https://github.com/dawith-ai/dawith-welfare-office/releases" target="_blank" rel="noreferrer">릴리스</a>
+          <a href="https://github.com/dawith-ai/dawith-welfare-office/issues" target="_blank" rel="noreferrer">문제 알리기</a>
+          <a href="./install.html">설치 도움말</a>
+          <a href="./connect.html">AI 연결 도움말</a>
+          <a href="./faq.html">자주 묻는 질문</a>
+          <a href="./updates.html">업데이트 소식</a>
+        </nav>
+        <p class="legal">누구나 무료로 쓰며, 있는 그대로 제공하고 따로 보증하지 않습니다. AI가 만든 결과는 검토용 초안이며 공식 기록은 담당자가 확정합니다.</p>
+      </div>
+    </footer>
+    <script src="./site.js"></script>
+  </body>
+</html>
