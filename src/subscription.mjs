@@ -69,6 +69,9 @@ async function locate(provider) {
   for (const name of PROVIDERS[provider].commands) {
     if (path.isAbsolute(name) && await isFile(name)) return { command: name, prefixArgs: [] };
     for (const candidate of pathCandidates(name)) {
+      // npm puts an extensionless bash shim next to codex.cmd; Windows cannot
+      // spawn it, so only .cmd/.exe count there.
+      if (process.platform === 'win32' && !path.extname(candidate)) continue;
       if (await isFile(candidate)) return { command: candidate, prefixArgs: [] };
     }
   }
