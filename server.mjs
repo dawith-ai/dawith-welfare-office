@@ -9,9 +9,10 @@ import { buildDrafts, buildOllamaAssistPrompt, parseOllamaAssist } from './src/p
 import { openStore } from './src/storage.mjs';
 import { getCapabilities, whisperConfiguration } from './src/capabilities.mjs';
 import { buildDocumentDraft, documentTemplates } from './src/documents.mjs';
-import { documentToDocx, documentToHtml, documentToMarkdown, summaryToDocx } from './src/document-export.mjs';
-import { CLOUD_PROVIDERS, MAX_SUMMARY_INPUT, SUMMARY_KINDS, buildRuleSummary, buildSummaryPrompt, normalizeSummary, parseSummaryReply, summaryToLegacyDraft } from './src/record-summary.mjs';
+import { documentToDocx, documentToHtml, documentToMarkdown, recordFormStarterDocx, summaryToDocx } from './src/document-export.mjs';
+import { MAX_SUMMARY_INPUT, SUMMARY_KINDS, buildRuleSummary, buildSummaryPrompt, normalizeSummary, parseSummaryReply, summaryToLegacyDraft } from './src/record-summary.mjs';
 import { analyzeTemplate, isUploadedTemplateId, renderTemplate, uploadedTemplateId } from './src/template-engine.mjs';
+import { buildTemplatePrompt, buildTemplateRuleSummary, extractRecordMeta, formFieldValues, matchPlaceholder, normalizeTemplate, normalizeTemplateSummary, parseTemplateReply } from './src/record-templates.mjs';
 import { transcribeAudio } from './src/transcription.mjs';
 import { authPolicy, can, createSession, hashPassword, publicUser, roles, validatePassword, validateUsername, verifyPassword } from './src/auth.mjs';
 import { createSubscriptionBridge } from './src/subscription.mjs';
@@ -103,7 +104,7 @@ async function ollamaSummary(input, timeoutMs = defaultOllamaTimeoutMs, baseUrl 
       format: 'json',
       messages: [
         { role: 'system', content: '개인정보를 외부로 전송하지 않는 기관 PC의 로컬 모델입니다. 입력 사실을 만들지 말고 JSON만 반환하세요.' },
-        { role: 'user', content: buildSummaryPrompt(input) },
+        { role: 'user', content: input.prompt || buildSummaryPrompt(input) },
       ],
     }),
   });
@@ -118,31 +119,6 @@ const ollamaFallbackMessages = {
   ollama_timeout: '로컬 모델 응답이 너무 오래 걸려 규칙으로 정리했습니다. 더 작은 모델을 쓰거나 원문을 나눠 보세요.',
   ollama_invalid_result: '로컬 모델 응답을 읽지 못해 규칙으로 정리했습니다. 다시 시도하거나 다른 모델을 선택하세요.',
 };
-
-const cloudErrorMessages = {
-  external_transfer_confirmation_required: '클라우드 AI로 보내려면 전송 내용 확인이 필요합니다.',
-  cloud_provider_invalid: '지원하지 않는 클라우드 AI입니다.',
-  subscription_not_installed: '선택한 AI 프로그램(CLI)이 이 PC에 설치되어 있지 않습니다. AI 보조·연결에서 설치 상태를 확인하세요.',
-  ai_provider_not_connected: '선택한 클라우드 AI가 아직 연결되지 않았습니다. AI 보조·연결에서 먼저 연결하세요.',
-  chatgpt_not_connected: 'ChatGPT가 연결되어 있지 않습니다. AI 보조·연결에서 다시 연결하세요.',
-  chatgpt_refresh_failed: 'ChatGPT 로그인이 만료되었습니다. AI 보조·연결에서 다시 연결하세요.',
-  subscription_process_timeout: '클라우드 AI 응답 시간이 초과되었습니다. 원문을 줄이거나 잠시 뒤 다시 시도하세요.',
-  subscription_request_failed: 'AI 프로그램이 요청을 처리하지 못했습니다. 로그인 상태를 확인하세요.',
-  subscription_empty_result: '클라우드 AI가 빈 결과를 돌려주었습니다. 다시 시도하세요.',
-  ai_provider_empty_result: '클라우드 AI가 빈 결과를 돌려주었습니다. 다시 시도하세요.',
-  assist_text_too_large: '원문이 너무 깁니다. 나눠서 정리하세요.',
-};
-
-function cloudFailure(error) {
-  const code = error?.name === 'TimeoutError' || error?.name === 'AbortError' ? 'subscription_process_timeout' : String(error?.message || 'cloud_request_failed');
-  const status = code === 'subscription_not_installed' || code.endsWith('not_connected') ? 409 : code === 'assist_text_too_large' ? 413 : code === 'subscription_process_timeout' ? 504 : 502;
-  const message = cloudErrorMessages[code]
-    || (code.startsWith('openrouter') ? 'OpenRouter 요청이 거절되었습니다. 무료 모델 한도나 연결 상태를 확인하세요.'
-      : code.startsWith('gemini') ? 'Gemini 요청이 거절되었습니다. API 키와 사용 한도를 확인하세요.'
-        : code.startsWith('chatgpt') ? 'ChatGPT 요청이 거절되었습니다. 요금제 권한과 연결 상태를 확인하세요.'
-          : '클라우드 AI에서 결과를 받지 못했습니다. 연결 상태를 확인한 뒤 다시 시도하세요.');
-  return { status, body: { error: code, message } };
-}
 
 async function ollamaAssist(input, timeoutMs = defaultOllamaTimeoutMs) {
   const response = await fetch('http://127.0.0.1:11434/api/chat', {
@@ -467,49 +443,87 @@ export function createServer({ dataDir = defaultDataDir, ollamaTimeoutMs = defau
         const provider = String(input.provider || 'rules');
         if (!rawText) return json(response, 400, { error: 'raw_text_required', message: '정리할 원문을 입력하세요.' });
         if (rawText.length > MAX_SUMMARY_INPUT) return json(response, 413, { error: 'raw_text_too_large', message: '원문이 너무 깁니다. 나눠서 정리하세요.' });
-        const cloudProvider = provider.startsWith('cloud:') ? provider.slice('cloud:'.length) : null;
-        if (!['rules', 'ollama-local'].includes(provider) && !CLOUD_PROVIDERS.includes(cloudProvider)) return json(response, 400, { error: 'external_provider_blocked', message: '지원하지 않는 처리 방식입니다. 클라우드 AI는 cloud:<provider> 형식으로만 선택할 수 있습니다.' });
-        if (cloudProvider && input.confirmExternal !== true) return json(response, 400, { error: 'external_transfer_confirmation_required', message: cloudErrorMessages.external_transfer_confirmation_required });
-        const fallback = buildDrafts({ kind, rawText, contextText });
-        const ruleSummary = buildRuleSummary({ kind: summaryKind, rawText, contextText });
+        // Local only: rules on this PC or Ollama on loopback. Anything else
+        // (including the retired cloud:<provider> values) is refused.
+        if (!['rules', 'ollama-local'].includes(provider)) return json(response, 400, { error: 'external_provider_blocked', message: '이 PC 안에서만 정리합니다. 규칙 또는 로컬 AI(Ollama)를 선택하세요.' });
+        const template = input.template === undefined || input.template === null ? null : normalizeTemplate(input.template);
+        if (input.template && !template) return json(response, 400, { error: 'template_invalid', message: '기록 양식에 항목이 하나 이상 있어야 합니다.' });
         const localTransfer = { external: false, destination: 'local machine' };
-        if (provider === 'rules') return json(response, 200, { draft: fallback, summary: ruleSummary, kind: summaryKind, provider: 'rules', engine: 'rules', fallback: null, transfer: localTransfer });
-        if (provider === 'ollama-local') {
+        if (template) {
+          const ruleSummary = buildTemplateRuleSummary({ template, rawText, contextText });
+          const base = { kind: 'template', transfer: localTransfer };
+          if (provider === 'rules') return json(response, 200, { ...base, summary: ruleSummary, provider: 'rules', engine: 'rules', fallback: null });
           const model = allowedOllamaModels.has(String(input.model || '')) ? String(input.model) : '';
           let reason;
           try {
-            const summary = parseSummaryReply(await ollamaSummary({ kind: summaryKind, rawText, contextText, model }, ollamaTimeoutMs, ollamaBaseUrl), summaryKind);
-            if (summary) return json(response, 200, { draft: { ...fallback, ...summaryToLegacyDraft(summary), provider: 'ollama-local' }, summary, kind: summaryKind, provider: 'ollama-local', engine: 'ollama', model: model || 'qwen2.5:7b', fallback: null, transfer: localTransfer });
+            const reply = await ollamaSummary({ model, prompt: buildTemplatePrompt({ template, rawText, contextText }) }, ollamaTimeoutMs, ollamaBaseUrl);
+            const summary = parseTemplateReply(reply, template);
+            if (summary) return json(response, 200, { ...base, summary: { ...summary, meta: ruleSummary.meta }, provider: 'ollama-local', engine: 'ollama', model: model || 'qwen2.5:7b', fallback: null });
             reason = 'ollama_invalid_result';
           } catch (error) {
-            reason = error.name === 'TimeoutError' || error.name === 'AbortError'
-              ? 'ollama_timeout'
-              : String(error.message || '').startsWith('ollama_http_') ? error.message : 'ollama_unavailable';
+            reason = error.name === 'TimeoutError' || error.name === 'AbortError' ? 'ollama_timeout' : String(error.message || '').startsWith('ollama_http_') ? error.message : 'ollama_unavailable';
           }
-          const message = ollamaFallbackMessages[reason] || '로컬 모델 응답이 없어 로컬 규칙·템플릿으로 초안을 만들었습니다.';
-          return json(response, 200, { draft: { ...fallback, provider: 'rules-fallback' }, summary: ruleSummary, kind: summaryKind, provider: 'rules-fallback', engine: 'rules', fallback: { used: true, reason, message }, transfer: localTransfer });
+          return json(response, 200, { ...base, summary: ruleSummary, provider: 'rules-fallback', engine: 'rules', fallback: { used: true, reason, message: ollamaFallbackMessages[reason] || '로컬 모델 응답이 없어 규칙으로 정리했습니다.' } });
         }
-        const prompt = buildSummaryPrompt({ kind: summaryKind, rawText, contextText });
-        let reply;
+        const fallback = buildDrafts({ kind, rawText, contextText });
+        const ruleSummary = buildRuleSummary({ kind: summaryKind, rawText, contextText });
+        if (provider === 'rules') return json(response, 200, { draft: fallback, summary: ruleSummary, kind: summaryKind, provider: 'rules', engine: 'rules', fallback: null, transfer: localTransfer });
+        const model = allowedOllamaModels.has(String(input.model || '')) ? String(input.model) : '';
+        let reason;
         try {
-          const bridge = ['openrouter', 'gemini', 'chatgpt'].includes(cloudProvider) ? aiConnections : subscription;
-          reply = await bridge.complete({ provider: cloudProvider, prompt });
+          const summary = parseSummaryReply(await ollamaSummary({ kind: summaryKind, rawText, contextText, model }, ollamaTimeoutMs, ollamaBaseUrl), summaryKind);
+          if (summary) return json(response, 200, { draft: { ...fallback, ...summaryToLegacyDraft(summary), provider: 'ollama-local' }, summary, kind: summaryKind, provider: 'ollama-local', engine: 'ollama', model: model || 'qwen2.5:7b', fallback: null, transfer: localTransfer });
+          reason = 'ollama_invalid_result';
         } catch (error) {
-          const failure = cloudFailure(error);
-          return json(response, failure.status, { ...failure.body, provider });
+          reason = error.name === 'TimeoutError' || error.name === 'AbortError'
+            ? 'ollama_timeout'
+            : String(error.message || '').startsWith('ollama_http_') ? error.message : 'ollama_unavailable';
         }
-        const transfer = { external: true, destination: cloudProvider, userInitiated: true };
-        const summary = parseSummaryReply(reply?.result, summaryKind);
-        if (!summary) return json(response, 200, { draft: { ...fallback, provider: 'rules-fallback' }, summary: ruleSummary, kind: summaryKind, provider: 'rules-fallback', engine: 'rules', fallback: { used: true, reason: 'cloud_invalid_result', message: '클라우드 AI 응답을 표 형식으로 읽지 못해 규칙으로 정리했습니다. 원문은 이미 전송되었습니다. 다시 시도하거나 다른 AI를 선택하세요.' }, transfer });
-        return json(response, 200, { draft: { ...fallback, ...summaryToLegacyDraft(summary), provider }, summary, kind: summaryKind, provider, engine: 'cloud', fallback: null, transfer });
+        const message = ollamaFallbackMessages[reason] || '로컬 모델 응답이 없어 로컬 규칙·템플릿으로 초안을 만들었습니다.';
+        return json(response, 200, { draft: { ...fallback, provider: 'rules-fallback' }, summary: ruleSummary, kind: summaryKind, provider: 'rules-fallback', engine: 'rules', fallback: { used: true, reason, message }, transfer: localTransfer });
+      }
+      // Institution forms for 상담 기록·회의록: inspect the {{표식}} in an
+      // uploaded DOCX/HWPX and fill them. Stateless — the form is never stored.
+      if (url.pathname === '/api/record-form/inspect' && request.method === 'POST') {
+        const input = safeJson(await body(request, 40 * 1024 * 1024));
+        const analysis = await analyzeTemplate({ fileName: input.fileName, data: Buffer.from(String(input.dataBase64 || ''), 'base64') });
+        const sectionNames = (Array.isArray(input.sectionNames) ? input.sectionNames : []).map((name) => String(name || '')).filter(Boolean).slice(0, 30);
+        const placeholders = analysis.fields.map((field) => ({ token: field.token, source: matchPlaceholder(field.token, sectionNames) }));
+        return json(response, 200, { format: analysis.format, fileName: analysis.fileName, placeholders, warnings: analysis.fields.length ? analysis.warnings : ['양식에서 {{표식}}을 찾지 못했습니다. 내용이 들어갈 자리에 {{관찰사항}}처럼 적은 뒤 다시 올려 주세요.'] });
+      }
+      if (url.pathname === '/api/record-form/fill' && request.method === 'POST') {
+        const input = safeJson(await body(request, 42 * 1024 * 1024));
+        const data = Buffer.from(String(input.dataBase64 || ''), 'base64');
+        const analysis = await analyzeTemplate({ fileName: input.fileName, data });
+        const tokens = analysis.fields.map((field) => field.token);
+        if (!tokens.length) return json(response, 400, { error: 'record_form_no_placeholders', message: '양식에서 {{표식}}을 찾지 못했습니다.' });
+        const summary = normalizeTemplateSummary(input.summary);
+        const header = Object.fromEntries(['organization', 'author', 'date', 'place', 'attendees', 'agenda'].map((key) => [key, String(input.header?.[key] || '').slice(0, 500)]));
+        const meta = extractRecordMeta(String(input.rawText || '').slice(0, MAX_SUMMARY_INPUT), String(input.contextText || '').slice(0, 4000));
+        const { fields, report } = formFieldValues(tokens, { sections: summary.sections, header, meta, templateName: summary.templateName, extra: safeJson(input.extra) });
+        const output = await renderTemplate({ fileName: input.fileName, data, fields });
+        const remaining = new Set((await analyzeTemplate({ fileName: input.fileName, data: output })).fields.map((field) => field.token));
+        const filled = report.filter((item) => item.filled && !remaining.has(item.token)).map((item) => ({ token: item.token, source: item.source?.label || '' }));
+        const missing = tokens.filter((token) => remaining.has(token));
+        const base = String(analysis.fileName).replace(/\.(docx|hwpx)$/i, '');
+        return json(response, 200, { fileName: `${base}_작성본.${analysis.format}`, format: analysis.format, dataBase64: Buffer.from(output).toString('base64'), filled, missing, transfer: { external: false, destination: 'local machine' } });
+      }
+      if (url.pathname === '/api/record-form/starter' && request.method === 'POST') {
+        const input = safeJson(await body(request, 256 * 1024));
+        const template = normalizeTemplate(input.template);
+        if (!template) return json(response, 400, { error: 'template_invalid' });
+        const buffer = await recordFormStarterDocx(template);
+        const fileName = encodeURIComponent(`${template.name}_양식.docx`);
+        response.writeHead(200, { 'Content-Type': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'Content-Disposition': `attachment; filename="dawith-record-form.docx"; filename*=UTF-8''${fileName}`, 'Cache-Control': 'no-store' });
+        return response.end(buffer);
       }
       if (url.pathname === '/api/summary/export' && request.method === 'POST') {
         const input = safeJson(await body(request, 2 * 1024 * 1024));
-        const kind = SUMMARY_KINDS.includes(input.kind) ? input.kind : 'counseling';
-        const summary = normalizeSummary(input.summary, kind);
-        const header = { organization: String(input.header?.organization || '').slice(0, 200), author: String(input.header?.author || '').slice(0, 100) };
+        const kind = input.kind === 'template' || input.summary?.kind === 'template' ? 'template' : SUMMARY_KINDS.includes(input.kind) ? input.kind : 'counseling';
+        const summary = kind === 'template' ? normalizeTemplateSummary(input.summary) : normalizeSummary(input.summary, kind);
+        const header = { organization: String(input.header?.organization || '').slice(0, 200), author: String(input.header?.author || '').slice(0, 100), date: String(input.header?.date || '').slice(0, 100) };
         const buffer = await summaryToDocx(summary, header);
-        const fileName = encodeURIComponent(`${kind === 'meeting' ? '회의록' : '상담기록'}.docx`);
+        const fileName = encodeURIComponent(`${kind === 'template' ? summary.templateName.replace(/[\\/:*?"<>|]+/g, '_') : kind === 'meeting' ? '회의록' : '상담기록'}.docx`);
         response.writeHead(200, { 'Content-Type': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'Content-Disposition': `attachment; filename="dawith-${kind}.docx"; filename*=UTF-8''${fileName}`, 'Cache-Control': 'no-store' });
         return response.end(buffer);
       }

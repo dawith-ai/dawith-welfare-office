@@ -119,10 +119,16 @@ async function renderDocx(data, fields) {
 async function renderHwpx(data, fields) {
   const { zip, entries } = await xmlEntries(data);
   for (const entry of entries) {
+    // Body text lives in <hp:t> runs of Contents/sectionN.xml, where a line
+    // break is <hp:lineBreak/> (what 한글 itself writes). Elsewhere (metadata)
+    // multi-line values collapse to one line.
+    const body = /^Contents\/section\d+\.xml$/i.test(entry.name);
     let replaced = entry.text;
     for (const [key, value] of Object.entries(fields)) {
       const token = escapeRegExp(key);
-      replaced = replaced.replace(new RegExp(`\\{\\{\\s*${token}\\s*\\}\\}`, 'g'), escapeXml(value));
+      const lines = String(value ?? '').split(/\r?\n/).map(escapeXml);
+      const xml = body ? lines.join('<hp:lineBreak/>') : lines.join(' ');
+      replaced = replaced.replace(new RegExp(`\\{\\{\\s*${token}\\s*\\}\\}`, 'g'), () => xml);
     }
     if (replaced !== entry.text) zip.file(entry.name, replaced);
   }

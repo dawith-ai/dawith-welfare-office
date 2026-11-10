@@ -1,6 +1,8 @@
 import { test, expect } from './fixtures.mjs';
 import { PDFDocument } from 'pdf-lib';
 import { readFile } from 'node:fs/promises';
+import JSZip from 'jszip';
+import { Document, Packer, Paragraph, Table, TableCell, TableRow } from 'docx';
 
 async function pdfBuffer(pageCount = 1) {
   const document = await PDFDocument.create();
@@ -333,7 +335,19 @@ test('텍스트 로컬 AI 보조는 외부가 아닌 로컬 API 결과를 화면
 
 const counselingMemo = '3월 12일 내담자는 월세가 두 달 밀려 퇴거가 걱정된다고 호소함. 자녀 양육은 꾸준히 하고 있으며 취업 의지가 있음. 연락처 010-1234-5678. 주거급여 신청 절차를 안내하였음. 다음 주에 주민센터와 연계하여 신청서류를 확인하기로 함.';
 const meetingMemo = '일시: 11월 10일 오후 2시\n장소: 2층 회의실\n참석자: 김팀장, 이사회복지사, 박간호사\n안건: 독거 어르신 겨울철 안부 확인\n어르신 12가구의 난방 상태를 점검함. 방문 횟수를 주 2회로 늘리기로 결정함. 이사회복지사가 11월 15일까지 대상 명단을 정리함.';
-const cloudStatus = { providers: { codex: { provider: 'codex', label: 'Codex 구독', state: 'ready' }, 'claude-code': { provider: 'claude-code', label: 'Claude 구독', state: 'signed-out' }, chatgpt: { provider: 'chatgpt', label: 'ChatGPT 구독', state: 'not-connected', connected: false } } };
+async function institutionFormDocx() {
+  const row = (label, value) => new TableRow({ children: [new TableCell({ children: [new Paragraph(label)] }), new TableCell({ children: [new Paragraph(value)] })] });
+  const document = new Document({ sections: [{ children: [
+    new Paragraph('{{기관명}} 상담일지'),
+    new Table({ rows: [row('상담일', '{{상담일}}'), row('담당자', '{{담당자}}'), row('대상자', '{{대상자}}'), row('관찰사항', '{{관찰사항}}'), row('상담원 소견', '{{소견}}'), row('향후 계획', '{{향후 계획}}')] }),
+  ] }] });
+  return Buffer.from(await Packer.toBuffer(document));
+}
+
+async function docxText(buffer) {
+  const xml = await (await JSZip.loadAsync(buffer)).file('word/document.xml').async('string');
+  return xml.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
+}
 
 test('홈 화면은 상담 기록·회의록 정리를 앞세우고 추천 01에서 바로 연다', async ({ page }) => {
   await page.goto('/');
@@ -343,65 +357,176 @@ test('홈 화면은 상담 기록·회의록 정리를 앞세우고 추천 01에
   await expect(page.locator('.tool-card[data-tool="template-studio"]')).toContainText('기관 문서 양식');
   await page.locator('.recommendation-item').first().click();
   await expect(page.locator('.workspace-header h1')).toHaveText('상담 기록·회의록 정리');
-  await expect(page.locator('.summary-mode.active')).toContainText('상담 기록 정리');
+  await expect(page.locator('#recordTemplate')).toHaveValue('preset-counseling');
   await expect(page.locator('input[name="recordEngine"][value="rules"]')).toBeChecked();
+  await expect(page.locator('input[name="recordEngine"]')).toHaveCount(2);
+  await expect(page.locator('.engine-picker')).toContainText('규칙 (AI 없음)');
+  await expect(page.locator('.engine-picker')).toContainText('로컬 AI (Ollama)');
+  await expect(page.locator('.engine-picker')).not.toContainText('클라우드');
 });
 
-test('상담 기록 정리는 규칙 엔진으로 다섯 항목을 만들고 고친 내용을 저장·내보낸다', async ({ page }) => {
+test('기본 상담기록은 규칙 엔진으로 다섯 항목을 만들고 고친 내용을 저장·내보낸다', async ({ page }) => {
   await page.goto('/');
   await page.locator('.tool-card[data-tool="case-record"]').click();
+  await expect(page.locator('#recordTemplateSections')).toContainText('주요 호소');
   await page.locator('#recordRaw').fill(counselingMemo);
   await page.locator('#recordProcess').click();
   await expect(page.locator('#recordTransfer')).toHaveText('규칙 · 이 PC');
-  await expect(page.locator('#sumOverview')).toHaveValue(/3월 12일/);
-  await expect(page.locator('#sumComplaint')).toHaveValue(/퇴거가 걱정/);
-  await expect(page.locator('#sumStrengths')).toHaveValue(/취업 의지/);
-  await expect(page.locator('#sumRisks')).toHaveValue(/퇴거/);
-  await expect(page.locator('#sumIntervention')).toHaveValue(/안내하였음/);
-  await expect(page.locator('#sumPlan')).toHaveValue(/주민센터/);
-  await page.locator('#sumNeeds').fill('주거급여 신청 지원이 필요함.');
+  const section = (name) => page.locator(`.sum-section[data-section="${name}"]`);
+  await expect(section('상담 개요')).toHaveValue(/3월 12일/);
+  await expect(section('주요 호소')).toHaveValue(/퇴거가 걱정/);
+  await expect(section('사정')).toHaveValue(/취업 의지/);
+  await expect(section('개입 내용')).toHaveValue(/안내하였음/);
+  await expect(section('향후 계획')).toHaveValue(/주민센터/);
+  await section('사정').fill('주거급여 신청 지원이 필요함.');
   await page.locator('#recordSave').click();
   await expect(page.locator('#recordNotice')).toContainText('로컬 저장소');
   const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('dawith-record-drafts-v1')));
   expect(saved).toHaveLength(1);
-  expect(saved[0].summary.assessment.needs).toBe('주거급여 신청 지원이 필요함.');
+  expect(saved[0].summary.sections.find((item) => item.name === '사정').content).toBe('주거급여 신청 지원이 필요함.');
   const markdown = page.waitForEvent('download');
   await page.locator('#recordExport').click();
   const markdownFile = await markdown;
-  expect(markdownFile.suggestedFilename()).toMatch(/^상담기록_\d{8}\.md$/);
-  expect(await readFile(await markdownFile.path(), 'utf8')).toContain('### 욕구\n\n주거급여 신청 지원이 필요함.');
+  expect(markdownFile.suggestedFilename()).toMatch(/^기본_상담기록_\d{8}\.md$/);
+  expect(await readFile(await markdownFile.path(), 'utf8')).toContain('## 사정\n\n주거급여 신청 지원이 필요함.');
   const docx = page.waitForEvent('download');
   await page.locator('#recordDocx').click();
-  expect((await docx).suggestedFilename()).toMatch(/\.docx$/);
+  const docxFile = await docx;
+  expect(docxFile.suggestedFilename()).toMatch(/\.docx$/);
+  expect(await docxText(await readFile(await docxFile.path()))).toContain('주거급여 신청 지원이 필요함.');
   await page.reload();
   await page.locator('.tool-card[data-tool="case-record"]').click();
   await page.locator('#recordSavedList').selectOption({ index: 1 });
-  await expect(page.locator('#sumNeeds')).toHaveValue('주거급여 신청 지원이 필요함.');
+  await expect(section('사정')).toHaveValue('주거급여 신청 지원이 필요함.');
 });
 
-test('회의록 정리는 개요·결정 사항·할 일 표를 만들고 기관 문서 양식으로 보낸다', async ({ page }) => {
+test('프리셋을 고르면 그 양식의 항목대로 나눈다: 관찰·상담·소견형', async ({ page }) => {
+  const requests = [];
+  page.on('request', (request) => { if (request.url().endsWith('/api/process')) requests.push(request.postDataJSON()); });
+  await page.goto('/');
+  await page.locator('.tool-card[data-tool="case-record"]').click();
+  await page.locator('#recordTemplate').selectOption('preset-observation');
+  await expect(page.locator('#recordTemplateSections span')).toHaveText(['관찰사항', '상담내용', '상담원 소견', '향후 계획']);
+  await expect(page.locator('#summaryBody')).toContainText('관찰사항 · 상담내용 · 상담원 소견 · 향후 계획');
+  await page.locator('#recordSample').click();
+  await page.locator('#recordProcess').click();
+  await expect(page.locator('#summaryTitle')).toHaveText('관찰·상담·소견형');
+  await expect(page.locator('.sum-section')).toHaveCount(4);
+  await expect(page.locator('.sum-section[data-section="관찰사항"]')).toHaveValue(/표정이 어둡고/);
+  await expect(page.locator('.sum-section[data-section="상담원 소견"]')).toHaveValue(/담당자가 작성/);
+  expect(requests[0].template.sections.map((item) => item.name)).toEqual(['관찰사항', '상담내용', '상담원 소견', '향후 계획']);
+  expect(requests[0].provider).toBe('rules');
+  await page.reload();
+  await page.locator('.tool-card[data-tool="case-record"]').click();
+  await expect(page.locator('#recordTemplate')).toHaveValue('preset-observation');
+});
+
+test('내 양식을 만들고 항목을 추가·이름 변경·순서 변경·삭제하면 규칙 엔진이 그 항목대로 채운다', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('.tool-card[data-tool="case-record"]').click();
+  await page.locator('#recordTemplateNew').click();
+  await expect(page.locator('#recordTemplateEditor')).toBeVisible();
+  await page.locator('#rtName').fill('우리 기관 상담일지');
+  const rows = page.locator('#rtSections li');
+  await rows.nth(0).locator('.rt-name').fill('경제 상황');
+  await rows.nth(0).locator('.rt-guide').fill('월세·소득');
+  await rows.nth(1).locator('.rt-name').fill('관찰');
+  await rows.nth(2).locator('.rt-name').fill('지울 항목');
+  await page.locator('#rtAdd').click();
+  await rows.nth(3).locator('.rt-name').fill('종교 활동');
+  await rows.nth(2).locator('.rt-remove').click();
+  await rows.nth(1).locator('.rt-name').fill('관찰사항');
+  await rows.nth(1).locator('.rt-up').click();
+  await page.locator('#rtSave').click();
+  await expect(page.locator('#recordTemplateEditor')).toBeHidden();
+  await expect(page.locator('#recordTemplate option:checked')).toHaveText('우리 기관 상담일지');
+  await expect(page.locator('#recordTemplateSections span')).toHaveText(['관찰사항', '경제 상황', '종교 활동']);
+  const stored = await page.evaluate(() => JSON.parse(localStorage.getItem('dawith-record-templates-v1')));
+  expect(stored[0].sections).toEqual([{ name: '관찰사항', guide: '' }, { name: '경제 상황', guide: '월세·소득' }, { name: '종교 활동', guide: '' }]);
+
+  await page.locator('#recordRaw').fill('3월 12일 가정방문. 내담자는 표정이 어둡고 말수가 적었음. 월세가 두 달 밀려 걱정된다고 함. 다음 주에 다시 방문하기로 함.');
+  await page.locator('#recordProcess').click();
+  await expect(page.locator('#summaryTitle')).toHaveText('우리 기관 상담일지');
+  await expect(page.locator('.summary-section > label')).toHaveText(['관찰사항', '경제 상황 월세·소득', '종교 활동']);
+  await expect(page.locator('.sum-section[data-section="관찰사항"]')).toHaveValue(/표정이 어둡고/);
+  await expect(page.locator('.sum-section[data-section="경제 상황"]')).toHaveValue(/월세가 두 달/);
+  await expect(page.locator('.sum-section[data-section="종교 활동"]')).toHaveValue(/찾지 못했습니다/);
+  await expect(page.locator('.summary-unassigned')).toContainText('어느 항목에도 넣지 못한 문장');
+
+  await page.reload();
+  await page.locator('.tool-card[data-tool="case-record"]').click();
+  await expect(page.locator('#recordTemplate option:checked')).toHaveText('우리 기관 상담일지');
+  await page.locator('#recordTemplateEdit').click();
+  await page.locator('#rtDelete').click();
+  await expect(page.locator('#recordTemplate')).toHaveValue('preset-counseling');
+  await expect(page.locator('#recordTemplate option', { hasText: '우리 기관 상담일지' })).toHaveCount(0);
+});
+
+test('기관 Word 양식을 올리면 표식을 찾아 정리 결과를 넣고 빈 표식을 알려준다', async ({ page }) => {
   await page.goto('/');
   await page.evaluate(() => localStorage.setItem('dawith-institution-profile-v1', JSON.stringify({ organization: '다위종합사회복지관', manager: '김담당' })));
   await page.locator('.tool-card[data-tool="case-record"]').click();
-  await page.locator('.summary-mode[data-summary-mode="meeting"]').click();
+  await page.locator('#recordTemplate').selectOption('preset-observation');
+  await page.locator('#recordFormGuideToggle').click();
+  await expect(page.locator('.record-form-token')).toContainText(['{{관찰사항}}', '{{상담원 소견}}', '{{기관명}}', '{{담당자}}', '{{상담일}}']);
+  const starter = page.waitForEvent('download');
+  await page.locator('#recordFormStarter').click();
+  expect(await docxText(await readFile(await (await starter).path()))).toContain('{{상담원 소견}}');
+
+  await page.locator('#recordFormInput').setInputFiles({ name: '우리기관_상담일지.docx', mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', buffer: await institutionFormDocx() });
+  await expect(page.locator('#recordFormName')).toHaveText('우리기관_상담일지.docx');
+  await expect(page.locator('.record-form-summary')).toContainText('찾은 표식 7개 · 자동으로 채울 표식 6개 · 직접 적을 표식 1개');
+  await expect(page.locator('.ph-row[data-token="소견"]')).toContainText('← 상담원 소견');
+  await expect(page.locator('#recordFormFill')).toBeDisabled();
+
+  await page.locator('#recordRaw').fill(counselingMemo.replace('3월 12일', '3월 12일 표정이 어둡고 말수가 적었음.'));
+  await page.locator('#recordProcess').click();
+  await expect(page.locator('#sumOrg')).toHaveValue('다위종합사회복지관');
+  await page.locator('.sum-section[data-section="상담원 소견"]').fill('주거 위기 단서가 있어 주거급여 연계가 필요함.');
+  await expect(page.locator('#recordFormFill')).toBeEnabled();
+  const first = page.waitForEvent('download');
+  await page.locator('#recordFormFill').click();
+  const firstFile = await first;
+  expect(firstFile.suggestedFilename()).toBe('우리기관_상담일지_작성본.docx');
+  const text = await docxText(await readFile(await firstFile.path()));
+  expect(text).toContain('다위종합사회복지관 상담일지');
+  expect(text).toContain('김담당');
+  expect(text).toContain('주거 위기 단서가 있어 주거급여 연계가 필요함.');
+  expect(text).toContain('표정이 어둡고');
+  expect(text).toContain('{{대상자}}');
+  await expect(page.locator('#recordFormNotice')).toContainText('빈 표식: {{대상자}}');
+  await expect(page.locator('.ph-row[data-token="관찰사항"]')).toHaveClass(/done/);
+
+  await page.locator('.ph-extra[data-token="대상자"]').fill('김○○');
+  const second = page.waitForEvent('download');
+  await page.locator('#recordFormFill').click();
+  expect(await docxText(await readFile(await (await second).path()))).toContain('김○○');
+  await expect(page.locator('#recordFormNotice')).toContainText('표식 7개를 모두 채워');
+
+  await page.reload();
+  await page.locator('.tool-card[data-tool="case-record"]').click();
+  await expect(page.locator('#recordFormName')).toHaveText('우리기관_상담일지.docx');
+  await page.locator('#recordFormForget').click();
+  await expect(page.locator('#recordFormName')).toHaveText('올린 양식 없음');
+});
+
+test('회의록 양식은 개요·결정 사항·할 일을 만들고 기관 문서 양식으로 보낸다', async ({ page }) => {
+  await page.goto('/');
+  await page.evaluate(() => localStorage.setItem('dawith-institution-profile-v1', JSON.stringify({ organization: '다위종합사회복지관', manager: '김담당' })));
+  await page.locator('.tool-card[data-tool="case-record"]').click();
+  await page.locator('#recordTemplate').selectOption('preset-meeting');
   await expect(page.locator('#recordRawLabel')).toHaveText('회의 메모 원문');
   await page.locator('#recordRaw').fill(meetingMemo);
   await page.locator('#recordProcess').click();
-  await expect(page.locator('#summaryTitle')).toHaveText('회의록');
+  await expect(page.locator('#summaryTitle')).toHaveText('일반 회의록');
   await expect(page.locator('#sumOrg')).toHaveValue('다위종합사회복지관');
   await expect(page.locator('#sumAuthor')).toHaveValue('김담당');
-  await expect(page.locator('#sumDatetime')).toHaveValue('11월 10일 오후 2시');
-  await expect(page.locator('#sumPlace')).toHaveValue('2층 회의실');
-  await expect(page.locator('#sumAttendees')).toHaveValue('김팀장, 이사회복지사, 박간호사');
-  await expect(page.locator('#sumDecisions')).toHaveValue(/주 2회/);
-  const listingRow = page.locator('#sumActions tr').filter({ has: page.locator('.action-task[value*="명단"]') });
-  await expect(listingRow.locator('.action-owner')).toHaveValue('이사회복지사');
-  await expect(listingRow.locator('.action-due')).toHaveValue('11월 15일까지');
-  const rows = await page.locator('#sumActions tr').count();
-  await page.locator('#sumAddAction').click();
-  await expect(page.locator('#sumActions tr')).toHaveCount(rows + 1);
-  await page.locator('#sumActions tr').last().locator('.action-task').fill('보호자에게 결과 안내');
-  await page.locator('#sumActions tr').last().locator('.action-owner').fill('김팀장');
+  await expect(page.locator('#sumDate')).toHaveValue('11월 10일 오후 2시');
+  await expect(page.locator('.sum-section[data-section="회의 개요"]')).toHaveValue(/장소: 2층 회의실/);
+  await expect(page.locator('.sum-section[data-section="결정 사항"]')).toHaveValue(/주 2회/);
+  await expect(page.locator('.sum-section[data-section="할 일"]')).toHaveValue(/담당: 이사회복지사, 기한: 11월 15일까지/);
+  const actions = page.locator('.sum-section[data-section="할 일"]');
+  await actions.fill(`${await actions.inputValue()}\n2. 보호자에게 결과 안내 (담당: 김팀장)`);
   await page.locator('#recordToTemplate').click();
   await expect(page.locator('.workspace-header h1')).toHaveText('기관 문서 양식');
   await expect(page.locator('#templateProject')).toHaveValue('독거 어르신 겨울철 안부 확인');
@@ -411,75 +536,34 @@ test('회의록 정리는 개요·결정 사항·할 일 표를 만들고 기관
   await expect(page.locator('#templatePreview')).toContainText('김팀장, 이사회복지사, 박간호사');
 });
 
-test('클라우드 AI는 보낼 내용을 개인정보를 가린 채 먼저 보여주고 동의 후에만 전송한다', async ({ page }) => {
-  await page.route('**/api/ai/subscription/status', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(cloudStatus) }));
-  const requests = [];
-  await page.route('**/api/process', async (route) => {
-    const body = route.request().postDataJSON();
-    requests.push(body);
-    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ engine: 'cloud', provider: body.provider, kind: 'counseling', fallback: null, transfer: { external: true, destination: 'codex', userInitiated: true }, summary: { kind: 'counseling', overview: '클라우드 개요', complaint: '클라우드가 정리한 주요 호소', assessment: { needs: '주거 지원', strengths: '취업 의지', risks: '체납' }, intervention: '주거급여 안내', plan: '주민센터 연계' } }) });
-  });
-  await page.goto('/');
-  await page.locator('.tool-card[data-tool="case-record"]').click();
-  await page.locator('#recordRaw').fill(counselingMemo);
-  await page.locator('input[name="recordEngine"][value="cloud"]').check();
-  await expect(page.locator('#engineCloudStatus')).toHaveText('연결됨: Codex');
-  await expect(page.locator('#recordCloudProvider option')).toHaveCount(1);
-  await expect(page.locator('#recordProcess')).toHaveText('보낼 내용 확인 →');
-
-  await page.locator('#recordProcess').click();
-  const dialog = page.locator('#cloudConfirmDialog');
-  await expect(dialog).toBeVisible();
-  await expect(page.locator('#cloudConfirmProvider')).toHaveText('Codex');
-  await expect(page.locator('#cloudMask')).toBeChecked();
-  await expect(page.locator('#cloudPreview')).toContainText('010-****-5678');
-  await expect(page.locator('#cloudPreview')).not.toContainText('010-1234-5678');
-  await page.locator('#cloudMask').uncheck();
-  await expect(page.locator('#cloudPreview')).toContainText('010-1234-5678');
-  await page.locator('#cloudCancel').click();
-  await expect(dialog).toBeHidden();
-  await expect(page.locator('#recordNotice')).toContainText('아무것도 보내지 않았습니다');
-  expect(requests).toHaveLength(0);
-
-  await page.locator('#recordProcess').click();
-  await expect(page.locator('#cloudMask')).toBeChecked();
-  await page.locator('#cloudSend').click();
-  await expect(page.locator('#sumComplaint')).toHaveValue('클라우드가 정리한 주요 호소');
-  await expect(page.locator('#recordTransfer')).toContainText('클라우드 AI · Codex');
-  expect(requests).toHaveLength(1);
-  expect(requests[0].provider).toBe('cloud:codex');
-  expect(requests[0].confirmExternal).toBe(true);
-  expect(requests[0].rawText).toContain('010-****-5678');
-  expect(requests[0].rawText).not.toContain('010-1234-5678');
-});
-
-test('클라우드 AI가 연결되지 않았으면 AI 보조·연결로 안내하고 오류는 한국어로 보여준다', async ({ page }) => {
-  await page.route('**/api/ai/subscription/status', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ providers: { chatgpt: { provider: 'chatgpt', state: 'not-connected' } } }) }));
+test('로컬 AI가 꺼져 있으면 규칙으로 대신 정리하고 이유를 한국어로 보여준다', async ({ page }) => {
   await page.route('**/api/capabilities', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ system: { memoryGB: 8, cpuCores: 4 }, ollama: { available: false, models: [], recommendation: { model: 'qwen2.5:3b' } } }) }));
-  await page.route('**/api/process', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ engine: 'rules', provider: 'rules-fallback', kind: 'meeting', transfer: { external: false }, fallback: { used: true, reason: 'ollama_unavailable', message: 'Ollama가 실행 중이 아니어서 규칙으로 정리했습니다.' }, summary: { kind: 'meeting', overview: { datetime: '11월 10일', place: '회의실', attendees: '김팀장', agenda: '안부' }, discussion: '논의', decisions: '결정', actions: [] } }) }));
+  const requests = [];
+  page.on('request', (request) => { if (request.url().endsWith('/api/process')) requests.push(request.postDataJSON()); });
   await page.goto('/');
   await page.locator('.tool-card[data-tool="case-record"]').click();
   await expect(page.locator('#engineOllamaStatus')).toContainText('꺼져 있음');
-  await page.locator('.summary-mode[data-summary-mode="meeting"]').click();
+  await page.locator('#recordTemplate').selectOption('preset-case-conference');
   await page.locator('#recordRaw').fill(meetingMemo);
   await page.locator('input[name="recordEngine"][value="ollama"]').check();
   await page.locator('#recordProcess').click();
-  await expect(page.locator('#recordNotice')).toContainText('Ollama가 실행 중이 아니어서');
   await expect(page.locator('#recordTransfer')).toHaveText('규칙으로 대체');
-  await page.locator('input[name="recordEngine"][value="cloud"]').check();
-  await expect(page.locator('#engineCloudEmpty')).toBeVisible();
-  await page.locator('#engineCloudEmpty [data-tool="ai-setup"]').click();
-  await expect(page.locator('#aiInstallLink')).toBeVisible();
+  await expect(page.locator('#recordNotice')).toContainText('Ollama');
+  await expect(page.locator('.sum-section[data-section="역할 분담"]')).toHaveValue(/명단/);
+  expect(requests[0].provider).toBe('ollama-local');
+  expect(requests[0].template.sections.map((item) => item.name)).toContain('사례 현황');
 });
 
 test('작은 화면에서도 상담 기록·회의록 화면이 가로로 넘치지 않는다', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/');
   await page.locator('.tool-card[data-tool="case-record"]').click();
-  await page.locator('.summary-mode[data-summary-mode="meeting"]').click();
+  await page.locator('#recordTemplate').selectOption('preset-meeting');
   await page.locator('#recordRaw').fill(meetingMemo);
   await page.locator('#recordProcess').click();
-  await expect(page.locator('#sumPlace')).toHaveValue('2층 회의실');
+  await expect(page.locator('.sum-section[data-section="회의 개요"]')).toHaveValue(/2층 회의실/);
+  await page.locator('#recordTemplateNew').click();
+  await page.locator('#recordFormGuideToggle').click();
   const dimensions = await page.evaluate(() => ({ scrollWidth: document.documentElement.scrollWidth, width: window.innerWidth }));
   expect(dimensions.scrollWidth).toBeLessThanOrEqual(dimensions.width + 1);
 });
