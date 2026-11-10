@@ -20,7 +20,10 @@ const root = path.dirname(fileURLToPath(import.meta.url));
 const defaultPort = Number(process.env.PORT || 4387);
 const defaultHost = process.env.WELFARE_BIND_HOST || '127.0.0.1';
 const defaultDataDir = process.env.WELFARE_DATA_DIR || path.join(root, '.data');
-const defaultOllamaTimeoutMs = Number(process.env.OLLAMA_TIMEOUT_MS || 45000);
+// Measured on a CPU-only office PC (qwen2.5:3b): ~8 tokens/s, 40s+ for one
+// record and more on the first run while the model loads. 45s made almost
+// every request fall back to rules, so allow a few minutes.
+const defaultOllamaTimeoutMs = Number(process.env.OLLAMA_TIMEOUT_MS || 180000);
 const defaultAuthRequired = process.env.WELFARE_AUTH_REQUIRED === '1';
 const defaultOllamaUrl = 'http://127.0.0.1:11434';
 const localSecurityHeaders = {
@@ -100,6 +103,10 @@ async function ollamaSummary(input, timeoutMs = defaultOllamaTimeoutMs, baseUrl 
       model: input.model || 'qwen2.5:7b',
       stream: false,
       format: 'json',
+      // Small local models sometimes repeat themselves until the timeout; a
+      // meeting note ran past 3 minutes without a cap and stopped at ~500
+      // tokens with one. Low temperature keeps them closer to the source.
+      options: { num_predict: 1536, temperature: 0.2 },
       messages: [
         { role: 'system', content: '개인정보를 외부로 전송하지 않는 기관 PC의 로컬 모델입니다. 입력 사실을 만들지 말고 JSON만 반환하세요.' },
         { role: 'user', content: input.prompt || buildSummaryPrompt(input) },

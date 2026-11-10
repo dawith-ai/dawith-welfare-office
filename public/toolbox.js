@@ -967,7 +967,7 @@ function bindCaseRecord() {
     const button = $('#recordProcess');
     button.disabled = true;
     button.textContent = choice === 'ollama' ? '로컬 AI가 정리하는 중…' : '정리하는 중…';
-    notice('');
+    notice(choice === 'ollama' ? '로컬 AI가 이 PC에서 정리하고 있습니다. PC 사양에 따라 1~3분 걸릴 수 있습니다. 창을 닫지 마세요.' : '');
     try {
       let response;
       try { response = await fetch('./api/process', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(request) }); }
@@ -976,7 +976,7 @@ function bindCaseRecord() {
       if (!response.ok || !payload.summary) throw Object.assign(new Error(payload.error || `http_${response.status}`), { userMessage: engineErrorMessage(payload, response.status) });
       showResult(payload.summary, { provider: payload.provider, engine: payload.engine, rawText, contextText });
       if (payload.fallback?.used) { badge('규칙으로 대체'); notice(payload.fallback.message, true); }
-      else if (payload.engine === 'ollama') { badge(`로컬 AI · ${payload.model || 'Ollama'}`); notice('로컬 AI가 만든 초안입니다. PC 밖으로 나가지 않았습니다. 원문과 대조한 뒤 확정하세요.'); }
+      else if (payload.engine === 'ollama') { badge(`로컬 AI · ${payload.model || 'Ollama'}`); notice('로컬 AI가 만든 초안입니다. PC 밖으로 나가지 않았습니다. AI는 사실을 바꿔 적을 수 있으니(예: “정돈됨”을 “정돈되지 않음”으로) 원문과 한 줄씩 대조한 뒤 확정하세요.'); }
       else { badge('규칙 · 이 PC'); notice('규칙으로 항목을 나눴습니다. [확인 필요] 표시는 직접 채워 주세요.'); }
     } catch (error) {
       notice(error.userMessage || '정리하지 못했습니다. 잠시 뒤 다시 시도하세요.', true);

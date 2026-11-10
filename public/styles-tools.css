@@ -579,3 +579,4 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .sum-view.active { background: var(--ink); color: #fff; }
 #sumSectionsView { display: grid; gap: 14px; }
 .sum-combined textarea { width: 100%; padding: 12px; border: 1px solid var(--line-dark); border-radius: 4px; background: #fbfbf9; color: var(--ink); font-size: 13px; line-height: 1.8; resize: vertical; }
+.beta-tag { margin-left: 4px; padding: 1px 7px; border: 1px solid var(--green); border-radius: 999px; color: var(--green); font-size: 12px; font-style: normal; font-weight: 750; letter-spacing: 0; vertical-align: 2px; }

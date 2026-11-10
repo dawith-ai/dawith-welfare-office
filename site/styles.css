@@ -290,3 +290,4 @@ code, kbd { padding: 1px 6px; border: 1px solid var(--line); border-radius: 5px;
 .footer .legal-links a { text-decoration: none; }
 .footer .legal-links a:hover, .footer .legal-links a[aria-current="page"] { color: var(--ink); text-decoration: underline; }
 @media (max-width: 720px) { .legal-doc table, .legal-doc tbody, .legal-doc tr, .legal-doc td { display: block; width: 100%; } .legal-doc thead { display: none; } .legal-doc tr { padding: 10px 0; border-bottom: 1px solid var(--line); } .legal-doc td { padding: 3px 0; border: 0; } .legal-doc td:first-child { color: var(--ink); font-weight: 700; } }
+.beta-tag { margin-left: 8px; padding: 2px 8px; border: 1px solid currentColor; border-radius: 999px; font-size: 12px; font-weight: 700; letter-spacing: 0; opacity: .85; vertical-align: 2px; }

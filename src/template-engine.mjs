@@ -130,6 +130,10 @@ async function renderHwpx(data, fields) {
       const xml = body ? lines.join('<hp:lineBreak/>') : lines.join(' ');
       replaced = replaced.replace(new RegExp(`\\{\\{\\s*${token}\\s*\\}\\}`, 'g'), () => xml);
     }
+    // <hp:linesegarray> caches where 한글 laid out each line for the old text.
+    // Left in place, 한글 draws the new text on those stale positions, so lines
+    // overlap. It is optional; without it 한글 lays the paragraph out again.
+    if (body && replaced !== entry.text) replaced = replaced.replace(/<hp:linesegarray>[\s\S]*?<\/hp:linesegarray>/g, '');
     if (replaced !== entry.text) zip.file(entry.name, replaced);
   }
   return zip.generateAsync({ type: 'nodebuffer', compression: 'DEFLATE' });
