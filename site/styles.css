@@ -251,3 +251,26 @@ code, kbd { padding: 1px 6px; border: 1px solid var(--line); border-radius: 5px;
 }
 @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
 .lead-gap { max-width: 760px; margin-top: 20px !important; }
+
+/* scroll reveal: sections slide up into place as they come into view */
+.reveal { opacity: 0; transform: translateY(28px); transition: opacity .7s cubic-bezier(.2, .7, .2, 1), transform .7s cubic-bezier(.2, .7, .2, 1); transition-delay: var(--reveal-delay, 0s); }
+.reveal.in { opacity: 1; transform: none; }
+@media (prefers-reduced-motion: reduce) { .reveal { opacity: 1; transform: none; transition: none; } }
+
+/* contact */
+.contact { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 56px; align-items: start; }
+.contact-cards { display: grid; gap: 12px; }
+.contact-card { display: grid; grid-template-columns: 44px 1fr auto; gap: 14px; align-items: center; padding: 20px 22px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); text-decoration: none; }
+.contact-card:hover { border-color: var(--brand); }
+.contact-card i { display: grid; width: 44px; height: 44px; place-items: center; border-radius: 12px; background: var(--soft); color: var(--brand); font-style: normal; font-weight: 800; }
+.contact-card b { display: block; font-size: 17px; }
+.contact-card small { display: block; margin-top: 2px; color: var(--muted); font-size: 14px; }
+.contact-card span.go { color: var(--muted); font-size: 20px; }
+.maker-badges { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 22px; }
+.maker-badges span { padding: 6px 12px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); font-size: 14px; font-weight: 600; }
+.contact-note { margin: 16px 0 0; color: var(--muted); font-size: 14px; }
+.story { max-width: 760px; padding-bottom: 20px; }
+.story p { color: #3c4540; font-size: 18px; line-height: 1.95; }
+.story h2 { margin: 52px 0 12px; font-size: 26px; letter-spacing: -.02em; }
+.story blockquote { margin: 26px 0; padding: 4px 0 4px 20px; border-left: 3px solid var(--accent); color: var(--ink); font-size: 20px; font-weight: 700; }
+@media (max-width: 1000px) { .contact { grid-template-columns: 1fr; gap: 26px; } }

@@ -148,8 +148,30 @@ function setupAsk() {
   });
 }
 
+// Blocks fade and slide up as they scroll into view. Classes are added here,
+// so without JavaScript (or with reduced motion) everything stays visible.
+function setupReveal() {
+  if (!('IntersectionObserver' in window) || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const targets = $$('.section .split, .section .section-title, .section .section-desc, .shot, .points > div, .more-tools > div, .cost-cards > article, .never li, .oss > div, .steps3 > div, .dl-panel, .stuck-card, .contact > *, .release, .faq-group, .doc section, .story > *, .page-hero > *');
+  const observer = new IntersectionObserver((entries) => {
+    for (const entry of entries) {
+      if (!entry.isIntersecting) continue;
+      entry.target.classList.add('in');
+      observer.unobserve(entry.target);
+    }
+  }, { rootMargin: '0px 0px -8% 0px', threshold: 0.08 });
+  targets.forEach((element) => {
+    // Siblings in a row arrive one after another.
+    const index = [...element.parentElement.children].indexOf(element);
+    element.style.setProperty('--reveal-delay', `${Math.min(index, 5) * 70}ms`);
+    element.classList.add('reveal');
+    observer.observe(element);
+  });
+}
+
 showOsNotice();
 loadRelease();
+setupReveal();
 setupTabs();
 setupNav();
 setupAsk();
