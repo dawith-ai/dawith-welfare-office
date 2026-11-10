@@ -445,7 +445,7 @@ test('내 양식을 만들고 항목을 추가·이름 변경·순서 변경·�
   await page.locator('#recordRaw').fill('3월 12일 가정방문. 내담자는 표정이 어둡고 말수가 적었음. 월세가 두 달 밀려 걱정된다고 함. 다음 주에 다시 방문하기로 함.');
   await page.locator('#recordProcess').click();
   await expect(page.locator('#summaryTitle')).toHaveText('우리 기관 상담일지');
-  await expect(page.locator('.summary-section > label')).toHaveText(['관찰사항', '경제 상황 월세·소득', '종교 활동']);
+  await expect(page.locator('#sumSectionsView .sum-head > label')).toHaveText(['관찰사항', '경제 상황 월세·소득', '종교 활동']);
   await expect(page.locator('.sum-section[data-section="관찰사항"]')).toHaveValue(/표정이 어둡고/);
   await expect(page.locator('.sum-section[data-section="경제 상황"]')).toHaveValue(/월세가 두 달/);
   await expect(page.locator('.sum-section[data-section="종교 활동"]')).toHaveValue(/찾지 못했습니다/);
@@ -718,4 +718,35 @@ test('작은 화면에서도 도구 작업대가 가로로 넘치지 않는다',
   await page.locator('.tool-card[data-tool="text-tools"]').click();
   const dimensions = await page.evaluate(() => ({ scrollWidth: document.documentElement.scrollWidth, width: window.innerWidth }));
   expect(dimensions.scrollWidth).toBeLessThanOrEqual(dimensions.width + 1);
+});
+
+test('정리 결과는 항목별·한 번에 보기로 바꿀 수 있고 상자마다 바로 복사한다', async ({ page, context }) => {
+  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+  await page.goto('/?tool=case-record');
+  await page.locator('#recordTemplate').selectOption({ label: '관찰·상담·소견형' });
+  await page.locator('#recordRaw').fill('집 안이 정돈되어 있고 아동은 밝은 표정으로 인사함. 어머니는 월세가 밀려 걱정된다고 호소함. 다음 주에 주민센터와 연계하기로 함.');
+  await page.locator('#recordProcess').click();
+  await expect(page.locator('#sumSectionsView .sum-copy')).toHaveCount(4);
+  await page.locator('[data-copy-section="0"]').click();
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toContain('밝은 표정');
+  await page.locator('[data-sum-view="combined"]').click();
+  await expect(page.locator('#sumSectionsView')).toBeHidden();
+  const combined = await page.locator('#sumCombined').inputValue();
+  expect(combined.startsWith('관찰사항')).toBe(true);
+  expect(combined).toContain('상담원 소견');
+  expect(combined).not.toContain('#');
+  await page.locator('[data-copy-combined]').click();
+  const normalize = (text) => text.split('\r\n').join('\n');
+  expect(normalize(await page.evaluate(() => navigator.clipboard.readText()))).toBe(normalize(combined));
+  await page.locator('[data-sum-view="sections"]').click();
+  await expect(page.locator('#sumSectionsView')).toBeVisible();
+});
+
+test('회의록도 같은 보기 전환과 복사 버튼을 쓴다', async ({ page }) => {
+  await page.goto('/?tool=case-record');
+  await page.locator('#recordTemplate').selectOption({ label: '일반 회의록' });
+  await page.locator('#recordRaw').fill('11월 운영회의. 참석자 김팀장, 이복지사. 송년 행사를 12월 20일에 열기로 결정함. 이복지사가 장소를 섭외하기로 함.');
+  await page.locator('#recordProcess').click();
+  await expect(page.locator('[data-sum-view="combined"]')).toBeVisible();
+  expect(await page.locator('#sumSectionsView .sum-copy').count()).toBeGreaterThan(2);
 });

@@ -822,14 +822,22 @@ function summaryToMarkdown(summary, header = {}) {
   return `# ${summary.templateName}\n\n${meta}\n\n${summary.sections.map((section) => `## ${section.name}\n\n${section.content || '-'}`).join('\n\n')}\n`;
 }
 
+// Plain text for pasting into documents and case-management systems: section
+// names as their own lines, no Markdown marks.
+function summaryToPlainText(summary) {
+  return summary.sections.map((section) => `${section.name}\n${section.content || '-'}`).join('\n\n');
+}
+
 function summaryRows(value, min) { return Math.min(14, Math.max(min, String(value || '').split('\n').length + 1)); }
 
 function renderSummaryBody(summary, header = {}) {
   const dateLabel = recordKinds[summary.templateKind]?.dateLabel || '일자';
   const strip = `<div class="summary-header-strip"><div class="control-group"><label for="sumOrg">기관명</label><input id="sumOrg" class="wide-input" value="${escapeHtml(header.organization || '')}" placeholder="예: 다위종합사회복지관" /></div><div class="control-group"><label for="sumAuthor">작성자</label><input id="sumAuthor" class="wide-input" value="${escapeHtml(header.author || '')}" placeholder="담당자 이름" /></div><div class="control-group"><label for="sumDate">${dateLabel}</label><input id="sumDate" class="wide-input" value="${escapeHtml(header.date || '')}" /></div><button id="sumRememberProfile" class="icon-text-button" type="button">기관명·작성자 기억하기</button></div>`;
-  const sections = summary.sections.map((section, index) => `<div class="summary-section"><label for="sumSection${index}">${escapeHtml(section.name)}${section.guide ? ` <small>${escapeHtml(section.guide)}</small>` : ''}</label><textarea id="sumSection${index}" class="sum-section" data-section="${escapeHtml(section.name)}" rows="${summaryRows(section.content, 3)}">${escapeHtml(section.content)}</textarea></div>`).join('');
+  const sections = summary.sections.map((section, index) => `<div class="summary-section"><div class="sum-head"><label for="sumSection${index}">${escapeHtml(section.name)}${section.guide ? ` <small>${escapeHtml(section.guide)}</small>` : ''}</label><button class="sum-copy" type="button" data-copy-section="${index}" aria-label="${escapeHtml(section.name)} 복사">복사</button></div><textarea id="sumSection${index}" class="sum-section" data-section="${escapeHtml(section.name)}" rows="${summaryRows(section.content, 3)}">${escapeHtml(section.content)}</textarea></div>`).join('');
   const unassigned = summary.unassigned?.length ? `<details class="summary-unassigned"><summary>어느 항목에도 넣지 못한 문장 ${summary.unassigned.length}개</summary><ol>${summary.unassigned.map((line) => `<li>${escapeHtml(line)}</li>`).join('')}</ol><p>필요하면 위 항목에 직접 옮겨 적으세요.</p></details>` : '';
-  return `${strip}${sections}${unassigned}`;
+  const views = `<div class="sum-views" role="tablist" aria-label="결과 보기 방식"><button type="button" role="tab" class="sum-view active" data-sum-view="sections" aria-selected="true">항목별로 보기</button><button type="button" role="tab" class="sum-view" data-sum-view="combined" aria-selected="false">한 번에 보기</button></div>`;
+  const combined = `<div id="sumCombinedView" class="summary-section sum-combined" hidden><div class="sum-head"><label for="sumCombined">전체 내용 <small>항목을 문단으로 이어 붙였습니다. 고치려면 항목별로 보기에서 고치세요.</small></label><button class="sum-copy" type="button" data-copy-combined aria-label="전체 내용 복사">복사</button></div><textarea id="sumCombined" readonly rows="14"></textarea></div>`;
+  return `${strip}${views}<div id="sumSectionsView">${sections}${unassigned}</div>${combined}`;
 }
 
 function engineErrorMessage(payload, status) {
@@ -985,11 +993,26 @@ function bindCaseRecord() {
   $('#recordRaw').addEventListener('input', updateCount);
   $('#recordSample').addEventListener('click', () => { const sample = kindInfo().sample; $('#recordContext').value = sample.context; $('#recordRaw').value = sample.raw; updateCount(); notice('합성 예시를 넣었습니다. 실제 개인정보가 아닙니다.'); });
   $('#recordProcess').addEventListener('click', process);
+  const copyText = async (text, label) => {
+    try { await navigator.clipboard.writeText(text); notice(`${label}을(를) 복사했습니다. 원하는 곳에 붙여 넣으세요.`); } catch { notice('클립보드를 사용할 수 없습니다. 내용을 직접 선택해 복사하세요.', true); }
+  };
   $('#summaryBody').addEventListener('click', (event) => {
+    const viewButton = event.target.closest('[data-sum-view]');
+    if (viewButton) {
+      const combined = viewButton.dataset.sumView === 'combined';
+      $$('#summaryBody [data-sum-view]').forEach((button) => { const active = button === viewButton; button.classList.toggle('active', active); button.setAttribute('aria-selected', String(active)); });
+      $('#sumSectionsView').hidden = combined;
+      $('#sumCombinedView').hidden = !combined;
+      if (combined) { const summary = currentSummary(); $('#sumCombined').value = summary ? summaryToPlainText(summary) : ''; }
+      return;
+    }
+    const sectionCopy = event.target.closest('[data-copy-section]');
+    if (sectionCopy) { const box = $(`#sumSection${sectionCopy.dataset.copySection}`); return copyText(box.value.trim(), box.dataset.section); }
+    if (event.target.closest('[data-copy-combined]')) { const summary = currentSummary(); if (summary) copyText(summaryToPlainText(summary), '전체 내용'); return; }
     if (event.target.closest('#sumRememberProfile')) { try { localStorage.setItem(institutionProfileKey, JSON.stringify({ ...readInstitutionProfile(), organization: $('#sumOrg').value.trim(), manager: $('#sumAuthor').value.trim() })); notice('기관명·작성자를 이 PC에 저장했습니다. 기관 문서 양식에서도 같은 정보를 씁니다.'); } catch { notice('이 브라우저에서는 저장할 수 없습니다.', true); } }
   });
   const fileBase = (summary) => `${summary.templateName.replace(/[\\/:*?"<>|\s]+/g, '_')}_${compactDate(new Date())}`;
-  $('#recordCopy').addEventListener('click', async () => { const summary = currentSummary(); if (!summary) return; try { await navigator.clipboard.writeText(summaryToMarkdown(summary, header())); notice('정리 결과를 클립보드에 복사했습니다.'); } catch { notice('클립보드를 사용할 수 없습니다. Markdown 저장을 이용하세요.', true); } });
+  $('#recordCopy').addEventListener('click', async () => { const summary = currentSummary(); if (!summary) return; try { await navigator.clipboard.writeText(summaryToPlainText(summary)); notice('정리 결과 전체를 복사했습니다.'); } catch { notice('클립보드를 사용할 수 없습니다. Markdown 저장을 이용하세요.', true); } });
   $('#recordSave').addEventListener('click', () => {
     const summary = currentSummary(); if (!summary) return;
     const entry = { id: `record_${Date.now()}`, createdAt: new Date().toISOString(), kind: summary.templateKind, provider: result.provider, engine: result.engine, summary, header: header(), rawText: result.rawText, contextText: result.contextText };

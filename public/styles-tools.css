@@ -569,3 +569,13 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; } }
 .panel-heading > button, .panel-heading > .panel-actions button { flex: 0 0 auto; white-space: nowrap; }
 .record-template-editor #rtAdd { justify-self: start; }
+.sum-head { display: flex; align-items: end; justify-content: space-between; gap: 10px; }
+.sum-head label { color: var(--ink); font-size: 12px; font-weight: 800; }
+.sum-head label small { margin-left: 6px; color: var(--muted); font-size: 11px; font-weight: 500; }
+.sum-copy { flex: 0 0 auto; padding: 3px 10px; border: 1px solid var(--line-dark); border-radius: 999px; background: var(--surface); color: var(--green); font-size: 11px; font-weight: 750; white-space: nowrap; }
+.sum-copy:hover { border-color: var(--green); background: var(--green-soft); }
+.sum-views { display: inline-flex; justify-self: start; padding: 3px; border: 1px solid var(--line-dark); border-radius: 999px; background: #f1f1ed; }
+.sum-view { padding: 5px 14px; border: 0; border-radius: 999px; background: transparent; color: var(--muted); font-size: 12px; font-weight: 750; }
+.sum-view.active { background: var(--ink); color: #fff; }
+#sumSectionsView { display: grid; gap: 14px; }
+.sum-combined textarea { width: 100%; padding: 12px; border: 1px solid var(--line-dark); border-radius: 4px; background: #fbfbf9; color: var(--ink); font-size: 13px; line-height: 1.8; resize: vertical; }
