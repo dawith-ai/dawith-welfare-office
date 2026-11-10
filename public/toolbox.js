@@ -17,7 +17,7 @@ const toolCatalog = [
   { id: 'date-calculator', category: 'calculator', mark: 'D+', name: '날짜·기간 계산', description: '두 날짜 사이 기간과 기준일을 계산합니다.', keywords: '날짜 기간 일수 d-day', label: 'CALCULATOR' },
   { id: 'attendance', category: 'field', mark: '✓', name: '인원 체크', description: '식사·프로그램 명단을 로컬에서 체크하고 CSV로 저장합니다.', keywords: '인원 출석 신규 종결 대기 수령 명단 현황 csv', label: 'FIELD' },
   { id: 'duty-schedule', category: 'field', mark: 'CAL', name: '당직 일정', description: '직원 순서를 기준으로 당직표를 만들고 CSV로 저장합니다.', keywords: '당직 근무 일정 스케줄 직원 배치 csv', label: 'FIELD' },
-  { id: 'case-record', category: 'field', mark: 'LOG', name: '상담 기록·회의록 정리', description: '메모를 상담 기록(개요·호소·사정·개입·계획)과 회의록(결정 사항·할 일)으로 정리합니다.', keywords: '상담기록 상담일지 상담 내용 정리 회의록 사례회의 사례관리 기록 요약 결정사항 할일 조치사항 로컬 ai ollama 클라우드 claude chatgpt gemini codex openrouter', label: 'RECORD · MINUTES', aiMode: 'choice' },
+  { id: 'case-record', category: 'field', mark: 'LOG', name: '상담 기록·회의록 정리', description: '메모를 고른 기록 양식(관찰사항·상담내용·소견 등)대로 정리하고 기관 양식(Word·한글)에 넣어 줍니다.', keywords: '상담기록 상담일지 상담 내용 정리 회의록 사례회의 사례관리 기록 요약 결정사항 할일 조치사항 관찰사항 소견 양식 서식 템플릿 docx hwpx 로컬 ai ollama', label: 'RECORD · MINUTES', aiMode: 'local-optional' },
   { id: 'genogram', category: 'diagram', mark: 'GENO', name: '가계도 편집', description: '생성형 결과에 의존하지 않고 직접 수정하는 가계도 편집기입니다.', keywords: '가계도 genogram 가족관계 mcgoldrick svg pdf json 개인정보', label: 'RELATIONSHIP MAP', aiMode: 'local-optional' },
   { id: 'ecomap', category: 'diagram', mark: 'ECO', name: '생태도 편집', description: '가구와 기관·자원을 직접 배치하고 관계 강도를 표시합니다.', keywords: '생태도 ecomap 자원망 사회적지지 기관관계 svg json', label: 'RELATIONSHIP MAP', aiMode: 'local-optional' },
   { id: 'ai-setup', category: 'ai', mark: 'AI', name: 'AI 보조·연결 센터', description: '로컬·구독·무료 AI를 직접 고르고 연결합니다.', keywords: 'ollama 로컬 llm ai 모델 다운로드 상담 회의록 문서 claude codex chatgpt openrouter gemini 구독', label: 'AI CONTROL' },
@@ -238,27 +238,55 @@ function renderQrWorkspace(tool) {
   return `${toolHeader(tool, '링크를 QR 코드로 저장하기', '외부 서비스를 호출하지 않고 이 기기에서 QR 이미지를 만듭니다.')}<div class="tool-layout calculator-layout"><section class="calculator-card"><h2>주소 입력</h2><p>신청 링크, 안내 페이지 주소를 입력하세요.</p><div class="control-group"><label for="qrText">링크 또는 짧은 문구</label><input id="qrText" class="wide-input" placeholder="https://" /></div><div class="tool-actions"><button id="qrMake" class="primary-button" type="button">QR 만들기 →</button></div><div id="qrResult" class="calculator-result hidden"></div></section><section class="calculator-reference"><h3>사용 예</h3><div class="reference-row"><b>프로그램 신청</b><span>게시판·문자에 QR을 붙여 신청 페이지로 연결</span></div><div class="reference-row"><b>만족도 조사</b><span>행사 안내문에 설문 링크를 함께 제공</span></div></section></div>`;
 }
 
-const summaryModes = {
+// 기록 양식: built-in presets plus the user's own templates (localStorage).
+const recordKinds = {
   counseling: {
-    title: '상담 기록',
+    label: '상담 기록',
     contextLabel: '상담 맥락 (선택)',
     contextPlaceholder: '예: 3월 12일 가정방문 / 주거지원 사례 2회기',
     rawLabel: '상담 메모·녹취 원문',
     rawPlaceholder: '상담 중 적은 메모나 녹취 전사문을 붙여 넣으세요.\n예: 내담자는 월세가 두 달 밀려 퇴거가 걱정된다고 호소함. 주거급여 신청 절차를 안내함. 다음 주에 주민센터와 연계하기로 함.',
-    sample: { context: '주거지원 사례 2회기 · 가정방문', raw: '3월 12일 가정방문 상담. 내담자는 월세가 두 달 밀려 퇴거가 걱정된다고 호소함. 자녀 양육은 꾸준히 하고 있으며 취업 의지가 있음. 연락처 010-1234-5678. 주거급여 신청 절차와 필요 서류를 안내하였음. 다음 주에 주민센터와 연계하여 신청서류를 확인하기로 함.' },
+    dateLabel: '상담일',
+    sample: { context: '주거지원 사례 2회기 · 가정방문', raw: '3월 12일 가정방문 상담. 내담자는 표정이 어둡고 말수가 적었음. 집 안은 정돈되어 있었음. 내담자는 월세가 두 달 밀려 퇴거가 걱정된다고 호소함. 자녀 양육은 꾸준히 하고 있으며 취업 의지가 있음. 연락처 010-1234-5678. 주거급여 신청 절차와 필요 서류를 안내하였음. 다음 주에 주민센터와 연계하여 신청서류를 확인하기로 함.' },
   },
   meeting: {
-    title: '회의록',
+    label: '회의록',
     contextLabel: '회의명 (선택)',
     contextPlaceholder: '예: 11월 통합사례회의',
     rawLabel: '회의 메모 원문',
     rawPlaceholder: '회의 중 적은 메모를 붙여 넣으세요. "일시:", "장소:", "참석자:", "안건:" 줄이 있으면 개요에 바로 들어갑니다.\n예: 방문 횟수를 주 2회로 늘리기로 결정함. 이사회복지사가 11월 15일까지 명단을 정리함.',
+    dateLabel: '회의일',
     sample: { context: '11월 통합사례회의', raw: '일시: 11월 10일 오후 2시\n장소: 2층 회의실\n참석자: 김팀장, 이사회복지사, 박간호사\n안건: 독거 어르신 겨울철 안부 확인\n어르신 12가구의 난방 상태를 점검함. 방문 횟수를 주 2회로 늘리기로 결정함. 이사회복지사가 11월 15일까지 대상 명단을 정리함. 박간호사는 다음 주에 건강 상태를 확인하기로 함.' },
   },
 };
 
+const recordTemplatePresets = [
+  { id: 'preset-counseling', name: '기본 상담기록', kind: 'counseling', sections: [{ name: '상담 개요', guide: '일시·대상·상담 방식·주요 영역' }, { name: '주요 호소', guide: '내담자가 직접 말한 어려움과 요청' }, { name: '사정', guide: '욕구·강점·위험 단서' }, { name: '개입 내용', guide: '이번 상담에서 안내·연계·지지한 내용' }, { name: '향후 계획', guide: '다음 일정, 연계, 확인할 사항' }] },
+  { id: 'preset-observation', name: '관찰·상담·소견형', kind: 'counseling', sections: [{ name: '관찰사항', guide: '표정·태도·생활환경 등 직접 보고 들은 것' }, { name: '상담내용', guide: '내담자가 말한 내용과 상담 흐름' }, { name: '상담원 소견', guide: '근거를 밝힌 담당자 판단' }, { name: '향후 계획', guide: '다음 상담·연계·확인할 사항' }] },
+  { id: 'preset-case-conference', name: '사례회의록', kind: 'meeting', sections: [{ name: '회의 개요', guide: '일시·장소·참석자·안건' }, { name: '사례 현황', guide: '대상자의 현재 상황과 경과' }, { name: '논의 내용', guide: '참석자들의 주요 의견' }, { name: '결정 사항', guide: '회의에서 확정한 내용' }, { name: '역할 분담', guide: '할 일·담당·기한' }] },
+  { id: 'preset-meeting', name: '일반 회의록', kind: 'meeting', sections: [{ name: '회의 개요', guide: '일시·장소·참석자·안건' }, { name: '논의 내용', guide: '안건별 주요 의견' }, { name: '결정 사항', guide: '확정된 내용만' }, { name: '할 일', guide: '할 일·담당·기한' }] },
+];
+const recordTemplateStorageKey = 'dawith-record-templates-v1';
+const recordTemplateChoiceKey = 'dawith-record-template-choice-v1';
+const recordFormStorageKey = 'dawith-record-form-v1';
+
+function readCustomRecordTemplates() {
+  try { const saved = JSON.parse(localStorage.getItem(recordTemplateStorageKey) || '[]'); return Array.isArray(saved) ? saved.filter((item) => item?.id && Array.isArray(item.sections) && item.sections.length) : []; } catch { return []; }
+}
+function recordTemplateCatalog() { return [...recordTemplatePresets, ...readCustomRecordTemplates()]; }
+
+function recordTemplateOptions(selectedId) {
+  const option = (template) => `<option value="${escapeHtml(template.id)}"${template.id === selectedId ? ' selected' : ''}>${escapeHtml(template.name)}</option>`;
+  const custom = readCustomRecordTemplates();
+  return `<optgroup label="상담 기록">${recordTemplatePresets.filter((item) => item.kind === 'counseling').map(option).join('')}</optgroup><optgroup label="회의록">${recordTemplatePresets.filter((item) => item.kind === 'meeting').map(option).join('')}</optgroup>${custom.length ? `<optgroup label="내 양식 (이 PC)">${custom.map(option).join('')}</optgroup>` : ''}`;
+}
+
 function renderCaseRecordWorkspace(tool) {
-  return `${toolHeader(tool, '상담 기록·회의록 정리', '메모나 녹취 전사문을 붙여 넣으면 정해진 항목으로 나눠 정리합니다. 기본은 AI 없이 이 PC에서 처리하고, 원할 때만 로컬 AI나 클라우드 AI를 고릅니다.', { nav: '● 기본은 이 기기에서 처리', mark: '외부 전송은 확인 후' })}<div class="summary-layout"><section class="tool-panel summary-input"><div class="summary-modes" role="tablist" aria-label="정리 종류"><button class="summary-mode active" role="tab" aria-selected="true" data-summary-mode="counseling" type="button"><b>상담 기록 정리</b><small>호소 · 사정 · 개입 · 계획</small></button><button class="summary-mode" role="tab" aria-selected="false" data-summary-mode="meeting" type="button"><b>회의록 정리</b><small>개요 · 논의 · 결정 사항 · 할 일</small></button></div><div class="control-group"><label for="recordContext" id="recordContextLabel">${summaryModes.counseling.contextLabel}</label><input id="recordContext" class="wide-input" placeholder="${escapeHtml(summaryModes.counseling.contextPlaceholder)}" /></div><div class="control-group"><div class="label-row"><label for="recordRaw" id="recordRawLabel">${summaryModes.counseling.rawLabel}</label><span id="recordRawCount" class="muted-text">0자</span></div><textarea id="recordRaw" class="record-source" rows="11" placeholder="${escapeHtml(summaryModes.counseling.rawPlaceholder)}"></textarea></div><fieldset class="engine-picker"><legend>정리 방식</legend><label class="engine-option"><input type="radio" name="recordEngine" value="rules" checked /><span><b>규칙 · AI 없음 <i>기본</i></b><small>이 PC에서 바로 처리합니다. 문장을 항목별로 나누기만 합니다.</small></span></label><label class="engine-option"><input type="radio" name="recordEngine" value="ollama" /><span><b>로컬 AI · Ollama</b><small>PC 밖으로 나가지 않습니다. <em id="engineOllamaStatus">상태 확인 중…</em></small></span></label><label class="engine-option"><input type="radio" name="recordEngine" value="cloud" /><span><b>클라우드 AI</b><small>보내기 전에 전송할 내용을 보여 드립니다. <em id="engineCloudStatus">연결 확인 중…</em></small></span></label><div id="engineCloudPicker" class="engine-cloud-picker" hidden><label for="recordCloudProvider">사용할 클라우드 AI</label><select id="recordCloudProvider" class="wide-input"></select></div><p id="engineCloudEmpty" class="engine-empty" hidden>연결된 클라우드 AI가 없습니다. <button type="button" class="link-button" data-tool="ai-setup">AI 보조·연결에서 연결하기 →</button></p></fieldset><div class="tool-actions"><button id="recordProcess" class="primary-button" type="button">정리하기 →</button><button id="recordSample" class="secondary-button" type="button">예시 넣기</button></div><p id="recordNotice" class="notice" hidden></p></section><section class="tool-panel summary-output"><div class="panel-heading"><div><h2 id="summaryTitle">상담 기록</h2><p>결과는 바로 고칠 수 있습니다. 확정 전 원문과 대조하세요.</p></div><span id="recordTransfer" class="engine-badge">정리 전</span></div><div id="summaryBody" class="summary-body"><div class="summary-empty"><b>왼쪽에 원문을 넣고 정리하기를 누르세요.</b><span id="summaryEmptyHint">상담 개요 · 주요 호소 · 사정(욕구·강점·위험) · 개입 내용 · 향후 계획·후속 조치로 나눠 드립니다.</span></div></div><div class="summary-actions"><button id="recordCopy" class="secondary-button" type="button" disabled>복사</button><button id="recordSave" class="secondary-button" type="button" disabled>이 PC에 저장</button><button id="recordExport" class="secondary-button" type="button" disabled>Markdown 저장</button><button id="recordDocx" class="primary-button" type="button" disabled>Word(DOCX) 저장 →</button><button id="recordToTemplate" class="secondary-button hidden" type="button" disabled>기관 문서 양식으로 보내기</button></div><div class="summary-saved"><label for="recordSavedList">저장한 기록 불러오기</label><select id="recordSavedList" class="wide-input"><option value="">저장한 기록 없음</option></select></div></section></div><dialog id="cloudConfirmDialog" class="privacy-dialog cloud-confirm" aria-labelledby="cloudConfirmTitle"><p class="overline">EXTERNAL TRANSFER · 외부 전송 확인</p><h2 id="cloudConfirmTitle"><span id="cloudConfirmProvider"></span>에 아래 내용을 보냅니다</h2><label class="option-line cloud-mask-option"><input id="cloudMask" type="checkbox" checked /> 보내기 전에 개인정보 가리기 <small>주민등록번호 · 전화번호 · 이메일 · 계좌번호</small></label><p class="field-hint">이름·주소·기관명은 자동으로 가려지지 않습니다. 아래 내용을 끝까지 확인하세요.</p><pre id="cloudPreview" class="cloud-preview" tabindex="0"></pre><p class="dialog-footnote">위 내용과 정리 지시문(개인정보 없음)만 전송됩니다. 결과는 이 PC로 돌아오며 Dawith 서버에는 저장되지 않습니다. 기관의 외부 전송 기준을 확인한 뒤 보내세요.</p><div class="dialog-actions"><button id="cloudCancel" class="secondary-button" type="button">취소</button><button id="cloudSend" class="primary-button" type="button">이 내용으로 보내기</button></div></dialog>`;
+  const engine = `<fieldset class="engine-picker"><legend>정리 방식</legend><label class="engine-option"><input type="radio" name="recordEngine" value="rules" checked /><span><b>규칙 (AI 없음) <i>기본</i></b><small>이 PC에서 바로 처리합니다. 문장을 항목별로 나누기만 합니다.</small></span></label><label class="engine-option"><input type="radio" name="recordEngine" value="ollama" /><span><b>로컬 AI (Ollama)</b><small>이 PC 안의 AI가 문장을 다듬어 항목에 넣습니다. PC 밖으로 나가지 않습니다. <em id="engineOllamaStatus">상태 확인 중…</em></small></span></label></fieldset>`;
+  const editor = `<div id="recordTemplateEditor" class="record-template-editor" hidden><div class="control-group"><label for="rtName">양식 이름</label><input id="rtName" class="wide-input" maxlength="30" placeholder="예: 우리 기관 상담일지" /></div><div class="rt-kind" role="radiogroup" aria-label="기록 종류"><span>종류</span><label><input type="radio" name="rtKind" value="counseling" checked /> 상담 기록</label><label><input type="radio" name="rtKind" value="meeting" /> 회의록</label></div><div class="rt-list-head"><span>항목</span><span>작성 안내 (선택)</span></div><ol id="rtSections" class="rt-sections"></ol><button id="rtAdd" class="icon-text-button" type="button">+ 항목 추가</button><div class="tool-actions"><button id="rtSave" class="primary-button" type="button">내 양식으로 저장</button><button id="rtCancel" class="secondary-button" type="button">닫기</button><button id="rtDelete" class="secondary-button rt-delete" type="button" hidden>이 양식 지우기</button></div></div>`;
+  const picker = `<div class="record-template-picker"><div class="label-row"><label for="recordTemplate">기록 양식</label><span class="rt-buttons"><button id="recordTemplateEdit" class="icon-text-button" type="button">항목 고치기</button><button id="recordTemplateNew" class="icon-text-button" type="button">+ 새 양식</button></span></div><select id="recordTemplate" class="wide-input">${recordTemplateOptions(recordTemplatePresets[0].id)}</select><p id="recordTemplateSections" class="rt-chips"></p></div>${editor}`;
+  const formPanel = `<section class="record-form-fill" aria-labelledby="recordFormTitle"><div><h3 id="recordFormTitle">우리 기관 양식에 넣기</h3><p>Word(.docx)·한글(.hwpx) 양식에 <code>{{관찰사항}}</code>처럼 표식을 적어 두면, 정리 결과를 그 자리에 넣어 내려받습니다. 파일은 이 PC 밖으로 나가지 않습니다.</p></div><div class="record-form-row"><label class="file-button"><input id="recordFormInput" type="file" accept=".docx,.hwpx" />양식 파일 올리기</label><span id="recordFormName" class="record-form-name">올린 양식 없음</span><button id="recordFormForget" class="icon-text-button" type="button" hidden>양식 지우기</button><button id="recordFormGuideToggle" class="link-button" type="button" aria-expanded="false">양식에 넣을 표식 목록</button></div><div id="recordFormGuide" class="record-form-guide" hidden></div><ul id="recordFormFields" class="record-form-fields" hidden></ul><div class="record-form-actions"><button id="recordFormFill" class="primary-button" type="button" disabled>양식에 넣어 내려받기 →</button></div><p id="recordFormNotice" class="notice" hidden></p></section>`;
+  return `${toolHeader(tool, '상담 기록·회의록 정리', '메모나 녹취 전사문을 붙여 넣으면 고른 기록 양식의 항목대로 나눠 정리하고, 우리 기관 양식(Word·한글)에 바로 넣어 줍니다. 모든 처리는 이 PC 안에서 합니다.', { nav: '● 이 기기에서만 처리', mark: '외부 전송 없음' })}<div class="summary-layout"><section class="tool-panel summary-input">${picker}<div class="control-group"><label for="recordContext" id="recordContextLabel">${recordKinds.counseling.contextLabel}</label><input id="recordContext" class="wide-input" placeholder="${escapeHtml(recordKinds.counseling.contextPlaceholder)}" /></div><div class="control-group"><div class="label-row"><label for="recordRaw" id="recordRawLabel">${recordKinds.counseling.rawLabel}</label><span id="recordRawCount" class="muted-text">0자</span></div><textarea id="recordRaw" class="record-source" rows="11" placeholder="${escapeHtml(recordKinds.counseling.rawPlaceholder)}"></textarea></div>${engine}<div class="tool-actions"><button id="recordProcess" class="primary-button" type="button">정리하기 →</button><button id="recordSample" class="secondary-button" type="button">예시 넣기</button></div><p id="recordNotice" class="notice" hidden></p></section><section class="tool-panel summary-output"><div class="panel-heading"><div><h2 id="summaryTitle">기본 상담기록</h2><p>결과는 바로 고칠 수 있습니다. 확정 전 원문과 대조하세요.</p></div><span id="recordTransfer" class="engine-badge">정리 전</span></div><div id="summaryBody" class="summary-body"></div><div class="summary-actions"><button id="recordCopy" class="secondary-button" type="button" disabled>복사</button><button id="recordSave" class="secondary-button" type="button" disabled>이 PC에 저장</button><button id="recordExport" class="secondary-button" type="button" disabled>Markdown 저장</button><button id="recordToTemplate" class="secondary-button hidden" type="button" disabled>기관 문서 양식으로 보내기</button><button id="recordDocx" class="primary-button" type="button" disabled>Word(DOCX) 저장 →</button></div>${formPanel}<div class="summary-saved"><label for="recordSavedList">저장한 기록 불러오기</label><select id="recordSavedList" class="wide-input"><option value="">저장한 기록 없음</option></select></div></section></div>`;
 }
 
 function renderDiagramWorkspace(tool) {
@@ -968,64 +996,37 @@ function bindQr() { $('#qrMake').addEventListener('click', () => { const value =
 const recordStorageKey = 'dawith-record-drafts-v1';
 const institutionProfileKey = 'dawith-institution-profile-v1';
 const templateHandoffKey = 'dawith-template-handoff-v1';
-const cloudProviderOrder = ['claude-code', 'codex', 'chatgpt', 'gemini-cli', 'gemini', 'openrouter'];
 
 function readSavedRecords() {
   try { const saved = JSON.parse(localStorage.getItem(recordStorageKey) || '[]'); return Array.isArray(saved) ? saved : []; } catch { return []; }
 }
 
-// Browser-only fallback for the static web build where /api is unavailable.
-function buildBrowserSummary(kind, rawText, contextText = '') {
-  const source = String(rawText).trim();
-  const lines = source.split(/(?<=[.!?。！？])\s+|\n+/).map((line) => line.replace(/^\s*(?:[-*•·]|\d+[.)])\s*/, '').trim()).filter(Boolean);
-  const label = (name) => source.match(new RegExp(`^\\s*(?:${name})\\s*[:：]\\s*(.+)$`, 'm'))?.[1]?.trim() || '';
-  const pick = (pattern, exclude = []) => lines.filter((line) => pattern.test(line) && !exclude.includes(line) && !/^\s*(?:일시|장소|참석자?|안건)\s*[:：]/.test(line));
-  const list = (items, empty = '[확인 필요]') => items.length ? items.map((item, index) => `${index + 1}. ${item}`).join('\n') : empty;
-  if (kind === 'meeting') {
-    const decisions = pick(/결정|합의|확정|하기로|승인/);
-    return { kind, overview: { datetime: label('일시|날짜') || '[확인 필요]', place: label('장소') || '[확인 필요]', attendees: label('참석자?') || '[확인 필요]', agenda: label('안건|회의명') || contextText || '[확인 필요]' }, discussion: list(pick(/./, decisions)), decisions: list(decisions), actions: pick(/담당|연락|신청|확인|방문|연계|예정|하기로|까지/).map((task) => ({ task, owner: '', due: task.match(/\d{1,2}월\s*\d{1,2}일(?:까지)?|다음\s*주|이번\s*주/)?.[0] || '' })) };
+// Records saved before 기록 양식 existed use fixed fields; show them as sections.
+function asTemplateSummary(summary) {
+  if (summary?.kind === 'template') return summary;
+  if (summary?.kind === 'meeting') {
+    const o = summary.overview || {};
+    const actions = (summary.actions || []).map((item, index) => { const meta = [item.owner && `담당: ${item.owner}`, item.due && `기한: ${item.due}`].filter(Boolean).join(', '); return `${index + 1}. ${item.task}${meta ? ` (${meta})` : ''}`; }).join('\n');
+    return { kind: 'template', templateKind: 'meeting', templateName: '회의록', meta: { datetime: o.datetime, place: o.place, attendees: o.attendees, agenda: o.agenda }, sections: [{ name: '회의 개요', content: `일시: ${o.datetime || ''}\n장소: ${o.place || ''}\n참석자: ${o.attendees || ''}\n안건: ${o.agenda || ''}` }, { name: '논의 내용', content: summary.discussion || '' }, { name: '결정 사항', content: summary.decisions || '' }, { name: '할 일', content: actions }] };
   }
-  const future = pick(/하기로|예정|다음|계획/);
-  return { kind: 'counseling', overview: contextText ? `맥락: ${contextText}` : '[확인 필요]', complaint: list(pick(/어렵|불안|걱정|힘들|호소|부담|문제|부족/)), assessment: { needs: list(pick(/필요|원함|원하|희망|요청/)), strengths: list(pick(/의지|노력|꾸준|가능|지지|참여/)), risks: list(pick(/위험|위기|폭력|학대|자해|자살|체납|퇴거|중독/), '원문에서 위험 단서를 찾지 못했습니다. 담당자 [확인 필요]') }, intervention: list(pick(/안내|설명|연계|제공|공감|격려|교육/, future)), plan: list(future) };
+  const a = summary?.assessment || {};
+  return { kind: 'template', templateKind: 'counseling', templateName: '상담 기록', meta: {}, sections: [{ name: '상담 개요', content: summary?.overview || '' }, { name: '주요 호소', content: summary?.complaint || '' }, { name: '사정', content: `욕구\n${a.needs || ''}\n\n강점\n${a.strengths || ''}\n\n위험\n${a.risks || ''}` }, { name: '개입 내용', content: summary?.intervention || '' }, { name: '향후 계획', content: summary?.plan || '' }] };
 }
 
 function summaryToMarkdown(summary, header = {}) {
-  const title = summary.kind === 'meeting' ? '회의록' : '상담 기록';
-  const meta = [header.organization && `- 기관: ${header.organization}`, header.author && `- 작성자: ${header.author}`, `- 작성일: ${formatDate(new Date())}`].filter(Boolean).join('\n');
-  const cellText = (value) => String(value || '-').replace(/\|/g, '\\|').replace(/\n+/g, ' ');
-  if (summary.kind === 'meeting') {
-    const o = summary.overview;
-    const actions = summary.actions.length ? summary.actions.map((item) => `| ${cellText(item.task)} | ${cellText(item.owner)} | ${cellText(item.due)} |`).join('\n') : '| (할 일 없음) | - | - |';
-    return `# ${title}\n\n${meta}\n\n## 회의 개요\n\n- 일시: ${o.datetime || '-'}\n- 장소: ${o.place || '-'}\n- 참석자: ${o.attendees || '-'}\n- 안건: ${o.agenda || '-'}\n\n## 논의 내용\n\n${summary.discussion || '-'}\n\n## 결정 사항\n\n${summary.decisions || '-'}\n\n## 할 일\n\n| 할 일 | 담당 | 기한 |\n| --- | --- | --- |\n${actions}\n`;
-  }
-  const a = summary.assessment;
-  return `# ${title}\n\n${meta}\n\n## 상담 개요\n\n${summary.overview || '-'}\n\n## 주요 호소\n\n${summary.complaint || '-'}\n\n## 사정\n\n### 욕구\n\n${a.needs || '-'}\n\n### 강점\n\n${a.strengths || '-'}\n\n### 위험\n\n${a.risks || '-'}\n\n## 개입 내용\n\n${summary.intervention || '-'}\n\n## 향후 계획·후속 조치\n\n${summary.plan || '-'}\n`;
+  const dateLabel = recordKinds[summary.templateKind]?.dateLabel || '일자';
+  const meta = [header.organization && `- 기관: ${header.organization}`, header.author && `- 작성자: ${header.author}`, `- ${dateLabel}: ${header.date || formatDate(new Date())}`].filter(Boolean).join('\n');
+  return `# ${summary.templateName}\n\n${meta}\n\n${summary.sections.map((section) => `## ${section.name}\n\n${section.content || '-'}`).join('\n\n')}\n`;
 }
 
-function summaryRows(value, min) { return Math.min(12, Math.max(min, String(value || '').split('\n').length + 1)); }
-function summaryField(id, label, value, rows = 4) {
-  return `<div class="summary-section"><label for="${id}">${label}</label><textarea id="${id}" rows="${summaryRows(value, rows)}">${escapeHtml(value)}</textarea></div>`;
-}
-
-function actionRow(item = {}) {
-  return `<tr><td><input class="action-task" aria-label="할 일" value="${escapeHtml(item.task || '')}" /></td><td><input class="action-owner" aria-label="담당" placeholder="담당" value="${escapeHtml(item.owner || '')}" /></td><td><input class="action-due" aria-label="기한" placeholder="기한" value="${escapeHtml(item.due || '')}" /></td><td><button class="icon-text-button action-remove" type="button" aria-label="이 할 일 지우기">삭제</button></td></tr>`;
-}
+function summaryRows(value, min) { return Math.min(14, Math.max(min, String(value || '').split('\n').length + 1)); }
 
 function renderSummaryBody(summary, header = {}) {
-  if (summary.kind === 'meeting') {
-    const o = summary.overview;
-    return `<div class="summary-header-strip"><div class="control-group"><label for="sumOrg">기관명</label><input id="sumOrg" class="wide-input" value="${escapeHtml(header.organization || '')}" placeholder="기관 문서 양식에 저장하면 자동 입력" /></div><div class="control-group"><label for="sumAuthor">작성자</label><input id="sumAuthor" class="wide-input" value="${escapeHtml(header.author || '')}" placeholder="담당자 이름" /></div><button id="sumRememberProfile" class="icon-text-button" type="button">기관명·작성자 기억하기</button></div><fieldset class="summary-section summary-grid"><legend>회의 개요</legend><label>일시<input id="sumDatetime" class="wide-input" value="${escapeHtml(o.datetime)}" /></label><label>장소<input id="sumPlace" class="wide-input" value="${escapeHtml(o.place)}" /></label><label>참석자<input id="sumAttendees" class="wide-input" value="${escapeHtml(o.attendees)}" /></label><label>안건<input id="sumAgenda" class="wide-input" value="${escapeHtml(o.agenda)}" /></label></fieldset>${summaryField('sumDiscussion', '논의 내용', summary.discussion, 6)}${summaryField('sumDecisions', '결정 사항', summary.decisions, 4)}<div class="summary-section"><div class="label-row"><span class="summary-label">할 일 (담당·기한)</span><button id="sumAddAction" class="icon-text-button" type="button">+ 할 일 추가</button></div><div class="attendance-table-wrap"><table class="attendance-table action-table"><thead><tr><th>할 일</th><th>담당</th><th>기한</th><th aria-label="삭제"></th></tr></thead><tbody id="sumActions">${summary.actions.map(actionRow).join('')}</tbody></table></div></div>`;
-  }
-  const a = summary.assessment;
-  return `${summaryField('sumOverview', '상담 개요', summary.overview, 3)}${summaryField('sumComplaint', '주요 호소', summary.complaint, 4)}<fieldset class="summary-section summary-assessment"><legend>사정</legend><label for="sumNeeds">욕구</label><textarea id="sumNeeds" rows="${summaryRows(a.needs, 2)}">${escapeHtml(a.needs)}</textarea><label for="sumStrengths">강점</label><textarea id="sumStrengths" rows="${summaryRows(a.strengths, 2)}">${escapeHtml(a.strengths)}</textarea><label for="sumRisks">위험</label><textarea id="sumRisks" rows="${summaryRows(a.risks, 2)}">${escapeHtml(a.risks)}</textarea></fieldset>${summaryField('sumIntervention', '개입 내용', summary.intervention, 4)}${summaryField('sumPlan', '향후 계획·후속 조치', summary.plan, 4)}`;
-}
-
-function collectSummary(kind) {
-  const value = (id) => $(`#${id}`)?.value.trim() || '';
-  if (kind === 'meeting') {
-    return { kind, overview: { datetime: value('sumDatetime'), place: value('sumPlace'), attendees: value('sumAttendees'), agenda: value('sumAgenda') }, discussion: value('sumDiscussion'), decisions: value('sumDecisions'), actions: $$('#sumActions tr').map((row) => ({ task: $('.action-task', row).value.trim(), owner: $('.action-owner', row).value.trim(), due: $('.action-due', row).value.trim() })).filter((item) => item.task || item.owner || item.due) };
-  }
-  return { kind: 'counseling', overview: value('sumOverview'), complaint: value('sumComplaint'), assessment: { needs: value('sumNeeds'), strengths: value('sumStrengths'), risks: value('sumRisks') }, intervention: value('sumIntervention'), plan: value('sumPlan') };
+  const dateLabel = recordKinds[summary.templateKind]?.dateLabel || '일자';
+  const strip = `<div class="summary-header-strip"><div class="control-group"><label for="sumOrg">기관명</label><input id="sumOrg" class="wide-input" value="${escapeHtml(header.organization || '')}" placeholder="예: 다위종합사회복지관" /></div><div class="control-group"><label for="sumAuthor">작성자</label><input id="sumAuthor" class="wide-input" value="${escapeHtml(header.author || '')}" placeholder="담당자 이름" /></div><div class="control-group"><label for="sumDate">${dateLabel}</label><input id="sumDate" class="wide-input" value="${escapeHtml(header.date || '')}" /></div><button id="sumRememberProfile" class="icon-text-button" type="button">기관명·작성자 기억하기</button></div>`;
+  const sections = summary.sections.map((section, index) => `<div class="summary-section"><label for="sumSection${index}">${escapeHtml(section.name)}${section.guide ? ` <small>${escapeHtml(section.guide)}</small>` : ''}</label><textarea id="sumSection${index}" class="sum-section" data-section="${escapeHtml(section.name)}" rows="${summaryRows(section.content, 3)}">${escapeHtml(section.content)}</textarea></div>`).join('');
+  const unassigned = summary.unassigned?.length ? `<details class="summary-unassigned"><summary>어느 항목에도 넣지 못한 문장 ${summary.unassigned.length}개</summary><ol>${summary.unassigned.map((line) => `<li>${escapeHtml(line)}</li>`).join('')}</ol><p>필요하면 위 항목에 직접 옮겨 적으세요.</p></details>` : '';
+  return `${strip}${sections}${unassigned}`;
 }
 
 function engineErrorMessage(payload, status) {
@@ -1035,169 +1036,274 @@ function engineErrorMessage(payload, status) {
   return '정리하지 못했습니다. 잠시 뒤 다시 시도하세요.';
 }
 
+const readFileBase64 = (file) => new Promise((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(String(reader.result).split(',')[1] || ''); reader.onerror = () => reject(reader.error); reader.readAsDataURL(file); });
+const base64Blob = (base64, type) => { const binary = atob(base64); const bytes = new Uint8Array(binary.length); for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index); return new Blob([bytes], { type }); };
+
 function bindCaseRecord() {
-  let mode = 'counseling';
+  let template = null; // { id, name, kind, sections }
   let result = null; // { summary, provider, engine, rawText, contextText }
+  let form = null; // { fileName, dataBase64, placeholders }
+  let editingId = null;
   const notice = (message, error = false) => { const target = $('#recordNotice'); target.hidden = !message; target.className = error ? 'notice error-notice' : 'notice'; target.textContent = message; };
+  const formNotice = (message, error = false) => { const target = $('#recordFormNotice'); target.hidden = !message; target.className = error ? 'notice error-notice' : 'notice'; target.textContent = message; };
   const engine = () => $('input[name="recordEngine"]:checked')?.value || 'rules';
-  const header = () => mode === 'meeting' ? { organization: $('#sumOrg')?.value.trim() || '', author: $('#sumAuthor')?.value.trim() || '' } : {};
-  const setActions = (enabled) => { ['#recordCopy', '#recordSave', '#recordExport', '#recordDocx', '#recordToTemplate'].forEach((id) => { $(id).disabled = !enabled; }); $('#recordToTemplate').classList.toggle('hidden', mode !== 'meeting'); };
-  const badge = (text, external = false) => { const target = $('#recordTransfer'); target.textContent = text; target.classList.toggle('external', external); };
+  const header = () => ({ organization: $('#sumOrg')?.value.trim() || '', author: $('#sumAuthor')?.value.trim() || '', date: $('#sumDate')?.value.trim() || '' });
+  const setActions = (enabled) => { ['#recordCopy', '#recordSave', '#recordExport', '#recordDocx', '#recordToTemplate'].forEach((id) => { $(id).disabled = !enabled; }); $('#recordToTemplate').classList.toggle('hidden', (result?.summary.templateKind || template.kind) !== 'meeting'); syncFormButton(); };
+  const badge = (text) => { $('#recordTransfer').textContent = text; };
+  const kindInfo = () => recordKinds[template.kind] || recordKinds.counseling;
+
   const showEmpty = () => {
     result = null;
-    $('#summaryTitle').textContent = summaryModes[mode].title;
-    $('#summaryBody').innerHTML = `<div class="summary-empty"><b>왼쪽에 원문을 넣고 정리하기를 누르세요.</b><span>${mode === 'meeting' ? '회의 개요(일시·장소·참석자·안건) · 논의 내용 · 결정 사항 · 할 일(담당·기한)로 나눠 드립니다.' : '상담 개요 · 주요 호소 · 사정(욕구·강점·위험) · 개입 내용 · 향후 계획·후속 조치로 나눠 드립니다.'}</span></div>`;
+    $('#summaryTitle').textContent = template.name;
+    $('#summaryBody').innerHTML = `<div class="summary-empty"><b>왼쪽에 원문을 넣고 정리하기를 누르세요.</b><span>${template.sections.map((section) => escapeHtml(section.name)).join(' · ')} 항목으로 나눠 드립니다.</span></div>`;
     badge('정리 전');
     setActions(false);
   };
   const showResult = (summary, meta) => {
     const profile = readInstitutionProfile();
-    result = { ...meta, summary };
-    $('#summaryTitle').textContent = summaryModes[summary.kind].title;
-    $('#summaryBody').innerHTML = renderSummaryBody(summary, meta.header || { organization: profile.organization || '', author: profile.manager || '' });
+    const normalized = asTemplateSummary(summary);
+    result = { ...meta, summary: normalized };
+    $('#summaryTitle').textContent = normalized.templateName;
+    const fallbackHeader = { organization: profile.organization || '', author: profile.manager || '', date: normalized.meta?.datetime || normalized.meta?.date || formatDate(new Date()) };
+    $('#summaryBody').innerHTML = renderSummaryBody(normalized, meta.header?.organization || meta.header?.author || meta.header?.date ? meta.header : fallbackHeader);
     setActions(true);
+    if (form) inspectForm();
   };
-  const setMode = (next) => {
-    mode = next === 'meeting' ? 'meeting' : 'counseling';
-    $$('.summary-mode').forEach((button) => { const active = button.dataset.summaryMode === mode; button.classList.toggle('active', active); button.setAttribute('aria-selected', String(active)); });
-    const info = summaryModes[mode];
+  const currentSummary = () => {
+    if (!result) return null;
+    const contents = $$('#summaryBody .sum-section').map((element) => element.value.trim());
+    return { ...result.summary, sections: result.summary.sections.map((section, index) => ({ name: section.name, guide: section.guide || '', content: contents[index] ?? section.content })) };
+  };
+
+  // ---- 기록 양식 고르기·고치기 ----
+  const renderChips = () => { $('#recordTemplateSections').innerHTML = template.sections.map((section) => `<span title="${escapeHtml(section.guide || '')}">${escapeHtml(section.name)}</span>`).join(''); };
+  const selectTemplate = (id, { keepResult = false } = {}) => {
+    const catalog = recordTemplateCatalog();
+    template = catalog.find((item) => item.id === id) || catalog[0];
+    $('#recordTemplate').innerHTML = recordTemplateOptions(template.id);
+    try { localStorage.setItem(recordTemplateChoiceKey, template.id); } catch { /* storage may be unavailable */ }
+    const info = kindInfo();
     $('#recordContextLabel').textContent = info.contextLabel; $('#recordContext').placeholder = info.contextPlaceholder;
     $('#recordRawLabel').textContent = info.rawLabel; $('#recordRaw').placeholder = info.rawPlaceholder;
-    showEmpty();
+    $('#recordTemplateEdit').textContent = template.id.startsWith('preset-') ? '항목 고치기' : '이 양식 고치기';
+    renderChips();
+    renderFormGuide();
+    if (!keepResult) showEmpty();
+    if (form) inspectForm();
   };
+  const editorRow = (section = {}) => `<li><input class="rt-name wide-input" aria-label="항목 이름" maxlength="30" placeholder="예: 관찰사항" value="${escapeHtml(section.name || '')}" /><input class="rt-guide wide-input" aria-label="작성 안내" maxlength="120" placeholder="예: 표정·태도·생활환경" value="${escapeHtml(section.guide || '')}" /><span class="rt-row-buttons"><button class="icon-text-button rt-up" type="button" aria-label="위로">↑</button><button class="icon-text-button rt-down" type="button" aria-label="아래로">↓</button><button class="icon-text-button rt-remove" type="button" aria-label="이 항목 지우기">삭제</button></span></li>`;
+  const openEditor = (source) => {
+    editingId = source && !source.id.startsWith('preset-') ? source.id : null;
+    $('#rtName').value = source ? (editingId ? source.name : `${source.name} (내 양식)`) : '';
+    $$('input[name="rtKind"]').forEach((input) => { input.checked = input.value === (source?.kind || template.kind); });
+    $('#rtSections').innerHTML = (source?.sections || [{}, {}, {}]).map(editorRow).join('');
+    $('#rtSave').textContent = editingId ? '저장' : '내 양식으로 저장';
+    $('#rtDelete').hidden = !editingId;
+    $('#recordTemplateEditor').hidden = false;
+    (source ? $('#rtName') : $('#rtName')).focus();
+  };
+  const closeEditor = () => { $('#recordTemplateEditor').hidden = true; editingId = null; };
+  const saveEditor = () => {
+    const sections = $$('#rtSections li').map((row) => ({ name: $('.rt-name', row).value.replace(/[{}]/g, '').trim(), guide: $('.rt-guide', row).value.trim() })).filter((section) => section.name);
+    const names = sections.map((section) => section.name.replace(/\s+/g, ''));
+    if (!sections.length) { notice('항목을 하나 이상 적어 주세요.', true); $('.rt-name')?.focus(); return; }
+    if (new Set(names).size !== names.length) { notice('같은 이름의 항목이 있습니다. 항목 이름을 다르게 적어 주세요.', true); return; }
+    const name = $('#rtName').value.trim() || '내 기록 양식';
+    const kind = $('input[name="rtKind"]:checked')?.value === 'meeting' ? 'meeting' : 'counseling';
+    const saved = { id: editingId || `custom-${Date.now()}`, name, kind, sections };
+    const custom = readCustomRecordTemplates();
+    const next = editingId ? custom.map((item) => item.id === editingId ? saved : item) : [...custom, saved];
+    try { localStorage.setItem(recordTemplateStorageKey, JSON.stringify(next)); } catch { notice('이 PC의 저장 공간을 사용할 수 없습니다.', true); return; }
+    closeEditor();
+    selectTemplate(saved.id);
+    notice(`'${name}' 양식을 이 PC에 저장했습니다. 다음에도 목록에서 고를 수 있습니다.`);
+  };
+  $('#recordTemplate').addEventListener('change', (event) => { closeEditor(); selectTemplate(event.target.value); });
+  $('#recordTemplateEdit').addEventListener('click', () => openEditor(template));
+  $('#recordTemplateNew').addEventListener('click', () => openEditor(null));
+  $('#rtAdd').addEventListener('click', () => { $('#rtSections').insertAdjacentHTML('beforeend', editorRow()); $$('#rtSections .rt-name').at(-1)?.focus(); });
+  $('#rtSections').addEventListener('click', (event) => {
+    const row = event.target.closest('li'); if (!row) return;
+    if (event.target.closest('.rt-remove')) row.remove();
+    if (event.target.closest('.rt-up') && row.previousElementSibling) row.parentElement.insertBefore(row, row.previousElementSibling);
+    if (event.target.closest('.rt-down') && row.nextElementSibling) row.parentElement.insertBefore(row.nextElementSibling, row);
+  });
+  $('#rtSave').addEventListener('click', saveEditor);
+  $('#rtCancel').addEventListener('click', closeEditor);
+  $('#rtDelete').addEventListener('click', () => {
+    if (!editingId) return;
+    try { localStorage.setItem(recordTemplateStorageKey, JSON.stringify(readCustomRecordTemplates().filter((item) => item.id !== editingId))); } catch { return; }
+    closeEditor();
+    selectTemplate(recordTemplatePresets[0].id);
+    notice('내 양식을 지웠습니다.');
+  });
+
+  // ---- 정리하기 ----
   const updateCount = () => { $('#recordRawCount').textContent = `${$('#recordRaw').value.length.toLocaleString()}자`; };
-  const syncEngine = () => { const cloud = engine() === 'cloud'; const hasProviders = $('#recordCloudProvider').options.length > 0; $('#engineCloudPicker').hidden = !cloud || !hasProviders; $('#engineCloudEmpty').hidden = !cloud || hasProviders; $('#recordProcess').textContent = cloud ? '보낼 내용 확인 →' : '정리하기 →'; };
-  const loadEngineStatus = async () => {
+  const loadEngineStatus = () => {
     fetchLocalAiCapabilities().then((capabilities) => {
       const ollama = capabilities.ollama || {};
       $('#engineOllamaStatus').textContent = ollama.available ? `연결됨 · ${preferredAiModel()}` : '꺼져 있음 · 고르면 규칙으로 대신 정리';
       $('#engineOllamaStatus').classList.toggle('ok', Boolean(ollama.available));
     }).catch(() => { $('#engineOllamaStatus').textContent = '확인할 수 없음 · PC용 앱에서 사용'; });
-    try {
-      const status = await fetchSubscriptionStatus();
-      const ready = Object.values(status.providers || {}).filter((item) => item.state === 'ready' || item.connected === true)
-        .sort((a, b) => cloudProviderOrder.indexOf(a.provider) - cloudProviderOrder.indexOf(b.provider));
-      $('#recordCloudProvider').innerHTML = ready.map((item) => `<option value="${escapeHtml(item.provider)}">${escapeHtml(item.label || providerLabel(item.provider))}</option>`).join('');
-      $('#engineCloudStatus').textContent = ready.length ? `연결됨: ${ready.map((item) => providerLabel(item.provider)).join(', ')}` : '연결된 AI 없음';
-      $('#engineCloudStatus').classList.toggle('ok', ready.length > 0);
-    } catch {
-      $('#recordCloudProvider').innerHTML = '';
-      $('#engineCloudStatus').textContent = '연결된 AI 없음';
-    }
-    syncEngine();
   };
-  const confirmCloud = (provider, rawText, contextText) => new Promise((resolve) => {
-    const dialog = $('#cloudConfirmDialog');
-    const outgoing = () => { const mask = $('#cloudMask').checked; const apply = (text) => mask ? transformText(text, 'mask') : text; return { rawText: apply(rawText), contextText: apply(contextText) }; };
-    const render = () => { const value = outgoing(); $('#cloudPreview').textContent = `${value.contextText ? `[${mode === 'meeting' ? '회의명' : '상담 맥락'}]\n${value.contextText}\n\n` : ''}[원문]\n${value.rawText}`; };
-    $('#cloudConfirmProvider').textContent = providerLabel(provider);
-    $('#cloudMask').checked = true;
-    render();
-    const finish = (value) => { $('#cloudMask').removeEventListener('change', render); $('#cloudSend').removeEventListener('click', onSend); $('#cloudCancel').removeEventListener('click', onCancel); dialog.removeEventListener('cancel', onCancel); if (dialog.open) dialog.close(); resolve(value); };
-    const onSend = () => finish(outgoing());
-    const onCancel = (event) => { event?.preventDefault?.(); finish(null); };
-    $('#cloudMask').addEventListener('change', render);
-    $('#cloudSend').addEventListener('click', onSend);
-    $('#cloudCancel').addEventListener('click', onCancel);
-    dialog.addEventListener('cancel', onCancel);
-    dialog.showModal();
-    $('#cloudCancel').focus();
-  });
   const process = async () => {
     const rawText = $('#recordRaw').value.trim();
     const contextText = $('#recordContext').value.trim();
-    if (!rawText) { notice(mode === 'meeting' ? '회의 메모를 먼저 붙여 넣으세요.' : '상담 메모를 먼저 붙여 넣으세요.', true); $('#recordRaw').focus(); return; }
+    if (!rawText) { notice(template.kind === 'meeting' ? '회의 메모를 먼저 붙여 넣으세요.' : '상담 메모를 먼저 붙여 넣으세요.', true); $('#recordRaw').focus(); return; }
     const choice = engine();
-    const request = { kind: mode, rawText, contextText, provider: 'rules' };
-    if (choice === 'ollama') { request.provider = 'ollama-local'; request.model = preferredAiModel(); }
-    if (choice === 'cloud') {
-      const provider = $('#recordCloudProvider').value;
-      if (!provider) { notice('연결된 클라우드 AI가 없습니다. AI 보조·연결에서 먼저 연결하거나 다른 정리 방식을 고르세요.', true); return; }
-      if (!(await ensureExternalAiConsent())) { notice('클라우드 AI 전송에 동의하지 않아 아무것도 보내지 않았습니다.'); return; }
-      const outgoing = await confirmCloud(provider, rawText, contextText);
-      if (!outgoing) { notice('전송을 취소했습니다. 아무것도 보내지 않았습니다.'); return; }
-      Object.assign(request, outgoing, { provider: `cloud:${provider}`, confirmExternal: true });
-    }
+    const request = { kind: template.kind, rawText, contextText, provider: choice === 'ollama' ? 'ollama-local' : 'rules', template: { name: template.name, kind: template.kind, sections: template.sections } };
+    if (choice === 'ollama') request.model = preferredAiModel();
     const button = $('#recordProcess');
     button.disabled = true;
-    button.textContent = choice === 'rules' ? '정리하는 중…' : choice === 'ollama' ? '로컬 AI가 정리하는 중…' : `${providerLabel(request.provider.slice(6))}에서 정리하는 중…`;
+    button.textContent = choice === 'ollama' ? '로컬 AI가 정리하는 중…' : '정리하는 중…';
     notice('');
     try {
       let response;
       try { response = await fetch('./api/process', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(request) }); }
-      catch { response = null; }
-      if (!response && choice === 'rules') {
-        showResult(buildBrowserSummary(mode, rawText, contextText), { provider: 'browser-rules', engine: 'rules', rawText, contextText });
-        badge('규칙 · 이 브라우저');
-        notice('로컬 서버에 연결되지 않아 브라우저 규칙으로 정리했습니다. 원문과 대조하세요.');
-        return;
-      }
-      if (!response) throw Object.assign(new Error('offline'), { userMessage: 'PC용 앱의 로컬 서버에 연결되지 않았습니다. 규칙 방식은 계속 사용할 수 있습니다.' });
+      catch { throw Object.assign(new Error('offline'), { userMessage: 'PC용 앱의 로컬 서버에 연결되지 않았습니다. 앱을 다시 실행해 주세요.' }); }
       const payload = await response.json().catch(() => ({}));
       if (!response.ok || !payload.summary) throw Object.assign(new Error(payload.error || `http_${response.status}`), { userMessage: engineErrorMessage(payload, response.status) });
-      showResult(payload.summary, { provider: payload.provider, engine: payload.engine, rawText: request.rawText, contextText: request.contextText });
-      if (payload.fallback?.used) { badge(payload.transfer?.external ? '규칙으로 대체 · 원문은 전송됨' : '규칙으로 대체', Boolean(payload.transfer?.external)); notice(payload.fallback.message, true); }
+      showResult(payload.summary, { provider: payload.provider, engine: payload.engine, rawText, contextText });
+      if (payload.fallback?.used) { badge('규칙으로 대체'); notice(payload.fallback.message, true); }
       else if (payload.engine === 'ollama') { badge(`로컬 AI · ${payload.model || 'Ollama'}`); notice('로컬 AI가 만든 초안입니다. PC 밖으로 나가지 않았습니다. 원문과 대조한 뒤 확정하세요.'); }
-      else if (payload.engine === 'cloud') { badge(`클라우드 AI · ${providerLabel(payload.transfer?.destination)}`, true); notice(`${providerLabel(payload.transfer?.destination)} 결과입니다. 확인한 내용만 전송했습니다. 원문과 대조한 뒤 확정하세요.`); }
       else { badge('규칙 · 이 PC'); notice('규칙으로 항목을 나눴습니다. [확인 필요] 표시는 직접 채워 주세요.'); }
     } catch (error) {
       notice(error.userMessage || '정리하지 못했습니다. 잠시 뒤 다시 시도하세요.', true);
     } finally {
       button.disabled = false;
-      syncEngine();
+      button.textContent = '정리하기 →';
     }
   };
-  const currentSummary = () => result ? collectSummary(result.summary.kind) : null;
   const refreshSavedList = () => {
     const saved = readSavedRecords().filter((item) => item.summary);
-    $('#recordSavedList').innerHTML = saved.length ? `<option value="">저장한 기록 ${saved.length}건 · 선택해 불러오기</option>${saved.map((item) => `<option value="${escapeHtml(item.id)}">${escapeHtml(new Date(item.createdAt).toLocaleString('ko-KR', { dateStyle: 'short', timeStyle: 'short' }))} · ${item.summary.kind === 'meeting' ? '회의록' : '상담 기록'} · ${escapeHtml(String(item.rawText || '').slice(0, 24))}</option>`).join('')}` : '<option value="">저장한 기록 없음</option>';
+    $('#recordSavedList').innerHTML = saved.length ? `<option value="">저장한 기록 ${saved.length}건 · 선택해 불러오기</option>${saved.map((item) => `<option value="${escapeHtml(item.id)}">${escapeHtml(new Date(item.createdAt).toLocaleString('ko-KR', { dateStyle: 'short', timeStyle: 'short' }))} · ${escapeHtml(asTemplateSummary(item.summary).templateName)} · ${escapeHtml(String(item.rawText || '').slice(0, 24))}</option>`).join('')}` : '<option value="">저장한 기록 없음</option>';
   };
-  $$('.summary-mode').forEach((button) => button.addEventListener('click', () => setMode(button.dataset.summaryMode)));
-  $$('input[name="recordEngine"]').forEach((input) => input.addEventListener('change', syncEngine));
   $('#recordRaw').addEventListener('input', updateCount);
-  $('#recordSample').addEventListener('click', () => { const sample = summaryModes[mode].sample; $('#recordContext').value = sample.context; $('#recordRaw').value = sample.raw; updateCount(); notice('합성 예시를 넣었습니다. 실제 개인정보가 아닙니다.'); });
+  $('#recordSample').addEventListener('click', () => { const sample = kindInfo().sample; $('#recordContext').value = sample.context; $('#recordRaw').value = sample.raw; updateCount(); notice('합성 예시를 넣었습니다. 실제 개인정보가 아닙니다.'); });
   $('#recordProcess').addEventListener('click', process);
   $('#summaryBody').addEventListener('click', (event) => {
-    if (event.target.closest('#sumAddAction')) { $('#sumActions').insertAdjacentHTML('beforeend', actionRow()); $$('#sumActions .action-task').at(-1)?.focus(); }
-    const remove = event.target.closest('.action-remove'); if (remove) remove.closest('tr').remove();
     if (event.target.closest('#sumRememberProfile')) { try { localStorage.setItem(institutionProfileKey, JSON.stringify({ ...readInstitutionProfile(), organization: $('#sumOrg').value.trim(), manager: $('#sumAuthor').value.trim() })); notice('기관명·작성자를 이 PC에 저장했습니다. 기관 문서 양식에서도 같은 정보를 씁니다.'); } catch { notice('이 브라우저에서는 저장할 수 없습니다.', true); } }
   });
+  const fileBase = (summary) => `${summary.templateName.replace(/[\\/:*?"<>|\s]+/g, '_')}_${compactDate(new Date())}`;
   $('#recordCopy').addEventListener('click', async () => { const summary = currentSummary(); if (!summary) return; try { await navigator.clipboard.writeText(summaryToMarkdown(summary, header())); notice('정리 결과를 클립보드에 복사했습니다.'); } catch { notice('클립보드를 사용할 수 없습니다. Markdown 저장을 이용하세요.', true); } });
   $('#recordSave').addEventListener('click', () => {
     const summary = currentSummary(); if (!summary) return;
-    const entry = { id: `record_${Date.now()}`, createdAt: new Date().toISOString(), kind: summary.kind, provider: result.provider, engine: result.engine, summary, header: header(), rawText: result.rawText, contextText: result.contextText };
+    const entry = { id: `record_${Date.now()}`, createdAt: new Date().toISOString(), kind: summary.templateKind, provider: result.provider, engine: result.engine, summary, header: header(), rawText: result.rawText, contextText: result.contextText };
     try { localStorage.setItem(recordStorageKey, JSON.stringify([entry, ...readSavedRecords()].slice(0, 30))); } catch { notice('이 PC의 저장 공간을 사용할 수 없습니다. Markdown이나 Word로 저장하세요.', true); return; }
     refreshSavedList();
     notice('이 PC의 로컬 저장소에 저장했습니다. 공용 PC라면 Word로 내려받은 뒤 지우세요.');
   });
-  $('#recordExport').addEventListener('click', () => { const summary = currentSummary(); if (!summary) return; downloadBlob(new Blob([summaryToMarkdown(summary, header())], { type: 'text/markdown;charset=utf-8' }), `${summary.kind === 'meeting' ? '회의록' : '상담기록'}_${compactDate(new Date())}.md`); });
+  $('#recordExport').addEventListener('click', () => { const summary = currentSummary(); if (!summary) return; downloadBlob(new Blob([summaryToMarkdown(summary, header())], { type: 'text/markdown;charset=utf-8' }), `${fileBase(summary)}.md`); });
   $('#recordDocx').addEventListener('click', async () => {
     const summary = currentSummary(); if (!summary) return;
     const button = $('#recordDocx'); button.disabled = true;
     try {
-      const response = await fetch('./api/summary/export', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ kind: summary.kind, summary, header: header() }) });
+      const response = await fetch('./api/summary/export', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ kind: 'template', summary, header: header() }) });
       if (!response.ok) throw new Error(`docx_http_${response.status}`);
-      downloadBlob(await response.blob(), `${summary.kind === 'meeting' ? '회의록' : '상담기록'}_${compactDate(new Date())}.docx`);
-    } catch { notice('Word 파일은 PC용 앱(로컬 서버)에서 만들 수 있습니다. 지금은 Markdown 저장을 이용하세요.', true); }
+      downloadBlob(await response.blob(), `${fileBase(summary)}.docx`);
+    } catch { notice('Word 파일을 만들지 못했습니다. PC용 앱에서 다시 시도하거나 Markdown 저장을 이용하세요.', true); }
     finally { button.disabled = false; }
   });
   $('#recordToTemplate').addEventListener('click', () => {
-    const summary = currentSummary(); if (!summary || summary.kind !== 'meeting') return;
-    const actions = summary.actions.map((item, index) => { const meta = [item.owner && `담당: ${item.owner}`, item.due && `기한: ${item.due}`].filter(Boolean).join(', '); return `${index + 1}. ${item.task}${meta ? ` (${meta})` : ''}`; }).join('\n');
-    try { sessionStorage.setItem(templateHandoffKey, JSON.stringify({ templateId: 'meeting-minutes', organization: header().organization, author: header().author, project: summary.overview.agenda, attendees: summary.overview.attendees, purpose: [summary.overview.datetime && `일시: ${summary.overview.datetime}`, summary.overview.place && `장소: ${summary.overview.place}`, summary.overview.agenda && `안건: ${summary.overview.agenda}`].filter(Boolean).join('\n'), content: summary.discussion, decisions: summary.decisions, actions })); } catch { notice('이 브라우저에서는 양식으로 보낼 수 없습니다.', true); return; }
+    const summary = currentSummary(); if (!summary || summary.templateKind !== 'meeting') return;
+    const find = (pattern) => summary.sections.find((section) => pattern.test(section.name))?.content || '';
+    const meta = summary.meta || {};
+    try { sessionStorage.setItem(templateHandoffKey, JSON.stringify({ templateId: 'meeting-minutes', organization: header().organization, author: header().author, project: meta.agenda || $('#recordContext').value.trim(), attendees: meta.attendees || '', purpose: find(/개요/) || [meta.datetime && `일시: ${meta.datetime}`, meta.place && `장소: ${meta.place}`].filter(Boolean).join('\n'), content: find(/논의|협의|내용/), decisions: find(/결정|합의|결론/), actions: find(/할\s*일|역할|분담|후속|조치/) })); } catch { notice('이 브라우저에서는 양식으로 보낼 수 없습니다.', true); return; }
     openTool('template-studio');
   });
   $('#recordSavedList').addEventListener('change', (event) => {
     const entry = readSavedRecords().find((item) => item.id === event.target.value); if (!entry?.summary) return;
-    setMode(entry.summary.kind);
     $('#recordRaw').value = entry.rawText || ''; $('#recordContext').value = entry.contextText || ''; updateCount();
-    showResult(entry.summary, { provider: entry.provider, engine: entry.engine, rawText: entry.rawText, contextText: entry.contextText, header: entry.header?.organization || entry.header?.author ? entry.header : null });
+    showResult(entry.summary, { provider: entry.provider, engine: entry.engine, rawText: entry.rawText, contextText: entry.contextText, header: entry.header });
     badge(`저장본 · ${new Date(entry.createdAt).toLocaleString('ko-KR', { dateStyle: 'short', timeStyle: 'short' })}`);
     notice('저장한 기록을 불러왔습니다.');
   });
-  setMode('counseling');
+
+  // ---- 우리 기관 양식에 넣기 ----
+  function syncFormButton() { $('#recordFormFill').disabled = !(form?.placeholders?.length && result); }
+  function guideTokens() { const meeting = template.kind === 'meeting'; return [...template.sections.map((section) => section.name), '기관명', '담당자', meeting ? '회의일' : '상담일', ...(meeting ? ['장소', '참석자'] : [])]; }
+  function renderFormGuide() {
+    const tokens = guideTokens();
+    $('#recordFormGuide').innerHTML = `<p>양식 파일에서 내용이 들어갈 자리에 아래 표식을 그대로 적어 넣으세요. 표식을 누르면 복사됩니다.</p><div class="record-form-tokens">${tokens.map((token) => `<button class="record-form-token" type="button" data-token="${escapeHtml(token)}">{{${escapeHtml(token)}}}</button>`).join('')}</div><div class="record-form-guide-actions"><button id="recordFormCopyAll" class="secondary-button" type="button">표식 모두 복사</button><button id="recordFormStarter" class="secondary-button" type="button">표식이 들어간 Word 양식 받기</button></div><small>칸 이름이 조금 달라도(예: <code>{{소견}}</code>) 비슷한 항목을 찾아 넣습니다. 맞는 항목이 없는 표식은 직접 적을 수 있습니다.</small>`;
+  }
+  const renderFormFields = () => {
+    const list = $('#recordFormFields');
+    if (!form?.placeholders?.length) { list.hidden = true; list.innerHTML = ''; syncFormButton(); return; }
+    const matched = form.placeholders.filter((item) => item.source).length;
+    list.innerHTML = `<li class="record-form-summary">찾은 표식 ${form.placeholders.length}개 · 자동으로 채울 표식 ${matched}개${matched < form.placeholders.length ? ` · 직접 적을 표식 ${form.placeholders.length - matched}개` : ''}</li>${form.placeholders.map((item) => item.source ? `<li class="ph-row ok" data-token="${escapeHtml(item.token)}"><code>{{${escapeHtml(item.token)}}}</code><span>← ${escapeHtml(item.source.label)}</span></li>` : `<li class="ph-row missing" data-token="${escapeHtml(item.token)}"><code>{{${escapeHtml(item.token)}}}</code><input class="wide-input ph-extra" data-token="${escapeHtml(item.token)}" aria-label="{{${escapeHtml(item.token)}}}에 넣을 내용" placeholder="맞는 항목 없음 · 넣을 내용을 직접 적기" value="${escapeHtml(form.extra?.[item.token] || '')}" /></li>`).join('')}`;
+    list.hidden = false;
+    syncFormButton();
+  };
+  async function inspectForm() {
+    if (!form) return;
+    try {
+      const response = await fetch('./api/record-form/inspect', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ fileName: form.fileName, dataBase64: form.dataBase64, sectionNames: (result?.summary.sections || template.sections).map((section) => section.name) }) });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw Object.assign(new Error(payload.error || 'inspect_failed'), { code: payload.error });
+      form.placeholders = payload.placeholders || [];
+      renderFormFields();
+      if (payload.warnings?.length) formNotice(payload.warnings.join(' '), !form.placeholders.length);
+      else formNotice(result ? '' : '먼저 정리하기를 누르면 양식에 넣을 수 있습니다.');
+    } catch (error) {
+      form.placeholders = [];
+      renderFormFields();
+      formNotice(error.code === 'template_format_unsupported' ? 'Word(.docx)나 한글(.hwpx) 파일만 쓸 수 있습니다. .hwp 파일은 한글에서 "다른 이름으로 저장 → HWPX"로 바꾼 뒤 올려 주세요.' : error.code === 'template_size_invalid' ? '파일이 비어 있거나 25MB보다 큽니다.' : '양식 파일을 읽지 못했습니다. 파일이 손상되지 않았는지 확인하세요.', true);
+    }
+  }
+  const setForm = (next, { remember = true } = {}) => {
+    form = next;
+    $('#recordFormName').textContent = form ? form.fileName : '올린 양식 없음';
+    $('#recordFormForget').hidden = !form;
+    if (form && remember) { try { if (form.dataBase64.length <= 3_000_000) localStorage.setItem(recordFormStorageKey, JSON.stringify({ fileName: form.fileName, dataBase64: form.dataBase64 })); } catch { /* too large for this PC's storage: use it for this session only */ } }
+    if (!form) { try { localStorage.removeItem(recordFormStorageKey); } catch { /* ignore */ } renderFormFields(); formNotice(''); return; }
+    inspectForm();
+  };
+  $('#recordFormInput').addEventListener('change', async (event) => {
+    const file = event.target.files?.[0]; event.target.value = '';
+    if (!file) return;
+    if (!/\.(docx|hwpx)$/i.test(file.name)) { formNotice(/\.hwp$/i.test(file.name) ? '.hwp 파일은 한글에서 "다른 이름으로 저장 → HWPX"로 바꾼 뒤 올려 주세요.' : 'Word(.docx)나 한글(.hwpx) 파일만 쓸 수 있습니다.', true); return; }
+    if (file.size > 25 * 1024 * 1024) { formNotice('25MB보다 큰 양식은 쓸 수 없습니다.', true); return; }
+    setForm({ fileName: file.name, dataBase64: await readFileBase64(file), placeholders: [], extra: {} });
+  });
+  $('#recordFormForget').addEventListener('click', () => setForm(null));
+  $('#recordFormFields').addEventListener('input', (event) => { const input = event.target.closest('.ph-extra'); if (input && form) form.extra = { ...form.extra, [input.dataset.token]: input.value }; });
+  $('#recordFormGuideToggle').addEventListener('click', () => { const panel = $('#recordFormGuide'); panel.hidden = !panel.hidden; $('#recordFormGuideToggle').setAttribute('aria-expanded', String(!panel.hidden)); });
+  $('#recordFormGuide').addEventListener('click', async (event) => {
+    const token = event.target.closest('.record-form-token')?.dataset.token;
+    const copy = async (text, message) => { try { await navigator.clipboard.writeText(text); formNotice(message); } catch { formNotice('클립보드를 사용할 수 없습니다. 표식을 보고 직접 적어 주세요.', true); } };
+    if (token) await copy(`{{${token}}}`, `{{${token}}}을 복사했습니다. 양식의 빈칸에 붙여 넣으세요.`);
+    if (event.target.closest('#recordFormCopyAll')) await copy(guideTokens().map((item) => `${item}: {{${item}}}`).join('\n'), '표식 목록을 복사했습니다.');
+    if (event.target.closest('#recordFormStarter')) {
+      try {
+        const response = await fetch('./api/record-form/starter', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ template: { name: template.name, kind: template.kind, sections: template.sections } }) });
+        if (!response.ok) throw new Error('starter_failed');
+        downloadBlob(await response.blob(), `${template.name.replace(/[\\/:*?"<>|\s]+/g, '_')}_양식.docx`);
+        formNotice('표식이 들어간 Word 양식을 내려받았습니다. 기관 양식 모양으로 고친 뒤 다시 올려 주세요.');
+      } catch { formNotice('Word 양식을 만들지 못했습니다. PC용 앱에서 다시 시도하세요.', true); }
+    }
+  });
+  $('#recordFormFill').addEventListener('click', async () => {
+    const summary = currentSummary(); if (!summary || !form) return;
+    const button = $('#recordFormFill'); button.disabled = true; button.textContent = '양식에 넣는 중…';
+    try {
+      const response = await fetch('./api/record-form/fill', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ fileName: form.fileName, dataBase64: form.dataBase64, summary, header: header(), rawText: result.rawText, contextText: result.contextText, extra: form.extra || {} }) });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload.dataBase64) throw new Error(payload.message || 'fill_failed');
+      downloadBlob(base64Blob(payload.dataBase64, payload.format === 'hwpx' ? 'application/hwp+zip' : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'), payload.fileName);
+      const filled = new Set(payload.filled.map((item) => item.token));
+      $$('#recordFormFields .ph-row').forEach((row) => { row.classList.toggle('done', filled.has(row.dataset.token)); row.classList.toggle('empty', payload.missing.includes(row.dataset.token)); });
+      formNotice(payload.missing.length ? `표식 ${payload.filled.length + payload.missing.length}개 중 ${payload.filled.length}개를 채워 내려받았습니다. 빈 표식: ${payload.missing.map((token) => `{{${token}}}`).join(', ')} — 내려받은 파일에서 직접 채우세요.` : `표식 ${payload.filled.length}개를 모두 채워 '${payload.fileName}'으로 내려받았습니다.`, payload.missing.length > 0);
+    } catch (error) {
+      formNotice(error.message && error.message !== 'fill_failed' ? error.message : '양식에 넣지 못했습니다. 양식 파일을 다시 올려 보세요.', true);
+    } finally { button.textContent = '양식에 넣어 내려받기 →'; syncFormButton(); }
+  });
+
+  let choice = recordTemplatePresets[0].id;
+  try { choice = localStorage.getItem(recordTemplateChoiceKey) || choice; } catch { /* ignore */ }
+  selectTemplate(choice);
+  try { const saved = JSON.parse(localStorage.getItem(recordFormStorageKey) || 'null'); if (saved?.fileName && saved?.dataBase64) setForm({ ...saved, placeholders: [], extra: {} }, { remember: false }); } catch { /* ignore malformed local data */ }
   refreshSavedList();
-  syncEngine();
   loadEngineStatus();
 }
 

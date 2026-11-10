@@ -11,6 +11,7 @@ import {
   WidthType,
 } from 'docx';
 import { summarySections, summaryTitle } from './record-summary.mjs';
+import { placeholderGuide } from './record-templates.mjs';
 
 const escapeHtml = (value) => String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
 const asLines = (value) => String(value ?? '').split(/\r?\n/).filter((line) => line.trim());
@@ -51,10 +52,10 @@ const cell = (value, { bold = false, shade = false, width } = {}) => new TableCe
   children: bold ? [new Paragraph({ children: [new TextRun({ text: String(value ?? ''), bold: true, font: FONT, size: 20 })] })] : textParagraphs(value, 20),
 });
 
-// 상담 기록 / 회의록 summary -> Word. header: { organization, author } (optional).
+// 상담 기록 / 회의록 summary -> Word. header: { organization, author, date } (optional).
 export async function summaryToDocx(summary, header = {}) {
-  const title = summaryTitle(summary.kind);
-  const meta = [header.organization && `기관: ${header.organization}`, header.author && `작성자: ${header.author}`, `작성일: ${new Date().toLocaleDateString('ko-KR')}`].filter(Boolean).join(' · ');
+  const title = summary.kind === 'template' ? summary.templateName || '기록' : summaryTitle(summary.kind);
+  const meta = [header.organization && `기관: ${header.organization}`, header.author && `작성자: ${header.author}`, header.date ? `일자: ${header.date}` : `작성일: ${new Date().toLocaleDateString('ko-KR')}`].filter(Boolean).join(' · ');
   const children = [
     new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 120 }, children: [new TextRun({ text: title, bold: true, size: 34, font: FONT, color: '205B47' })] }),
     new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 300 }, children: [new TextRun({ text: meta, size: 20, font: FONT, color: '728078' })] }),
@@ -75,5 +76,19 @@ export async function summaryToDocx(summary, header = {}) {
   }
   children.push(new Paragraph({ spacing: { before: 300 }, children: [new TextRun({ text: '이 문서는 검토용 초안입니다. 담당자가 원문과 대조한 뒤 확정하세요.', italics: true, size: 18, font: FONT, color: '876D3F' })] }));
   const output = new Document({ creator: 'Dawith Welfare Office', title, description: '기관 내부 검토용 기록 초안', styles: { default: { document: { run: { font: FONT, size: 22 } } } }, sections: [{ properties: {}, children }] });
+  return Packer.toBuffer(output);
+}
+
+// A starter institution form for a record template: a two-column table with a
+// {{표식}} in every value cell. Users open it in Word/한글, restyle it as they
+// like, and upload it back to have the summary poured in.
+export async function recordFormStarterDocx(template) {
+  const rows = placeholderGuide(template).map(({ token }) => new TableRow({ children: [cell(token, { bold: true, shade: true, width: 24 }), cell(`{{${token}}}`, { width: 76 })] }));
+  const children = [
+    new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 240 }, children: [new TextRun({ text: template.name, bold: true, size: 34, font: FONT })] }),
+    new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, rows }),
+    new Paragraph({ spacing: { before: 240 }, children: [new TextRun({ text: '{{ }} 안의 표식은 지우지 말고, 표와 글꼴은 기관 양식에 맞게 고쳐 쓰세요.', size: 18, font: FONT, color: '728078' })] }),
+  ];
+  const output = new Document({ creator: 'Dawith Welfare Office', title: template.name, styles: { default: { document: { run: { font: FONT, size: 22 } } } }, sections: [{ properties: {}, children }] });
   return Packer.toBuffer(output);
 }

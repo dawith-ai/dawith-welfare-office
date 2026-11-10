@@ -1,24 +1,25 @@
-// Structured 상담 기록 / 회의록 summaries shared by the rule engine, the local
-// Ollama path and the cloud providers. Every engine returns the same shape so
-// the UI, export and save paths never care which engine produced the result.
+// Structured 상담 기록 / 회의록 summaries shared by the rule engine and the
+// local Ollama path. Every engine returns the same shape so the UI, export and
+// save paths never care which engine produced the result. Summaries shaped by a
+// record template (custom sections) live in record-templates.mjs and reuse the
+// helpers exported here.
 
 export const SUMMARY_KINDS = ['counseling', 'meeting'];
-export const CLOUD_PROVIDERS = ['claude-code', 'codex', 'gemini-cli', 'chatgpt', 'openrouter', 'gemini'];
 export const MAX_SUMMARY_INPUT = 60_000;
 
-const NEEDS_CHECK = '[확인 필요]';
-const DATE_PATTERN = /(?:20\d{2}\s*[년.\-/]\s*)?\d{1,2}\s*[월.\-/]\s*\d{1,2}\s*일?|\d{1,2}월(?:\s*\d{1,2}일)?|다음\s*주(?:\s*[월화수목금토일]요일)?|이번\s*주(?:\s*[월화수목금토일]요일)?|다음\s*달|이번\s*달|월말|\d+\s*개월\s*(?:후|내)/;
-const TIME_PATTERN = /(?:오전|오후)\s*\d{1,2}시(?:\s*\d{1,2}분)?|\d{1,2}:\d{2}|\d{1,2}시(?:\s*\d{1,2}분)?/;
-const ROLE_WORDS = '팀장|사회복지사|복지사|선생님|과장|센터장|관장|주임|대리|간호사|상담사|사례관리자|담당자|실장|부장';
-const RELATIONS = ['친모', '친부', '배우자', '자녀', '아동', '어머니', '아버지', '형제', '자매', '보호자', '내담자', '이용자', '대상자', '어르신'];
-const TOPICS = ['이혼', '주거', '경제', '생계', '취업', '건강', '정신건강', '양육', '면접교섭', '학교', '폭력', '학대', '중독', '돌봄', '서비스', '고립', '부채', '의료'];
+export const NEEDS_CHECK = '[확인 필요]';
+export const DATE_PATTERN = /(?:20\d{2}\s*[년.\-/]\s*)?\d{1,2}\s*[월.\-/]\s*\d{1,2}\s*일?|\d{1,2}월(?:\s*\d{1,2}일)?|다음\s*주(?:\s*[월화수목금토일]요일)?|이번\s*주(?:\s*[월화수목금토일]요일)?|다음\s*달|이번\s*달|월말|\d+\s*개월\s*(?:후|내)/;
+export const TIME_PATTERN = /(?:오전|오후)\s*\d{1,2}시(?:\s*\d{1,2}분)?|\d{1,2}:\d{2}|\d{1,2}시(?:\s*\d{1,2}분)?/;
+export const ROLE_WORDS = '팀장|사회복지사|복지사|선생님|과장|센터장|관장|주임|대리|간호사|상담사|사례관리자|담당자|실장|부장';
+export const RELATIONS = ['친모', '친부', '배우자', '자녀', '아동', '어머니', '아버지', '형제', '자매', '보호자', '내담자', '이용자', '대상자', '어르신'];
+export const TOPICS = ['이혼', '주거', '경제', '생계', '취업', '건강', '정신건강', '양육', '면접교섭', '학교', '폭력', '학대', '중독', '돌봄', '서비스', '고립', '부채', '의료'];
 
-const clean = (value = '') => String(value ?? '').replace(/\r/g, '').replace(/[ \t]+/g, ' ').replace(/\n{3,}/g, '\n\n').trim();
-const unique = (items) => [...new Set(items.filter(Boolean))];
-const numbered = (items) => items.map((item, index) => `${index + 1}. ${item}`).join('\n');
-const bounded = (value, limit) => String(value ?? '').slice(0, limit);
+export const clean = (value = '') => String(value ?? '').replace(/\r/g, '').replace(/[ \t]+/g, ' ').replace(/\n{3,}/g, '\n\n').trim();
+export const unique = (items) => [...new Set(items.filter(Boolean))];
+export const numbered = (items) => items.map((item, index) => `${index + 1}. ${item}`).join('\n');
+export const bounded = (value, limit) => String(value ?? '').slice(0, limit);
 
-function sentences(text) {
+export function sentences(text) {
   return clean(text)
     .split(/(?<=[.!?。！？])\s+|\n+/)
     .map((line) => line.replace(/^\s*(?:[-*•·]|\d+[.)])\s*/, '').trim())
@@ -26,23 +27,23 @@ function sentences(text) {
 }
 
 // "일시: 3월 12일" style labelled lines are common in hand-typed meeting notes.
-function labelled(text, labels) {
+export function labelled(text, labels) {
   const pattern = new RegExp(`^\\s*(?:${labels})\\s*[:：]\\s*(.+)$`, 'm');
   return clean(text.match(pattern)?.[1] || '');
 }
 
-const LABEL_LINE = /^\s*(?:일시|날짜|시간|장소|참석자?|참석 인원|안건|회의명|주제)\s*[:：]/;
+export const LABEL_LINE = /^\s*(?:일시|날짜|시간|장소|참석자?|참석 인원|안건|회의명|주제)\s*[:：]/;
 
 function pick(lines, pattern, exclude = []) {
   return unique(lines.filter((line) => pattern.test(line) && !exclude.includes(line)));
 }
 
-function dueOf(line) {
+export function dueOf(line) {
   const match = line.match(new RegExp(`(?:${DATE_PATTERN.source})(?:\\s*까지)?`));
   return match ? clean(match[0]) : '';
 }
 
-function ownerOf(line) {
+export function ownerOf(line) {
   const explicit = line.match(new RegExp(`담당(?:자)?\\s*[:：]\\s*([가-힣A-Za-z○]{1,10}(?:\\s?(?:${ROLE_WORDS}))?)`));
   if (explicit) return clean(explicit[1]);
   const titled = line.match(new RegExp(`([가-힣○]{1,4}\\s?(?:${ROLE_WORDS}))`));
@@ -153,7 +154,7 @@ export function buildSummaryPrompt({ kind = 'counseling', rawText = '', contextT
   ].join('\n\n');
 }
 
-function asText(value) {
+export function asText(value) {
   if (value === null || value === undefined) return '';
   if (typeof value === 'string') return value.trim();
   if (typeof value === 'number' || typeof value === 'boolean') return String(value);
@@ -219,7 +220,7 @@ function hasContent(summary) {
   return Boolean(summary.overview || summary.complaint || summary.intervention || summary.plan || Object.values(summary.assessment).some(Boolean));
 }
 
-function jsonCandidates(text) {
+export function jsonCandidates(text) {
   const candidates = [];
   const fenced = [...text.matchAll(/```(?:json)?\s*([\s\S]*?)```/gi)].map((match) => match[1]);
   candidates.push(...fenced, text);
@@ -254,6 +255,16 @@ export function parseSummaryReply(reply, kind = 'counseling', depth = 0) {
 
 // Old record consumers (record export, /api/records search) read these four keys.
 export function summaryToLegacyDraft(summary) {
+  if (summary.kind === 'template') {
+    return {
+      typeLabel: summary.templateName,
+      reviewRequired: true,
+      counselingLog: summary.sections.map((section) => `${section.name}\n${section.content}`).join('\n\n'),
+      assessment: '',
+      servicePlan: '',
+      followUp: '',
+    };
+  }
   if (summary.kind === 'meeting') {
     const o = summary.overview;
     return {
@@ -282,6 +293,7 @@ export function summaryTitle(kind) {
 
 // Section list used by DOCX export (and anything else that needs a flat view).
 export function summarySections(summary) {
+  if (summary.kind === 'template') return summary.sections.map((section) => ({ heading: section.name, content: section.content }));
   if (summary.kind === 'meeting') {
     const o = summary.overview;
     return [
