@@ -1,11 +1,11 @@
 import { test as base, expect } from '@playwright/test';
 
 // Must match CONSENT_POLICY_VERSION in public/toolbox.js.
-export const consentPolicyVersion = '2026-11-10';
+export const consentPolicyVersion = '2026-11-11';
 
-export function acceptedConsent({ externalAi = true, updatedAt = '2026-11-10T00:00:00.000Z' } = {}) {
+export function acceptedConsent({ updatedAt = '2026-11-11T00:00:00.000Z' } = {}) {
   const agreed = { agreed: true, at: updatedAt };
-  return { policyVersion: consentPolicyVersion, privacy: agreed, terms: agreed, externalAi: externalAi ? agreed : { agreed: false, at: null }, updatedAt };
+  return { policyVersion: consentPolicyVersion, privacy: agreed, terms: agreed, updatedAt };
 }
 
 // Tool tests start from a PC where the first-run setup is already done, so no

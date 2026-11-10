@@ -18,7 +18,7 @@ test('app and site copies carry the same policy text', () => {
     const app = read(path.join('public', page.file));
     const site = read(path.join('site', page.file));
     assert.equal(body(app), body(site), page.file);
-    assert.match(app, /시행일 2026년 11월 10일/);
+    assert.match(app, /시행일 2026년 11월 11일/);
     assert.match(app, /dawith0ai@gmail\.com|개인정보처리방침/);
   }
 });

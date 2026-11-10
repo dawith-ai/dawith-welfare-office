@@ -9,14 +9,14 @@ import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
-export const legalEffectiveDate = '2026-11-10';
-const effectiveLabel = '2026년 11월 10일';
+export const legalEffectiveDate = '2026-11-11';
+const effectiveLabel = '2026년 11월 11일';
 
 export const legalPages = [
   { file: 'privacy.html', title: '개인정보처리방침', footer: '개인정보처리방침', lede: 'Dawith 복지 업무 도구함(Dawith Welfare Office)은 계정도, Dawith가 운영하는 서버도 없는 PC용 프로그램입니다. 이 문서는 앱이 어떤 정보를 어디에 저장하고, 언제 바깥으로 보내는지를 있는 그대로 적은 것입니다.' },
   { file: 'terms.html', title: '이용약관', footer: '이용약관', lede: 'Dawith 복지 업무 도구함을 쓰기 전에 알아 두실 이용 조건입니다. 어렵지 않게, 실제로 중요한 것만 적었습니다.' },
   { file: 'data-processing.html', title: '데이터 처리 안내', footer: '데이터 처리 안내', lede: '도구마다 넣은 파일과 글이 어디에서 처리되고, 어디에 남고, 바깥으로 나가는지를 하나씩 정리했습니다.' },
-  { file: 'overseas.html', title: '해외 서버 안내', footer: '해외 서버 안내', lede: 'Dawith는 앱을 위한 서버를 운영하지 않습니다. 해외로 데이터가 나가는 경우는 사용자가 클라우드 AI를 직접 골라 쓸 때와, 아래에 적은 몇 가지 내려받기뿐입니다.' },
+  { file: 'overseas.html', title: '해외 서버 안내', footer: '해외 서버 안내', lede: 'Dawith는 앱을 위한 서버를 운영하지 않고, 앱에는 클라우드 AI 기능이 없습니다. 해외 서버와 연결되는 경우는 작성한 내용이 담기지 않는 아래의 몇 가지 내려받기뿐입니다.' },
   { file: 'cookies.html', title: '광고·쿠키 안내', footer: '광고·쿠키 안내', lede: '광고도, 이용 통계(분석) 도구도, 추적 쿠키도 쓰지 않습니다. 앱이 이 PC에 저장하는 것과 소개 사이트가 저장하는 것을 정확히 적었습니다.' },
 ];
 

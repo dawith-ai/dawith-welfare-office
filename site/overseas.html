@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#f6f5f0" />
-    <meta name="description" content="Dawith는 앱을 위한 서버를 운영하지 않습니다. 해외로 데이터가 나가는 경우는 사용자가 클라우드 AI를 직접 골라 쓸 때와, 아래에 적은 몇 가지 내려받기뿐입니다." />
+    <meta name="description" content="Dawith는 앱을 위한 서버를 운영하지 않고, 앱에는 클라우드 AI 기능이 없습니다. 해외 서버와 연결되는 경우는 작성한 내용이 담기지 않는 아래의 몇 가지 내려받기뿐입니다." />
     <title>해외 서버 안내 · Dawith 복지 업무 도구함</title>
     <link rel="icon" href="./favicon.svg" type="image/svg+xml" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
@@ -31,70 +31,47 @@
       <div class="wrap">
         <section class="page-hero">
           <h1>해외 서버 안내</h1>
-          <p>Dawith는 앱을 위한 서버를 운영하지 않습니다. 해외로 데이터가 나가는 경우는 사용자가 클라우드 AI를 직접 골라 쓸 때와, 아래에 적은 몇 가지 내려받기뿐입니다.</p>
-          <p class="legal-meta">시행일 2026년 11월 10일 · 문서 버전 2026-11-10</p>
+          <p>Dawith는 앱을 위한 서버를 운영하지 않고, 앱에는 클라우드 AI 기능이 없습니다. 해외 서버와 연결되는 경우는 작성한 내용이 담기지 않는 아래의 몇 가지 내려받기뿐입니다.</p>
+          <p class="legal-meta">시행일 2026년 11월 11일 · 문서 버전 2026-11-11</p>
         </section>
         <div class="doc legal-doc">
           <section id="principle">
             <h2>1. 기본 원칙</h2>
             <ul>
               <li>Dawith는 앱을 위한 서버를 운영하지 않습니다. 앱에 입력한 내용이 Dawith로 오는 일은 없습니다.</li>
-              <li>기본 도구와 로컬 AI(Ollama)만 쓰면 작성한 내용은 국내외 어디로도 전송되지 않습니다.</li>
-              <li>해외로 내용이 전송되는 경우는 <b>사용자가 클라우드 AI를 직접 연결하고, 외부 AI 버튼을 누르고, 확인창에 동의했을 때</b>뿐입니다. 이때 보내는 사람은 사용자 자신이며, 받는 곳은 사용자가 고른 AI 회사입니다.</li>
-            </ul>
-          </section>
-
-          <section id="ai-providers">
-            <h2>2. 외부(클라우드) AI 회사별 안내</h2>
-            <p>아래 ‘나라’는 회사가 있는 곳입니다. 실제로 처리하는 서버의 위치와 보관 기간은 각 회사의 정책에 따르며, 다른 나라일 수 있습니다. 보내기 전에 각 회사의 개인정보 정책을 확인해 주세요.</p>
-            <table>
-              <thead><tr><th>받는 회사 · 나라</th><th>앱의 연결 방식</th><th>언제, 무엇을 보내나요</th><th>보관</th></tr></thead>
-              <tbody>
-                <tr><td><b>Anthropic</b> (Claude) · 미국</td><td>사용자가 설치하고 로그인한 Claude Code 프로그램을 앱이 실행합니다.</td><td>Claude를 골라 외부 AI 버튼을 누르고 확인했을 때, 고른 텍스트와 작업 지시문을 Claude Code가 Anthropic으로 보냅니다.</td><td>Anthropic 정책에 따름</td></tr>
-                <tr><td><b>OpenAI</b> (Codex·ChatGPT) · 미국</td><td>Codex 프로그램을 실행하거나, ChatGPT 계정으로 브라우저 인증한 뒤 OpenAI API로 직접 요청합니다.</td><td>Codex·ChatGPT를 골라 보낼 때 고른 텍스트와 작업 지시문. ChatGPT 연결 요청에는 응답을 저장하지 말라는 옵션(<code>store: false</code>)을 붙입니다.</td><td>OpenAI 정책에 따름</td></tr>
-                <tr><td><b>Google</b> (Gemini) · 미국</td><td>Google 계정으로 로그인한 Gemini CLI를 실행하거나, 사용자가 넣은 Gemini API 키로 Google API에 요청합니다.</td><td>Gemini를 골라 보낼 때 고른 텍스트와 작업 지시문. 키를 연결할 때는 키 확인 요청을 보냅니다.</td><td>Google 정책에 따름</td></tr>
-                <tr><td><b>OpenRouter</b> · 미국</td><td>브라우저 인증으로 받은 키로 OpenRouter API에 요청합니다.</td><td>OpenRouter를 골라 보낼 때 고른 텍스트와 작업 지시문, 그리고 앱 이름(Dawith Welfare Office). OpenRouter는 요청을 고른 모델의 회사로 다시 전달합니다(기본 모델은 Google의 Gemini 무료 모델).</td><td>OpenRouter와 모델 제공 회사의 정책에 따름</td></tr>
-              </tbody>
-            </table>
-            <ul>
-              <li><b>목적:</b> 사용자가 요청한 요약·문장 정리·문서 초안 작성</li>
-              <li><b>방법:</b> 암호화된 인터넷 연결(HTTPS)로 그때그때 전송. 앱이 미리 모아 두었다가 보내는 일은 없습니다.</li>
-              <li><b>연결 정보:</b> 로그인 토큰과 API 키는 이 PC의 앱 데이터베이스에 암호화해 저장하며 Dawith로 보내지 않습니다. Claude Code·Codex·Gemini CLI의 로그인 정보는 각 프로그램이 관리하고, 앱은 그 파일을 읽지 않습니다.</li>
-              <li><b>무료 요금제 주의:</b> 무료 요금제나 무료 모델은 회사가 입력 내용을 서비스 개선에 쓸 수 있도록 정한 경우가 있습니다. 이용자 정보는 보내기 전에 각 회사 약관과 기관 지침을 꼭 확인하세요.</li>
-            </ul>
-          </section>
-
-          <section id="refuse">
-            <h2>3. 해외 전송을 원하지 않으면</h2>
-            <ul>
-              <li>외부 AI를 연결하지 않으면 됩니다. 처음 설정의 ‘외부 AI 전송’ 선택 동의를 하지 않아도 모든 로컬 기능을 쓸 수 있습니다.</li>
-              <li>AI가 필요하면 로컬 AI(Ollama)를 쓰세요. 이 PC 안에서만 처리됩니다.</li>
-              <li>이미 연결했다면 ‘AI 보조·연결 센터’에서 <b>연결 해제</b>를 누르고, 앱 위쪽 <b>설정</b>에서 외부 AI 동의를 끄세요.</li>
-              <li>이미 보낸 내용은 Dawith가 지울 수 없습니다. 해당 회사의 삭제 절차를 이용해 주세요.</li>
+              <li>앱에는 클라우드 AI(Claude·ChatGPT·Gemini 등)로 보내는 기능이 없습니다. AI 기능은 이 PC의 로컬 AI(Ollama)로만 처리하므로, 작성한 내용은 국내외 어디로도 전송되지 않습니다.</li>
+              <li>해외 서버와 연결되는 경우는 아래 2항의 내려받기뿐이며, 이때 작성한 내용은 담기지 않습니다.</li>
             </ul>
           </section>
 
           <section id="app-network">
-            <h2>4. 앱이 스스로 인터넷에 연결하는 경우</h2>
+            <h2>2. 앱이 인터넷에 연결하는 경우</h2>
             <p>아래 연결에는 작성한 내용이 담기지 않습니다. 다만 인터넷 연결의 특성상 상대 서버에 IP 주소와 기기·브라우저 정보 같은 일반적인 접속 정보가 전달됩니다.</p>
             <table>
               <thead><tr><th>연결</th><th>상대 · 나라</th><th>언제</th><th>막으면</th></tr></thead>
               <tbody>
                 <tr><td>업데이트 확인·내려받기</td><td>GitHub(GitHub Releases) · 미국</td><td>앱을 열 때와 ‘업데이트 확인’을 누를 때 최신 버전 정보를 읽고, 업데이트를 고르면 설치 파일을 받습니다.</td><td>확인만 실패하고 앱은 그대로 작동합니다.</td></tr>
-                <tr><td>로컬 AI 모델 내려받기</td><td>Ollama · 미국</td><td>‘AI 보조·연결 센터’에서 모델 준비를 누르면, 사용자가 설치한 Ollama 프로그램이 Ollama 서버에서 모델 파일을 받습니다.</td><td>로컬 AI 모델을 쓸 수 없습니다.</td></tr>
-                <tr><td>한글 양식 엔진</td><td>GitHub · 미국</td><td>엔진 파일이 앱에 없을 때만, 한글 양식을 처음 열 때 엔진 파일을 받습니다. 양식 파일 내용은 보내지 않습니다.</td><td>한글 양식 도구를 쓸 수 없습니다.</td></tr>
-                <tr><td>안내 링크</td><td>각 사이트</td><td>사용자가 설치 안내·내려받기 같은 링크를 누를 때만 열립니다.</td><td>-</td></tr>
+                <tr><td>로컬 AI 모델 내려받기</td><td>Ollama 모델 저장소 · 미국</td><td>‘로컬 AI 설정’에서 모델 준비를 누르면, 사용자가 설치한 Ollama 프로그램이 Ollama 모델 저장소에서 모델 파일을 받습니다.</td><td>로컬 AI 모델을 쓸 수 없습니다. 규칙 기반 기능은 그대로 작동합니다.</td></tr>
+                <tr><td>안내 링크</td><td>각 사이트</td><td>사용자가 Ollama 설치 안내 같은 링크를 누를 때만 브라우저로 열립니다.</td><td>-</td></tr>
               </tbody>
             </table>
+            <p>웹 버전에서 한글 양식 엔진 파일을 찾지 못할 때만 GitHub에서 같은 엔진 파일을 받습니다. 양식 파일 내용은 보내지 않습니다. 설치형 앱에는 엔진이 들어 있습니다.</p>
           </section>
 
           <section id="site-network">
-            <h2>5. 제품 소개 사이트</h2>
+            <h2>3. 제품 소개 사이트</h2>
             <ul>
-              <li>소개 사이트는 GitHub Pages 같은 호스팅 서비스로 제공되며, 접속하면 호스팅 서비스에 일반적인 접속 정보가 전달됩니다.</li>
-              <li>사이트 글꼴(Pretendard)은 jsDelivr CDN에서 받습니다. 이때 jsDelivr 서버에 일반적인 접속 정보가 전달됩니다.</li>
-              <li>설치 파일은 GitHub Releases에서 내려받습니다.</li>
+              <li>소개 사이트의 글꼴(Pretendard)은 jsDelivr CDN에서 받습니다. 이때 jsDelivr 서버에 일반적인 접속 정보가 전달됩니다.</li>
+              <li>소개 사이트는 호스팅 서비스로 제공되며, 접속하면 호스팅 서비스에 일반적인 접속 정보가 전달됩니다. 설치 파일은 GitHub Releases에서 내려받습니다.</li>
               <li>Dawith는 이 접속 정보를 따로 모으거나 받지 않습니다. 자세한 내용은 <a href="./cookies.html">광고·쿠키 안내</a>에 있습니다.</li>
+            </ul>
+          </section>
+
+          <section id="earlier">
+            <h2>4. 이전 버전(0.9.9 이하)을 쓰신 경우</h2>
+            <ul>
+              <li>0.9.9 이하 버전에는 사용자가 직접 연결하는 클라우드 AI 기능이 있었습니다. 이 버전부터 그 기능을 없앴고, 앱 데이터베이스에 남아 있던 연결 정보(로그인 토큰, API 키)는 처음 실행할 때 지웁니다.</li>
+              <li>이전 버전에서 클라우드 AI 회사로 이미 보낸 내용은 Dawith가 지울 수 없습니다. 해당 회사의 정책과 삭제 절차를 이용해 주세요.</li>
             </ul>
           </section>
         </div>

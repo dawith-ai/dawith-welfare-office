@@ -92,15 +92,6 @@ async function withServer(options, run) {
 
 const post = (url, payload, headers = {}) => fetch(url, { method: 'POST', headers: { 'content-type': 'application/json', ...headers }, body: JSON.stringify(payload) });
 
-function fakeBridge(reply) {
-  const calls = [];
-  return {
-    calls,
-    async complete(input) { calls.push(input); if (reply instanceof Error) throw reply; return { result: reply, provider: input.provider }; },
-    close() {},
-  };
-}
-
 test('/api/process returns structured summaries for the rule engine and keeps legacy fields', async () => {
   await withServer({}, async (url) => {
     const response = await post(`${url}/api/process`, { kind: 'meeting', provider: 'rules', rawText: meetingText });
@@ -115,51 +106,13 @@ test('/api/process returns structured summaries for the rule engine and keeps le
   });
 });
 
-test('cloud summaries need explicit confirmation and route to the chosen provider', async () => {
-  const subscription = fakeBridge('결과입니다:\n```json\n{"overview":{"datetime":"11월 10일","place":"2층 회의실","attendees":"김팀장","agenda":"안부"},"discussion":"난방 점검","decisions":"주 2회 방문","actions":[{"task":"명단 정리","owner":"이사회복지사","due":"11월 15일"}]}\n```');
-  const connections = fakeBridge('not json at all');
-  await withServer({ subscriptionBridge: subscription, aiConnectionManager: connections }, async (url) => {
-    const unconfirmed = await post(`${url}/api/process`, { kind: 'meeting', provider: 'cloud:codex', rawText: '합성 원문' });
-    assert.equal(unconfirmed.status, 400);
-    assert.equal((await unconfirmed.json()).error, 'external_transfer_confirmation_required');
-    const unknown = await post(`${url}/api/process`, { kind: 'meeting', provider: 'cloud:evil', rawText: '합성 원문', confirmExternal: true });
-    assert.equal(unknown.status, 400);
-    const bare = await post(`${url}/api/process`, { kind: 'meeting', provider: 'openrouter', rawText: '합성 원문', confirmExternal: true });
-    assert.equal(bare.status, 400);
-    assert.equal(subscription.calls.length + connections.calls.length, 0);
-
-    const masked = '연락처 010-****-5678 대상자와 방문 확대를 논의함.';
-    const response = await post(`${url}/api/process`, { kind: 'meeting', provider: 'cloud:codex', rawText: masked, contextText: '사례회의', confirmExternal: true });
-    const payload = await response.json();
-    assert.equal(response.status, 200);
-    assert.equal(payload.engine, 'cloud');
-    assert.equal(payload.provider, 'cloud:codex');
-    assert.deepEqual(payload.transfer, { external: true, destination: 'codex', userInitiated: true });
-    assert.equal(payload.summary.actions[0].owner, '이사회복지사');
-    assert.equal(subscription.calls.length, 1);
-    assert.equal(subscription.calls[0].provider, 'codex');
-    assert.ok(subscription.calls[0].prompt.includes(masked));
-    assert.equal(subscription.calls[0].prompt.includes('010-1234'), false);
-
-    const fallback = await post(`${url}/api/process`, { kind: 'counseling', provider: 'cloud:openrouter', rawText: counselingText, confirmExternal: true }).then((item) => item.json());
-    assert.equal(connections.calls[0].provider, 'openrouter');
-    assert.equal(fallback.engine, 'rules');
-    assert.equal(fallback.fallback.reason, 'cloud_invalid_result');
-    assert.equal(fallback.transfer.external, true);
-    assert.match(fallback.summary.complaint, /퇴거/);
-  });
-});
-
-test('cloud provider errors come back as clear Korean messages', async () => {
-  const notConnected = fakeBridge(new Error('ai_provider_not_connected'));
-  const notInstalled = fakeBridge(new Error('subscription_not_installed'));
-  await withServer({ subscriptionBridge: notInstalled, aiConnectionManager: notConnected }, async (url) => {
-    const gemini = await post(`${url}/api/process`, { kind: 'counseling', provider: 'cloud:gemini', rawText: '합성 원문', confirmExternal: true });
-    assert.equal(gemini.status, 409);
-    assert.match((await gemini.json()).message, /연결되지 않았습니다/);
-    const claude = await post(`${url}/api/process`, { kind: 'counseling', provider: 'cloud:claude-code', rawText: '합성 원문', confirmExternal: true });
-    assert.equal(claude.status, 409);
-    assert.match((await claude.json()).message, /설치되어 있지 않습니다/);
+test('/api/process refuses every non-local provider, including the removed cloud:<provider> values', async () => {
+  await withServer({}, async (url) => {
+    for (const provider of ['cloud:codex', 'cloud:claude-code', 'cloud:gemini', 'cloud:openrouter', 'cloud:chatgpt', 'openrouter', 'gemini']) {
+      const response = await post(`${url}/api/process`, { kind: 'meeting', provider, rawText: '합성 원문', confirmExternal: true });
+      assert.equal(response.status, 400, provider);
+      assert.equal((await response.json()).error, 'external_provider_blocked', provider);
+    }
   });
 });
 

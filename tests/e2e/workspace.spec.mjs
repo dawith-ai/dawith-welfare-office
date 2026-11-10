@@ -156,7 +156,7 @@ test('HWPX 양식은 rhwp WASM으로 로컬 텍스트를 추출한다', async ({
   await expect(page.locator('#hwpPageCount')).toContainText('1페이지');
   await expect(page.locator('#hwpUseAsSource')).toBeEnabled();
   await expect(page.locator('#hwpLocalAi')).toBeEnabled();
-  await expect(page.locator('#hwpSubscriptionAi')).toBeEnabled();
+  await expect(page.locator('#hwpSubscriptionAi')).toHaveCount(0);
   await page.locator('#hwpQuery').fill('{{기관명}}');
   await page.locator('#hwpReplacement').fill('다위복지관');
   const download = page.waitForEvent('download');
@@ -250,6 +250,8 @@ test('기관 양식 작업공간은 기관 정보와 문서 초안을 로컬에�
   await expect(page.locator('#templateNotice')).toContainText('저장했습니다');
 });
 
+const localCapabilities = { system: { platformLabel: '테스트', memoryGB: 16, cpuCores: 8 }, ollama: { available: true, models: [{ name: 'qwen2.5:7b' }], recommendation: { model: 'qwen2.5:7b', installedModel: 'qwen2.5:7b', label: '복지 기록 기본형' } } };
+
 test('기관 양식과 텍스트 화면에 로컬 AI 보조 진입점이 있다', async ({ page }) => {
   await page.goto('/');
   await page.locator('.tool-card[data-tool="text-tools"]').click();
@@ -257,59 +259,55 @@ test('기관 양식과 텍스트 화면에 로컬 AI 보조 진입점이 있다'
   await page.locator('[data-action="home"]').click();
   await page.locator('.tool-card[data-tool="template-studio"]').click();
   await expect(page.locator('#templateAiAssist')).toBeVisible();
-  await expect(page.locator('#templateSubscriptionAssist')).toBeVisible();
+  await expect(page.locator('#templateSubscriptionAssist')).toHaveCount(0);
   await expect(page.locator('#templateAiRevert')).toBeHidden();
 });
 
-test('기관 양식 구독 AI 결과는 적용 전 되돌릴 수 있다', async ({ page }) => {
-  await page.route('**/api/ai/subscription/status', async (route) => route.fulfill({
+test('기관 양식 로컬 AI 결과는 적용 전 되돌릴 수 있다', async ({ page }) => {
+  await page.route('**/api/capabilities', async (route) => route.fulfill({
     status: 200,
     contentType: 'application/json',
-    body: JSON.stringify({ providers: { codex: { provider: 'codex', label: 'Codex 구독', state: 'ready' } } }),
+    body: JSON.stringify(localCapabilities),
   }));
-  await page.route('**/api/ai/subscription/assist', async (route) => route.fulfill({
+  await page.route('**/api/ai/assist', async (route) => route.fulfill({
     status: 200,
     contentType: 'application/json',
-    body: JSON.stringify({ result: '구독 AI가 만든 합성 문서 초안입니다.' }),
+    body: JSON.stringify({ result: '로컬 AI가 만든 합성 문서 초안입니다.', provider: 'ollama-local' }),
   }));
-  page.on('dialog', (dialog) => dialog.accept());
   await page.goto('/');
   await page.locator('.tool-card[data-tool="template-studio"]').click();
   await page.locator('#templateProject').fill('합성 사례회의');
   await page.locator('#templateContent').fill('주거 지원 절차를 논의함.');
-  await page.locator('#templateSubscriptionAssist').click();
-  await expect(page.locator('#templatePreview')).toContainText('구독 AI가 만든');
+  await page.locator('#templateAiAssist').click();
+  await expect(page.locator('#templatePreview')).toContainText('로컬 AI가 만든');
   await expect(page.locator('#templateAiRevert')).toBeVisible();
   await page.locator('#templateAiRevert').click();
   await expect(page.locator('#templatePreview')).toContainText('합성 사례회의');
   await expect(page.locator('#templateAiRevert')).toBeHidden();
 });
 
-test('AI 연결 센터는 로컬 모델과 구독 AI 경계를 분리해 보여준다', async ({ page }) => {
-  await page.route('**/api/ai/subscription/status', async (route) => route.fulfill({
+test('로컬 AI 설정은 Ollama 준비 흐름만 보여주고 외부 AI 연결이 없다', async ({ page }) => {
+  await page.route('**/api/capabilities', async (route) => route.fulfill({
     status: 200,
     contentType: 'application/json',
-    body: JSON.stringify({ providers: { 'claude-code': { provider: 'claude-code', label: 'Claude 구독', installed: true, state: 'signed-out' }, codex: { provider: 'codex', label: 'Codex 구독', installed: true, state: 'ready' }, 'gemini-cli': { provider: 'gemini-cli', label: 'Gemini 무료 · Google 로그인', installed: true, state: 'ready' }, chatgpt: { provider: 'chatgpt', label: 'ChatGPT 구독', kind: 'oauth', state: 'not-connected' }, openrouter: { provider: 'openrouter', label: 'OpenRouter 무료', kind: 'oauth', state: 'not-connected' }, gemini: { provider: 'gemini', label: 'Google Gemini', kind: 'key', state: 'not-connected' } } }),
+    body: JSON.stringify(localCapabilities),
   }));
   await page.goto('/');
+  await expect(page.locator('.tool-card[data-tool="ai-setup"]')).toContainText('로컬 AI 설정');
   await page.locator('.tool-card[data-tool="ai-setup"]').click();
-  await expect(page.locator('.subscription-panel')).toBeVisible();
-  await expect(page.locator('.subscription-warning')).toContainText('외부 전송');
-  await expect(page.locator('.subscription-card')).toHaveCount(6);
-  await page.locator('#subscriptionText').fill('개인정보 없는 합성 문장입니다.');
-  await expect(page.locator('#subscriptionAssist')).toBeEnabled();
+  await expect(page.locator('#workspaceMount')).toContainText('로컬 AI 설정');
+  await expect(page.locator('#aiSetupStatus')).toHaveText('모델 준비됨');
+  await expect(page.locator('#aiPullModel')).toBeEnabled();
+  await expect(page.locator('.subscription-panel, .subscription-card, #subscriptionAssist')).toHaveCount(0);
+  await expect(page.locator('#workspaceMount')).not.toContainText(/구독|OpenRouter|ChatGPT|Claude|Codex|Gemini/);
 });
 
-test('텍스트 도구에는 구독 AI를 명시적으로 선택하는 경로가 있다', async ({ page }) => {
-  await page.route('**/api/ai/subscription/status', async (route) => route.fulfill({
-    status: 200,
-    contentType: 'application/json',
-    body: JSON.stringify({ providers: { codex: { provider: 'codex', label: 'Codex 구독', state: 'ready' } } }),
-  }));
+test('텍스트 도구에는 외부 AI로 보내는 버튼이 없다', async ({ page }) => {
   await page.goto('/');
   await page.locator('.tool-card[data-tool="text-tools"]').click();
-  await expect(page.locator('#textSubscriptionAssist')).toBeVisible();
-  await expect(page.locator('.external-ai-button')).toContainText('구독 AI');
+  await expect(page.locator('#textAiAssist')).toBeVisible();
+  await expect(page.locator('#textSubscriptionAssist')).toHaveCount(0);
+  await expect(page.locator('.external-ai-button')).toHaveCount(0);
 });
 
 test('텍스트 로컬 AI 보조는 외부가 아닌 로컬 API 결과를 화면에 반영한다', async ({ page }) => {
@@ -333,7 +331,6 @@ test('텍스트 로컬 AI 보조는 외부가 아닌 로컬 API 결과를 화면
 
 const counselingMemo = '3월 12일 내담자는 월세가 두 달 밀려 퇴거가 걱정된다고 호소함. 자녀 양육은 꾸준히 하고 있으며 취업 의지가 있음. 연락처 010-1234-5678. 주거급여 신청 절차를 안내하였음. 다음 주에 주민센터와 연계하여 신청서류를 확인하기로 함.';
 const meetingMemo = '일시: 11월 10일 오후 2시\n장소: 2층 회의실\n참석자: 김팀장, 이사회복지사, 박간호사\n안건: 독거 어르신 겨울철 안부 확인\n어르신 12가구의 난방 상태를 점검함. 방문 횟수를 주 2회로 늘리기로 결정함. 이사회복지사가 11월 15일까지 대상 명단을 정리함.';
-const cloudStatus = { providers: { codex: { provider: 'codex', label: 'Codex 구독', state: 'ready' }, 'claude-code': { provider: 'claude-code', label: 'Claude 구독', state: 'signed-out' }, chatgpt: { provider: 'chatgpt', label: 'ChatGPT 구독', state: 'not-connected', connected: false } } };
 
 test('홈 화면은 상담 기록·회의록 정리를 앞세우고 추천 01에서 바로 연다', async ({ page }) => {
   await page.goto('/');
@@ -411,50 +408,7 @@ test('회의록 정리는 개요·결정 사항·할 일 표를 만들고 기관
   await expect(page.locator('#templatePreview')).toContainText('김팀장, 이사회복지사, 박간호사');
 });
 
-test('클라우드 AI는 보낼 내용을 개인정보를 가린 채 먼저 보여주고 동의 후에만 전송한다', async ({ page }) => {
-  await page.route('**/api/ai/subscription/status', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(cloudStatus) }));
-  const requests = [];
-  await page.route('**/api/process', async (route) => {
-    const body = route.request().postDataJSON();
-    requests.push(body);
-    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ engine: 'cloud', provider: body.provider, kind: 'counseling', fallback: null, transfer: { external: true, destination: 'codex', userInitiated: true }, summary: { kind: 'counseling', overview: '클라우드 개요', complaint: '클라우드가 정리한 주요 호소', assessment: { needs: '주거 지원', strengths: '취업 의지', risks: '체납' }, intervention: '주거급여 안내', plan: '주민센터 연계' } }) });
-  });
-  await page.goto('/');
-  await page.locator('.tool-card[data-tool="case-record"]').click();
-  await page.locator('#recordRaw').fill(counselingMemo);
-  await page.locator('input[name="recordEngine"][value="cloud"]').check();
-  await expect(page.locator('#engineCloudStatus')).toHaveText('연결됨: Codex');
-  await expect(page.locator('#recordCloudProvider option')).toHaveCount(1);
-  await expect(page.locator('#recordProcess')).toHaveText('보낼 내용 확인 →');
-
-  await page.locator('#recordProcess').click();
-  const dialog = page.locator('#cloudConfirmDialog');
-  await expect(dialog).toBeVisible();
-  await expect(page.locator('#cloudConfirmProvider')).toHaveText('Codex');
-  await expect(page.locator('#cloudMask')).toBeChecked();
-  await expect(page.locator('#cloudPreview')).toContainText('010-****-5678');
-  await expect(page.locator('#cloudPreview')).not.toContainText('010-1234-5678');
-  await page.locator('#cloudMask').uncheck();
-  await expect(page.locator('#cloudPreview')).toContainText('010-1234-5678');
-  await page.locator('#cloudCancel').click();
-  await expect(dialog).toBeHidden();
-  await expect(page.locator('#recordNotice')).toContainText('아무것도 보내지 않았습니다');
-  expect(requests).toHaveLength(0);
-
-  await page.locator('#recordProcess').click();
-  await expect(page.locator('#cloudMask')).toBeChecked();
-  await page.locator('#cloudSend').click();
-  await expect(page.locator('#sumComplaint')).toHaveValue('클라우드가 정리한 주요 호소');
-  await expect(page.locator('#recordTransfer')).toContainText('클라우드 AI · Codex');
-  expect(requests).toHaveLength(1);
-  expect(requests[0].provider).toBe('cloud:codex');
-  expect(requests[0].confirmExternal).toBe(true);
-  expect(requests[0].rawText).toContain('010-****-5678');
-  expect(requests[0].rawText).not.toContain('010-1234-5678');
-});
-
-test('클라우드 AI가 연결되지 않았으면 AI 보조·연결로 안내하고 오류는 한국어로 보여준다', async ({ page }) => {
-  await page.route('**/api/ai/subscription/status', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ providers: { chatgpt: { provider: 'chatgpt', state: 'not-connected' } } }) }));
+test('로컬 AI가 꺼져 있으면 규칙으로 대체하고 정리 방식에 클라우드 AI가 없다', async ({ page }) => {
   await page.route('**/api/capabilities', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ system: { memoryGB: 8, cpuCores: 4 }, ollama: { available: false, models: [], recommendation: { model: 'qwen2.5:3b' } } }) }));
   await page.route('**/api/process', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ engine: 'rules', provider: 'rules-fallback', kind: 'meeting', transfer: { external: false }, fallback: { used: true, reason: 'ollama_unavailable', message: 'Ollama가 실행 중이 아니어서 규칙으로 정리했습니다.' }, summary: { kind: 'meeting', overview: { datetime: '11월 10일', place: '회의실', attendees: '김팀장', agenda: '안부' }, discussion: '논의', decisions: '결정', actions: [] } }) }));
   await page.goto('/');
@@ -466,10 +420,9 @@ test('클라우드 AI가 연결되지 않았으면 AI 보조·연결로 안내�
   await page.locator('#recordProcess').click();
   await expect(page.locator('#recordNotice')).toContainText('Ollama가 실행 중이 아니어서');
   await expect(page.locator('#recordTransfer')).toHaveText('규칙으로 대체');
-  await page.locator('input[name="recordEngine"][value="cloud"]').check();
-  await expect(page.locator('#engineCloudEmpty')).toBeVisible();
-  await page.locator('#engineCloudEmpty [data-tool="ai-setup"]').click();
-  await expect(page.locator('#aiInstallLink')).toBeVisible();
+  await expect(page.locator('input[name="recordEngine"]')).toHaveCount(2);
+  await expect(page.locator('input[name="recordEngine"][value="cloud"]')).toHaveCount(0);
+  await expect(page.locator('#cloudConfirmDialog')).toHaveCount(0);
 });
 
 test('작은 화면에서도 상담 기록·회의록 화면이 가로로 넘치지 않는다', async ({ page }) => {

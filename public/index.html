@@ -39,7 +39,7 @@
             <button class="category-button" data-category="calculator" type="button"><span>＋</span>계산·변환</button>
             <button class="category-button" data-category="field" type="button"><span>✓</span>현장 관리</button>
             <button class="category-button" data-category="diagram" type="button"><span>◇</span>관계도</button>
-            <button class="category-button" data-category="ai" type="button"><span>AI</span>AI 보조·연결</button>
+            <button class="category-button" data-category="ai" type="button"><span>AI</span>로컬 AI</button>
           </nav>
           <div class="sidebar-note">
             <span class="sidebar-note-mark">D</span>
@@ -64,7 +64,7 @@
               <ul class="hero-facts" aria-label="주요 특징">
                 <li><b>인터넷 없이</b><span>기본 도구는 오프라인 작동</span></li>
                 <li><b>계정 없이</b><span>설치하면 바로 시작</span></li>
-                <li><b>원문은 이 PC에</b><span>외부 AI는 직접 고를 때만</span></li>
+                <li><b>원문은 이 PC에</b><span>AI도 이 PC 안에서만</span></li>
               </ul>
             </div>
 
@@ -82,7 +82,7 @@
             </section>
 
             <section class="workspace-callout" data-home-only aria-label="상담 기록·회의록 정리">
-              <div class="workspace-callout-copy"><p class="overline">RECORD · MINUTES</p><h2>메모를 붙여 넣으면<br /><em>상담 기록과 회의록이 됩니다.</em></h2><p>상담은 개요·주요 호소·사정(욕구·강점·위험)·개입·향후 계획으로, 회의는 개요·논의·결정 사항·할 일(담당·기한)로 나눕니다. 기본은 AI 없이 이 PC에서, 원할 때만 로컬 AI(Ollama)나 연결한 클라우드 AI를 고릅니다.</p></div>
+              <div class="workspace-callout-copy"><p class="overline">RECORD · MINUTES</p><h2>메모를 붙여 넣으면<br /><em>상담 기록과 회의록이 됩니다.</em></h2><p>상담은 개요·주요 호소·사정(욕구·강점·위험)·개입·향후 계획으로, 회의는 개요·논의·결정 사항·할 일(담당·기한)로 나눕니다. 기본은 AI 없이 이 PC에서, 원할 때만 이 PC의 로컬 AI(Ollama)를 고릅니다.</p></div>
               <button class="workspace-callout-action" data-tool="case-record" type="button"><span>상담·회의 기록 정리하기</span><b>→</b></button>
             </section>
 
@@ -96,7 +96,7 @@
 
             <div id="directoryHeading" class="directory-heading">
               <div><h2 id="directoryTitle">필요한 것만 골라 쓰세요.</h2></div>
-              <p id="directoryNote">기본 기능은 오프라인에서도 작동하고, 외부 AI는 전송 전에 확인합니다.</p>
+              <p id="directoryNote">기본 기능은 오프라인에서도 작동하고, AI는 이 PC의 로컬 AI만 씁니다.</p>
             </div>
             <div id="toolGrid" class="tool-grid"></div>
 
@@ -136,9 +136,9 @@
         <div><span>만나이·금액 계산</span><b>이 기기</b></div>
         <div><span>기관 양식·초안</span><b>이 기기</b></div>
         <div><span>로컬 LLM·Ollama</span><b>127.0.0.1</b></div>
-        <div><span>구독·무료 AI</span><b>선택·확인 후 전송</b></div>
+        <div><span>외부·클라우드 AI</span><b>사용하지 않음</b></div>
       </div>
-      <p class="dialog-footnote">인터넷이 끊겨도 규칙 기반 도구와 파일 변환은 계속 사용할 수 있습니다. 상담·회의 원문은 로컬 LLM을 선택하면 외부로 나가지 않습니다.</p>
+      <p class="dialog-footnote">인터넷이 끊겨도 규칙 기반 도구와 파일 변환은 계속 사용할 수 있습니다. 상담·회의 원문은 AI를 써도 이 PC 밖으로 나가지 않습니다.</p>
       <div class="dialog-links">
         <button class="secondary-button" id="privacyOpenSettings" type="button">동의·설정 관리</button>
         <a href="./data-processing.html" target="_blank" rel="noopener">도구별 데이터 처리 안내 ↗</a>
@@ -148,8 +148,8 @@
 
     <dialog id="setupDialog" class="privacy-dialog setup-dialog" aria-labelledby="setupTitle">
       <div class="setup-head">
-        <p class="overline">처음 설정 · <span id="setupStepLabel">1/5</span></p>
-        <ol class="setup-progress" aria-hidden="true"><li></li><li></li><li></li><li></li><li></li></ol>
+        <p class="overline">처음 설정 · <span id="setupStepLabel">1/4</span></p>
+        <ol class="setup-progress" aria-hidden="true"><li></li><li></li><li></li><li></li></ol>
       </div>
 
       <section class="setup-step" data-setup-step="1">
@@ -159,7 +159,7 @@
         <ul class="setup-facts">
           <li><b>계정이 없습니다</b><span>회원가입·로그인 없이 바로 씁니다. Dawith는 앱을 위한 서버를 운영하지 않습니다.</span></li>
           <li><b>인터넷 없이 작동합니다</b><span>기본 도구와 로컬 AI(Ollama)는 오프라인에서도 쓸 수 있습니다.</span></li>
-          <li><b>작성한 내용은 이 PC에 남습니다</b><span>외부 AI는 직접 연결하고, 보낼 때마다 확인한 경우에만 씁니다.</span></li>
+          <li><b>작성한 내용은 이 PC에 남습니다</b><span>AI 기능도 이 PC의 로컬 AI(Ollama)만 쓰며, 외부 AI 서비스로 보내는 기능이 없습니다.</span></li>
         </ul>
         <p class="setup-hint">처음 한 번만 확인하면 됩니다. 1분이면 끝나요.</p>
       </section>
@@ -169,7 +169,7 @@
         <ul class="setup-summary">
           <li><b>수집하지 않습니다.</b> Dawith는 이 앱으로 이용자의 개인정보를 받거나 보관하지 않습니다.</li>
           <li><b>저장 위치는 이 PC입니다.</b> 설정·기록은 <code>%APPDATA%\Dawith Welfare Office</code> 폴더에 저장됩니다. 앱 데이터베이스는 암호화하지만, 화면에서 임시 저장한 기록·양식은 따로 암호화하지 않으니 PC 잠금을 꼭 지켜 주세요.</li>
-          <li><b>외부 전송은 직접 고를 때만.</b> 클라우드 AI를 연결해 보낼 때만 고른 텍스트가 그 회사로 전송됩니다.</li>
+          <li><b>외부로 보내지 않습니다.</b> 클라우드 AI 연결 기능이 없고, AI 정리도 이 PC의 로컬 AI로만 합니다.</li>
           <li><b>광고·통계·추적이 없습니다.</b> 제3자에게 제공하거나 판매하지 않습니다.</li>
           <li><b>지우는 방법.</b> 앱을 제거한 뒤 위 폴더를 지우면 모두 삭제됩니다.</li>
         </ul>
@@ -189,17 +189,6 @@
       </section>
 
       <section class="setup-step" data-setup-step="4" hidden>
-        <h2>외부(클라우드) AI 사용</h2>
-        <p class="setup-lede">Claude·ChatGPT·Codex·Gemini·OpenRouter 같은 클라우드 AI를 연결해 쓰면, <b>보내기로 고른 텍스트</b>가 그 회사 서버(주로 미국)로 전송되어 그 회사의 정책에 따라 처리됩니다.</p>
-        <ul class="setup-summary">
-          <li>로컬 AI(Ollama)나 기본 도구만 쓸 거라면 <b>동의하지 않아도 됩니다.</b> 모든 로컬 기능을 그대로 씁니다.</li>
-          <li>동의해도 보낼 때마다 한 번 더 확인합니다. 나중에 설정에서 언제든 끌 수 있습니다.</li>
-        </ul>
-        <p class="setup-doc-link"><a href="./overseas.html" target="_blank" rel="noopener">해외 서버 안내 보기 ↗</a></p>
-        <label class="consent-check optional"><input id="consentExternalAi" type="checkbox" /><span><b>[선택]</b> 외부 AI를 쓸 때 내가 고른 텍스트가 해당 AI 회사로 전송되는 것에 동의합니다.</span></label>
-      </section>
-
-      <section class="setup-step" data-setup-step="5" hidden>
         <h2>기관 정보 (선택)</h2>
         <p class="setup-lede">적어 두면 기관 양식 작업공간의 문서 초안에 자동으로 들어갑니다. 이 PC에만 저장되며, 나중에 바꿀 수 있습니다.</p>
         <div class="setup-fields">
@@ -229,11 +218,6 @@
         <button id="settingsWithdraw" class="secondary-button" type="button">필수 동의 철회</button>
       </div>
       <div class="settings-group">
-        <h3>선택 동의</h3>
-        <label class="consent-check optional"><input id="settingsExternalAi" type="checkbox" /><span><b>외부(클라우드) AI 전송</b> 내가 고른 텍스트를 연결한 AI 회사로 보내는 것에 동의합니다.</span></label>
-        <p id="settingsExternalAiStatus" class="settings-note"></p>
-      </div>
-      <div class="settings-group">
         <h3>기관 정보</h3>
         <div class="setup-fields">
           <label>기관명<input id="settingsOrganization" class="wide-input" autocomplete="organization" /></label>
@@ -249,17 +233,6 @@
         <a href="./data-processing.html" target="_blank" rel="noopener">데이터 처리 안내 ↗</a>
         <a href="./overseas.html" target="_blank" rel="noopener">해외 서버 안내 ↗</a>
         <a href="./cookies.html" target="_blank" rel="noopener">광고·쿠키 안내 ↗</a>
-      </div>
-    </dialog>
-
-    <dialog id="externalConsentDialog" class="privacy-dialog external-consent-dialog" aria-labelledby="externalConsentTitle">
-      <p class="overline">EXTERNAL AI</p>
-      <h2 id="externalConsentTitle">외부 AI로 보내기 전에 동의가 필요합니다</h2>
-      <p class="setup-lede">지금 고른 텍스트가 연결한 AI 회사(Anthropic·OpenAI·Google·OpenRouter 중 하나)의 서버로 전송되고, 그 회사의 정책에 따라 처리됩니다. 처리 서버는 해외(주로 미국)에 있을 수 있습니다.</p>
-      <p class="settings-note">로컬 AI만 쓸 거라면 취소하세요. 동의는 설정에서 언제든 끌 수 있습니다. <a href="./overseas.html" target="_blank" rel="noopener">해외 서버 안내 ↗</a></p>
-      <div class="setup-actions">
-        <button id="externalConsentCancel" class="secondary-button" type="button">취소</button>
-        <button id="externalConsentAccept" class="primary-button" type="button">동의하고 계속</button>
       </div>
     </dialog>
 

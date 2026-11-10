@@ -33,35 +33,33 @@ test('첫 실행 설정은 필수 동의 없이는 넘어가지 않고, 선택�
   await expect(setup).toBeVisible();
 
   await page.locator('#setupNext').click();
-  await expect(page.locator('#setupStepLabel')).toHaveText('2/5');
+  await expect(page.locator('#setupStepLabel')).toHaveText('2/4');
   await expect(setup.locator('a[href="./privacy.html"]').first()).toBeVisible();
   await page.locator('#setupNext').click();
   await expect(page.locator('#setupError')).toContainText('개인정보처리방침에 동의해야');
-  await expect(page.locator('#setupStepLabel')).toHaveText('2/5');
+  await expect(page.locator('#setupStepLabel')).toHaveText('2/4');
   await page.locator('#consentPrivacy').check();
   await page.locator('#setupNext').click();
 
-  await expect(page.locator('#setupStepLabel')).toHaveText('3/5');
+  await expect(page.locator('#setupStepLabel')).toHaveText('3/4');
   await page.locator('#setupNext').click();
   await expect(page.locator('#setupError')).toContainText('이용 조건에 동의해야');
   await page.locator('#consentTerms').check();
   await page.locator('#setupNext').click();
 
-  await expect(page.locator('#setupStepLabel')).toHaveText('4/5');
-  await expect(page.locator('#consentExternalAi')).not.toBeChecked();
-  await page.locator('#setupNext').click();
-
-  await expect(page.locator('#setupStepLabel')).toHaveText('5/5');
+  // There is no optional cloud-AI step: the app has no external AI.
+  await expect(page.locator('#setupStepLabel')).toHaveText('4/4');
+  await expect(setup.locator('#consentExternalAi')).toHaveCount(0);
   await page.locator('#setupOrganization').fill('합성 종합사회복지관');
   await page.locator('#setupManager').fill('합성 담당자');
   await page.locator('#setupNext').click();
   await expect(setup).toBeHidden();
 
   const saved = await serverConsent(request);
-  expect(saved.policyVersion).toBe('2026-11-10');
+  expect(saved.policyVersion).toBe('2026-11-11');
   expect(saved.privacy.agreed).toBe(true);
   expect(saved.terms.agreed).toBe(true);
-  expect(saved.externalAi.agreed).toBe(false);
+  expect('externalAi' in saved).toBe(false);
   expect(Date.parse(saved.privacy.at)).not.toBeNaN();
 
   await page.reload();
@@ -79,8 +77,8 @@ test('첫 실행 설정은 필수 동의 없이는 넘어가지 않고, 선택�
   expect(await page.evaluate(() => window.dawithConsent.status().terms.agreed)).toBe(true);
 });
 
-test('설정 화면에서 외부 AI 동의를 켜고 끄고, 필수 동의를 철회할 수 있다', async ({ page, request }) => {
-  await patchConsent(request, acceptedConsent({ externalAi: false }));
+test('설정 화면에는 외부 AI 동의가 없고, 필수 동의를 철회할 수 있다', async ({ page, request }) => {
+  await patchConsent(request, acceptedConsent());
   await page.goto(runtime.url);
   await expect(page.locator('#setupDialog')).toBeHidden();
 
@@ -89,14 +87,8 @@ test('설정 화면에서 외부 AI 동의를 켜고 끄고, 필수 동의를 �
   const settings = page.locator('#settingsDialog');
   await expect(settings).toBeVisible();
   await expect(page.locator('#settingsPrivacyStatus')).toContainText('동의함');
-  await expect(page.locator('#settingsExternalAi')).not.toBeChecked();
-
-  await page.locator('#settingsExternalAi').check();
-  await expect(page.locator('#settingsNotice')).toContainText('동의를 켰습니다');
-  await expect.poll(async () => (await serverConsent(request)).externalAi.agreed).toBe(true);
-  await page.locator('#settingsExternalAi').uncheck();
-  await expect(page.locator('#settingsNotice')).toContainText('철회했습니다');
-  await expect.poll(async () => (await serverConsent(request)).externalAi.agreed).toBe(false);
+  await expect(page.locator('#settingsExternalAi')).toHaveCount(0);
+  await expect(settings).not.toContainText('선택 동의');
 
   page.once('dialog', (dialog) => dialog.accept());
   await page.locator('#settingsWithdraw').click();
@@ -115,38 +107,18 @@ test('정책 버전이 바뀌면 처음 설정을 다시 보여준다', async ({
   await expect(page.locator('#setupPolicyChanged')).toBeVisible();
 });
 
-test('외부 AI 동의가 꺼져 있으면 보내기 전에 묻고, 취소하면 아무것도 보내지 않는다', async ({ page, request }) => {
-  await patchConsent(request, acceptedConsent({ externalAi: false }));
-  let assistCalls = 0;
-  await page.route('**/api/ai/subscription/status', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ providers: { codex: { provider: 'codex', label: 'Codex 구독', state: 'ready' } } }) }));
-  await page.route('**/api/ai/subscription/assist', (route) => { assistCalls += 1; return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ result: '외부 AI 합성 결과' }) }); });
-  page.on('dialog', (dialog) => dialog.accept());
-
+test('외부 AI 전송 동의 창과 구독 AI 버튼이 어디에도 없다', async ({ page, request }) => {
+  await patchConsent(request, acceptedConsent());
   await page.goto(runtime.url);
-  await page.locator('.tool-card[data-tool="text-tools"]').click();
-  await page.locator('#textInput').fill('개인정보 없는 합성 문장입니다.');
-
-  await page.locator('#textSubscriptionAssist').click();
-  const prompt = page.locator('#externalConsentDialog');
-  await expect(prompt).toBeVisible();
-  await expect(prompt).toContainText('외부 AI로 보내기 전에 동의가 필요합니다');
-  await page.locator('#externalConsentCancel').click();
-  await expect(prompt).toBeHidden();
-  expect(assistCalls).toBe(0);
-  expect((await serverConsent(request)).externalAi.agreed).toBe(false);
-
-  await page.locator('#textSubscriptionAssist').click();
-  await expect(prompt).toBeVisible();
-  await page.locator('#externalConsentAccept').click();
-  await expect(page.locator('#textOutput')).toContainText('외부 AI 합성 결과');
-  expect(assistCalls).toBe(1);
-  expect((await serverConsent(request)).externalAi.agreed).toBe(true);
-
-  // Once agreed, the next send only shows the per-send confirmation.
-  await page.locator('#textSubscriptionAssist').click();
-  await expect.poll(() => assistCalls).toBe(2);
-  await expect(prompt).toBeHidden();
-  expect(await page.evaluate(() => typeof window.dawithConsent.ensureExternalAi)).toBe('function');
+  await expect(page.locator('#externalConsentDialog')).toHaveCount(0);
+  expect(await page.evaluate(() => typeof window.dawithConsent.ensureExternalAi)).toBe('undefined');
+  for (const tool of ['text-tools', 'hwp-inspector', 'template-studio', 'ai-setup']) {
+    await page.locator(`.tool-card[data-tool="${tool}"]`).click();
+    await expect(page.locator('#workspaceView')).toBeVisible();
+    await expect(page.locator('.external-ai-button')).toHaveCount(0);
+    await expect(page.locator('#workspaceMount')).not.toContainText('구독 AI');
+    await page.locator('[data-action="home"]').click();
+  }
 });
 
 test('앱 하단과 정책 문서 링크가 실제 페이지로 열린다', async ({ page, request }) => {

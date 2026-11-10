@@ -22,7 +22,7 @@ export function normalizeConsent(input) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(policyVersion)) return null;
   const updatedAt = isoOrNull(input.updatedAt);
   if (!updatedAt) return null;
-  return { policyVersion, privacy: consentItem(input.privacy), terms: consentItem(input.terms), externalAi: consentItem(input.externalAi), updatedAt };
+  return { policyVersion, privacy: consentItem(input.privacy), terms: consentItem(input.terms), updatedAt };
 }
 
 export function openStore(dataDir, { encryptionKey } = {}) {
@@ -91,6 +91,9 @@ export function openStore(dataDir, { encryptionKey } = {}) {
   `);
   try { db.exec('ALTER TABLE records ADD COLUMN source_hash TEXT'); } catch { /* Existing database already migrated. */ }
   try { db.exec('ALTER TABLE records ADD COLUMN draft_hash TEXT'); } catch { /* Existing database already migrated. */ }
+  // Versions up to 0.9.9 could store cloud AI tokens/keys here. Cloud AI is gone,
+  // so any leftover credentials are deleted rather than kept around.
+  db.prepare('DELETE FROM settings WHERE key = ?').run('aiConnections');
 
   const now = () => new Date().toISOString();
   const id = (prefix) => `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
@@ -177,8 +180,6 @@ export function openStore(dataDir, { encryptionKey } = {}) {
     getSettings() {
       const defaults = { organizationName: 'Dawith Welfare Office', retentionDays: 0, whisperModelPath: '', whisperBinaryPath: '', consent: null };
       for (const row of db.prepare('SELECT key, value FROM settings').all()) {
-        // AI connection tokens stay server-side; they are read through getAiConnections().
-        if (row.key === 'aiConnections') continue;
         if (row.key === 'retentionDays') defaults.retentionDays = Number(cipher.open(row.value)) || 0;
         else if (row.key === 'consent') {
           try { defaults.consent = normalizeConsent(JSON.parse(cipher.open(row.value))); } catch { defaults.consent = null; }
@@ -196,7 +197,7 @@ export function openStore(dataDir, { encryptionKey } = {}) {
           if (input.consent && !consent) throw new Error('consent_invalid');
           db.prepare('INSERT INTO settings (key, value, updated_at) VALUES (?, ?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at').run('consent', cipher.seal(JSON.stringify(consent)), now());
           current.consent = consent;
-          audit('consent_updated', 'settings', '', consent ? { policyVersion: consent.policyVersion, privacy: consent.privacy.agreed, terms: consent.terms.agreed, externalAi: consent.externalAi.agreed } : { cleared: true });
+          audit('consent_updated', 'settings', '', consent ? { policyVersion: consent.policyVersion, privacy: consent.privacy.agreed, terms: consent.terms.agreed } : { cleared: true });
           continue;
         }
         const value = key === 'retentionDays' ? String(Math.max(0, Math.min(3650, Number(input[key]) || 0))) : String(input[key] || '').trim();
@@ -206,28 +207,6 @@ export function openStore(dataDir, { encryptionKey } = {}) {
       purgeExpired();
       audit('settings_updated', 'settings', '', { keys: Object.keys(input).filter((key) => allowed.includes(key)) });
       return current;
-    },
-    getAiConnections() {
-      const row = db.prepare('SELECT value FROM settings WHERE key = ?').get('aiConnections');
-      if (!row) return {};
-      try {
-        const parsed = JSON.parse(cipher.open(row.value));
-        return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
-      } catch {
-        return {};
-      }
-    },
-    updateAiConnections(input = {}) {
-      const allowed = ['openrouter', 'gemini', 'chatgpt'];
-      const next = {};
-      for (const provider of allowed) {
-        const value = input[provider];
-        if (value && typeof value === 'object' && !Array.isArray(value)) next[provider] = value;
-      }
-      const timestamp = now();
-      db.prepare('INSERT INTO settings (key, value, updated_at) VALUES (?, ?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at').run('aiConnections', cipher.seal(JSON.stringify(next)), timestamp);
-      audit('ai_connections_updated', 'settings', '', { providers: Object.keys(next) });
-      return next;
     },
     exportRecord(recordId) {
       const row = db.prepare('SELECT records.id, records.case_id AS caseId, cases.label AS caseLabel, records.kind, records.provider, records.source_name AS sourceName, records.raw_text AS rawText, records.context_text AS contextText, records.draft_json AS draftJson, records.source_hash AS sourceHash, records.draft_hash AS draftHash, records.created_at AS createdAt FROM records LEFT JOIN cases ON cases.id = records.case_id WHERE records.id = ?').get(recordId);
