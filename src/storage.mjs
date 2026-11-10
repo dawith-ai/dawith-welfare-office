@@ -4,6 +4,27 @@ import { DatabaseSync } from 'node:sqlite';
 import { createFieldCipher } from './crypto.mjs';
 import { sha256 } from './transcription.mjs';
 
+const isoOrNull = (value) => {
+  if (!value) return null;
+  const date = new Date(String(value));
+  return Number.isNaN(date.getTime()) ? null : date.toISOString();
+};
+const consentItem = (value) => {
+  const agreed = Boolean(value && typeof value === 'object' && value.agreed === true);
+  return { agreed, at: agreed ? isoOrNull(value.at) : null };
+};
+
+// Consent record written by the first-run setup: the policy version the user
+// saw, each item's choice and when it was made. Nothing else is kept.
+export function normalizeConsent(input) {
+  if (!input || typeof input !== 'object' || Array.isArray(input)) return null;
+  const policyVersion = String(input.policyVersion || '').trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(policyVersion)) return null;
+  const updatedAt = isoOrNull(input.updatedAt);
+  if (!updatedAt) return null;
+  return { policyVersion, privacy: consentItem(input.privacy), terms: consentItem(input.terms), externalAi: consentItem(input.externalAi), updatedAt };
+}
+
 export function openStore(dataDir, { encryptionKey } = {}) {
   fs.mkdirSync(dataDir, { recursive: true, mode: 0o700 });
   const db = new DatabaseSync(path.join(dataDir, 'welfare-office.sqlite'));
@@ -154,15 +175,30 @@ export function openStore(dataDir, { encryptionKey } = {}) {
       return this.exportRecord(recordId);
     },
     getSettings() {
-      const defaults = { organizationName: 'Dawith Welfare Office', retentionDays: 0, whisperModelPath: '', whisperBinaryPath: '' };
-      for (const row of db.prepare('SELECT key, value FROM settings').all()) defaults[row.key] = row.key === 'retentionDays' ? Number(row.value) || 0 : cipher.open(row.value);
+      const defaults = { organizationName: 'Dawith Welfare Office', retentionDays: 0, whisperModelPath: '', whisperBinaryPath: '', consent: null };
+      for (const row of db.prepare('SELECT key, value FROM settings').all()) {
+        // AI connection tokens stay server-side; they are read through getAiConnections().
+        if (row.key === 'aiConnections') continue;
+        if (row.key === 'retentionDays') defaults.retentionDays = Number(cipher.open(row.value)) || 0;
+        else if (row.key === 'consent') {
+          try { defaults.consent = normalizeConsent(JSON.parse(cipher.open(row.value))); } catch { defaults.consent = null; }
+        } else defaults[row.key] = cipher.open(row.value);
+      }
       return defaults;
     },
     updateSettings(input = {}) {
-      const allowed = ['organizationName', 'retentionDays', 'whisperModelPath', 'whisperBinaryPath'];
+      const allowed = ['organizationName', 'retentionDays', 'whisperModelPath', 'whisperBinaryPath', 'consent'];
       const current = this.getSettings();
       for (const key of allowed) {
         if (!(key in input)) continue;
+        if (key === 'consent') {
+          const consent = normalizeConsent(input.consent);
+          if (input.consent && !consent) throw new Error('consent_invalid');
+          db.prepare('INSERT INTO settings (key, value, updated_at) VALUES (?, ?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at').run('consent', cipher.seal(JSON.stringify(consent)), now());
+          current.consent = consent;
+          audit('consent_updated', 'settings', '', consent ? { policyVersion: consent.policyVersion, privacy: consent.privacy.agreed, terms: consent.terms.agreed, externalAi: consent.externalAi.agreed } : { cleared: true });
+          continue;
+        }
         const value = key === 'retentionDays' ? String(Math.max(0, Math.min(3650, Number(input[key]) || 0))) : String(input[key] || '').trim();
         db.prepare('INSERT INTO settings (key, value, updated_at) VALUES (?, ?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at').run(key, cipher.seal(value), now());
         current[key] = key === 'retentionDays' ? Number(value) : value;

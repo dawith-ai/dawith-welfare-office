@@ -20,6 +20,7 @@
         <div class="topbar-meta">
             <span class="local-status"><i></i> 로컬 우선 · 이 PC에서 처리</span>
           <button class="plain-button" id="privacyButton" type="button">데이터 경계</button>
+          <button class="plain-button" id="settingsButton" type="button">설정</button>
           <a class="plain-button guide-link" href="./guide.html">제품 안내</a>
           <button class="plain-button update-button hidden" id="updateButton" type="button">업데이트 확인</button>
           <a class="plain-button guide-link" id="downloadLink" href="https://welfare-office.vercel.app/#download" target="_blank" rel="noreferrer">PC용 내려받기</a>
@@ -98,6 +99,15 @@
               <p id="directoryNote">기본 기능은 오프라인에서도 작동하고, 외부 AI는 전송 전에 확인합니다.</p>
             </div>
             <div id="toolGrid" class="tool-grid"></div>
+
+            <footer class="app-legal" aria-label="법적 고지">
+              <span>© 2024-2026 Dawith AI. All rights reserved.</span>
+              <a href="./privacy.html" target="_blank" rel="noopener">개인정보처리방침</a>
+              <a href="./terms.html" target="_blank" rel="noopener">이용약관</a>
+              <a href="./data-processing.html" target="_blank" rel="noopener">데이터 처리 안내</a>
+              <a href="./overseas.html" target="_blank" rel="noopener">해외 서버 안내</a>
+              <a href="./cookies.html" target="_blank" rel="noopener">광고·쿠키 안내</a>
+            </footer>
           </section>
 
           <section id="workspaceView" class="workspace-view hidden" aria-live="polite">
@@ -129,6 +139,128 @@
         <div><span>구독·무료 AI</span><b>선택·확인 후 전송</b></div>
       </div>
       <p class="dialog-footnote">인터넷이 끊겨도 규칙 기반 도구와 파일 변환은 계속 사용할 수 있습니다. 상담·회의 원문은 로컬 LLM을 선택하면 외부로 나가지 않습니다.</p>
+      <div class="dialog-links">
+        <button class="secondary-button" id="privacyOpenSettings" type="button">동의·설정 관리</button>
+        <a href="./data-processing.html" target="_blank" rel="noopener">도구별 데이터 처리 안내 ↗</a>
+        <a href="./privacy.html" target="_blank" rel="noopener">개인정보처리방침 ↗</a>
+      </div>
+    </dialog>
+
+    <dialog id="setupDialog" class="privacy-dialog setup-dialog" aria-labelledby="setupTitle">
+      <div class="setup-head">
+        <p class="overline">처음 설정 · <span id="setupStepLabel">1/5</span></p>
+        <ol class="setup-progress" aria-hidden="true"><li></li><li></li><li></li><li></li><li></li></ol>
+      </div>
+
+      <section class="setup-step" data-setup-step="1">
+        <h2 id="setupTitle">Dawith 복지 업무 도구함에 오신 것을 환영합니다</h2>
+        <p id="setupPolicyChanged" class="notice" hidden>개인정보처리방침이나 이용약관이 바뀌어 다시 확인을 받습니다. 바뀐 내용을 읽고 동의해 주세요.</p>
+        <p class="setup-lede">PDF·한글 양식·사진·상담 기록 같은 서류 일을 이 PC 안에서 정리하는 무료 도구 모음입니다.</p>
+        <ul class="setup-facts">
+          <li><b>계정이 없습니다</b><span>회원가입·로그인 없이 바로 씁니다. Dawith는 앱을 위한 서버를 운영하지 않습니다.</span></li>
+          <li><b>인터넷 없이 작동합니다</b><span>기본 도구와 로컬 AI(Ollama)는 오프라인에서도 쓸 수 있습니다.</span></li>
+          <li><b>작성한 내용은 이 PC에 남습니다</b><span>외부 AI는 직접 연결하고, 보낼 때마다 확인한 경우에만 씁니다.</span></li>
+        </ul>
+        <p class="setup-hint">처음 한 번만 확인하면 됩니다. 1분이면 끝나요.</p>
+      </section>
+
+      <section class="setup-step" data-setup-step="2" hidden>
+        <h2>개인정보처리방침 요약</h2>
+        <ul class="setup-summary">
+          <li><b>수집하지 않습니다.</b> Dawith는 이 앱으로 이용자의 개인정보를 받거나 보관하지 않습니다.</li>
+          <li><b>저장 위치는 이 PC입니다.</b> 설정·기록은 <code>%APPDATA%\Dawith Welfare Office</code> 폴더에 저장됩니다. 앱 데이터베이스는 암호화하지만, 화면에서 임시 저장한 기록·양식은 따로 암호화하지 않으니 PC 잠금을 꼭 지켜 주세요.</li>
+          <li><b>외부 전송은 직접 고를 때만.</b> 클라우드 AI를 연결해 보낼 때만 고른 텍스트가 그 회사로 전송됩니다.</li>
+          <li><b>광고·통계·추적이 없습니다.</b> 제3자에게 제공하거나 판매하지 않습니다.</li>
+          <li><b>지우는 방법.</b> 앱을 제거한 뒤 위 폴더를 지우면 모두 삭제됩니다.</li>
+        </ul>
+        <p class="setup-doc-link"><a href="./privacy.html" target="_blank" rel="noopener">개인정보처리방침 전문 보기 ↗</a></p>
+        <label class="consent-check"><input id="consentPrivacy" type="checkbox" /><span><b>[필수]</b> 개인정보처리방침을 읽고 동의합니다.</span></label>
+      </section>
+
+      <section class="setup-step" data-setup-step="3" hidden>
+        <h2>이용 조건</h2>
+        <ul class="setup-summary">
+          <li><b>무료·있는 그대로 제공합니다.</b> 법령이 허용하는 범위에서 따로 보증하지 않습니다.</li>
+          <li><b>AI 결과는 검토용 초안입니다.</b> 공식 기록과 판단은 담당자가 확인하고 확정합니다.</li>
+          <li><b>기관 지침을 지켜 주세요.</b> 이용자 정보를 다룰 때는 소속 기관의 개인정보 처리 지침과 외부 전송 승인 절차를 따릅니다.</li>
+        </ul>
+        <p class="setup-doc-link"><a href="./terms.html" target="_blank" rel="noopener">이용약관 전문 보기 ↗</a></p>
+        <label class="consent-check"><input id="consentTerms" type="checkbox" /><span><b>[필수]</b> 이용 조건을 읽고 동의합니다.</span></label>
+      </section>
+
+      <section class="setup-step" data-setup-step="4" hidden>
+        <h2>외부(클라우드) AI 사용</h2>
+        <p class="setup-lede">Claude·ChatGPT·Codex·Gemini·OpenRouter 같은 클라우드 AI를 연결해 쓰면, <b>보내기로 고른 텍스트</b>가 그 회사 서버(주로 미국)로 전송되어 그 회사의 정책에 따라 처리됩니다.</p>
+        <ul class="setup-summary">
+          <li>로컬 AI(Ollama)나 기본 도구만 쓸 거라면 <b>동의하지 않아도 됩니다.</b> 모든 로컬 기능을 그대로 씁니다.</li>
+          <li>동의해도 보낼 때마다 한 번 더 확인합니다. 나중에 설정에서 언제든 끌 수 있습니다.</li>
+        </ul>
+        <p class="setup-doc-link"><a href="./overseas.html" target="_blank" rel="noopener">해외 서버 안내 보기 ↗</a></p>
+        <label class="consent-check optional"><input id="consentExternalAi" type="checkbox" /><span><b>[선택]</b> 외부 AI를 쓸 때 내가 고른 텍스트가 해당 AI 회사로 전송되는 것에 동의합니다.</span></label>
+      </section>
+
+      <section class="setup-step" data-setup-step="5" hidden>
+        <h2>기관 정보 (선택)</h2>
+        <p class="setup-lede">적어 두면 기관 양식 작업공간의 문서 초안에 자동으로 들어갑니다. 이 PC에만 저장되며, 나중에 바꿀 수 있습니다.</p>
+        <div class="setup-fields">
+          <label>기관명<input id="setupOrganization" class="wide-input" autocomplete="organization" placeholder="예: 다위종합사회복지관" /></label>
+          <label>담당자<input id="setupManager" class="wide-input" autocomplete="name" placeholder="예: 홍길동 사회복지사" /></label>
+        </div>
+      </section>
+
+      <p id="setupError" class="setup-error" role="alert" hidden></p>
+      <div class="setup-actions">
+        <button id="setupBack" class="secondary-button" type="button" hidden>이전</button>
+        <button id="setupNext" class="primary-button" type="button">다음</button>
+      </div>
+    </dialog>
+
+    <dialog id="settingsDialog" class="privacy-dialog settings-dialog" aria-labelledby="settingsTitle">
+      <button class="dialog-close" id="closeSettings" type="button" aria-label="닫기">×</button>
+      <p class="overline">SETTINGS</p>
+      <h2 id="settingsTitle">설정 · 동의 관리</h2>
+      <div class="settings-group">
+        <h3>필수 동의</h3>
+        <div class="boundary-list">
+          <div><span>개인정보처리방침</span><b id="settingsPrivacyStatus">-</b></div>
+          <div><span>이용약관</span><b id="settingsTermsStatus">-</b></div>
+        </div>
+        <p class="settings-note">필수 동의를 철회하면 다시 동의할 때까지 도구를 쓸 수 없습니다. 이 PC에 저장된 기록은 지워지지 않습니다.</p>
+        <button id="settingsWithdraw" class="secondary-button" type="button">필수 동의 철회</button>
+      </div>
+      <div class="settings-group">
+        <h3>선택 동의</h3>
+        <label class="consent-check optional"><input id="settingsExternalAi" type="checkbox" /><span><b>외부(클라우드) AI 전송</b> 내가 고른 텍스트를 연결한 AI 회사로 보내는 것에 동의합니다.</span></label>
+        <p id="settingsExternalAiStatus" class="settings-note"></p>
+      </div>
+      <div class="settings-group">
+        <h3>기관 정보</h3>
+        <div class="setup-fields">
+          <label>기관명<input id="settingsOrganization" class="wide-input" autocomplete="organization" /></label>
+          <label>담당자<input id="settingsManager" class="wide-input" autocomplete="name" /></label>
+        </div>
+        <button id="settingsProfileSave" class="secondary-button" type="button">기관 정보 저장</button>
+      </div>
+      <p id="settingsNotice" class="notice" hidden></p>
+      <p class="dialog-footnote"><span id="settingsStorage">동의 기록은 이 PC에 저장됩니다.</span> 모든 데이터를 지우려면 앱을 제거한 뒤 <code>%APPDATA%\Dawith Welfare Office</code> 폴더를 삭제하세요.</p>
+      <div class="dialog-links">
+        <a href="./privacy.html" target="_blank" rel="noopener">개인정보처리방침 ↗</a>
+        <a href="./terms.html" target="_blank" rel="noopener">이용약관 ↗</a>
+        <a href="./data-processing.html" target="_blank" rel="noopener">데이터 처리 안내 ↗</a>
+        <a href="./overseas.html" target="_blank" rel="noopener">해외 서버 안내 ↗</a>
+        <a href="./cookies.html" target="_blank" rel="noopener">광고·쿠키 안내 ↗</a>
+      </div>
+    </dialog>
+
+    <dialog id="externalConsentDialog" class="privacy-dialog external-consent-dialog" aria-labelledby="externalConsentTitle">
+      <p class="overline">EXTERNAL AI</p>
+      <h2 id="externalConsentTitle">외부 AI로 보내기 전에 동의가 필요합니다</h2>
+      <p class="setup-lede">지금 고른 텍스트가 연결한 AI 회사(Anthropic·OpenAI·Google·OpenRouter 중 하나)의 서버로 전송되고, 그 회사의 정책에 따라 처리됩니다. 처리 서버는 해외(주로 미국)에 있을 수 있습니다.</p>
+      <p class="settings-note">로컬 AI만 쓸 거라면 취소하세요. 동의는 설정에서 언제든 끌 수 있습니다. <a href="./overseas.html" target="_blank" rel="noopener">해외 서버 안내 ↗</a></p>
+      <div class="setup-actions">
+        <button id="externalConsentCancel" class="secondary-button" type="button">취소</button>
+        <button id="externalConsentAccept" class="primary-button" type="button">동의하고 계속</button>
+      </div>
     </dialog>
 
     <script src="./heartbeat.js"></script>

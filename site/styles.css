@@ -279,3 +279,14 @@ code, kbd { padding: 1px 6px; border: 1px solid var(--line); border-radius: 5px;
 .refs { margin: 0; padding: 0; list-style: none; border-top: 1px solid var(--line); }
 .refs li { padding: 14px 0; border-bottom: 1px solid var(--line); color: var(--muted); font-size: 16px; }
 .refs li a { margin-right: 8px; color: var(--ink); font-weight: 700; }
+/* legal pages and footer legal links */
+.page-hero .legal-meta { margin-top: 14px; color: var(--muted); font-size: 14px; font-weight: 600; }
+.legal-doc { max-width: 900px; }
+.legal-doc table { width: 100%; margin: 8px 0 18px; border-collapse: collapse; border-top: 2px solid var(--ink); font-size: 15px; line-height: 1.7; }
+.legal-doc th, .legal-doc td { padding: 12px 12px 12px 0; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; color: #3c4540; }
+.legal-doc th { color: var(--ink); font-size: 14px; white-space: nowrap; }
+.legal-doc code { padding: 1px 5px; border-radius: 4px; background: var(--soft); font-size: .92em; }
+.footer .legal-links { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 14px 0 0; color: var(--muted); font-size: 13px; }
+.footer .legal-links a { text-decoration: none; }
+.footer .legal-links a:hover, .footer .legal-links a[aria-current="page"] { color: var(--ink); text-decoration: underline; }
+@media (max-width: 720px) { .legal-doc table, .legal-doc tbody, .legal-doc tr, .legal-doc td { display: block; width: 100%; } .legal-doc thead { display: none; } .legal-doc tr { padding: 10px 0; border-bottom: 1px solid var(--line); } .legal-doc td { padding: 3px 0; border: 0; } .legal-doc td:first-child { color: var(--ink); font-weight: 700; } }
