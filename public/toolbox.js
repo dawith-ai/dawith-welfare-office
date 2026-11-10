@@ -970,10 +970,6 @@ const institutionProfileKey = 'dawith-institution-profile-v1';
 const templateHandoffKey = 'dawith-template-handoff-v1';
 const cloudProviderOrder = ['claude-code', 'codex', 'chatgpt', 'gemini-cli', 'gemini', 'openrouter'];
 
-function readInstitutionProfile() {
-  try { return JSON.parse(localStorage.getItem(institutionProfileKey) || '{}'); } catch { return {}; }
-}
-
 function readSavedRecords() {
   try { const saved = JSON.parse(localStorage.getItem(recordStorageKey) || '[]'); return Array.isArray(saved) ? saved : []; } catch { return []; }
 }
@@ -1117,6 +1113,7 @@ function bindCaseRecord() {
     if (choice === 'cloud') {
       const provider = $('#recordCloudProvider').value;
       if (!provider) { notice('연결된 클라우드 AI가 없습니다. AI 보조·연결에서 먼저 연결하거나 다른 정리 방식을 고르세요.', true); return; }
+      if (!(await ensureExternalAiConsent())) { notice('클라우드 AI 전송에 동의하지 않아 아무것도 보내지 않았습니다.'); return; }
       const outgoing = await confirmCloud(provider, rawText, contextText);
       if (!outgoing) { notice('전송을 취소했습니다. 아무것도 보내지 않았습니다.'); return; }
       Object.assign(request, outgoing, { provider: `cloud:${provider}`, confirmExternal: true });

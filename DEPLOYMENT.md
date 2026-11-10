@@ -49,13 +49,13 @@ npm run test:e2e
 npm run dist:win
 ```
 
-EXE는 `127.0.0.1`에만 로컬 서버를 열고, Electron OS 보호 저장소에 DB 키를 보관합니다. 설치 파일은 기관별 백신 정책과 Windows SmartScreen 정책을 확인한 뒤 코드 서명 인증서로 서명해서 배포해야 합니다. 서명되지 않은 빌드를 상용 배포물로 사용하지 않습니다.
+EXE는 `127.0.0.1`에만 로컬 서버를 열고, DB 암호화 키를 데이터 폴더의 `.local-key` 파일에 보관합니다. 설치 파일은 기관별 백신 정책과 Windows SmartScreen 정책을 확인한 뒤 코드 서명 인증서로 서명해서 배포해야 합니다. 서명되지 않은 빌드를 상용 배포물로 사용하지 않습니다.
 
 ## 백업·복구
 
 기관 서버의 `WELFARE_DATA_DIR` 전체를 업무 중지 후 백업합니다. SQLite의 `.sqlite`, `.sqlite-wal`, `.sqlite-shm`와 암호화 키를 함께 보관해야 복구할 수 있습니다. 백업은 기관 승인 암호화 저장소에 보관하고 복구 테스트를 월 1회 수행합니다.
 
-Windows EXE는 사용자 프로필의 `Dawith Welfare Office/data`를 기관 백업 정책에 포함합니다. OS 보호 키를 잃으면 암호화된 기록을 복구할 수 없으므로 장치 교체·계정 삭제 전에 백업과 복구를 확인합니다.
+Windows EXE는 사용자 프로필의 `Dawith Welfare Office/data`를 기관 백업 정책에 포함합니다. `.local-key` 파일을 잃으면 암호화된 기록을 복구할 수 없으므로 장치 교체·계정 삭제 전에 백업과 복구를 확인합니다.
 
 ## 출시 전 확인표
 

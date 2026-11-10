@@ -606,12 +606,16 @@ test('가계도 원문 후보도 목록에 추가되고 기호와 이름표가 �
   await page.locator('.diagram-source summary').click();
   await page.locator('#diagramSourceText').fill('내담자는 남편과 이혼 후 딸(12세), 아들(9세)과 함께 살고 있다. 어머니는 작년에 돌아가셨고 아버지와 남동생은 지방에 산다. 외할머니가 가끔 돌봐준다.');
   await page.locator('#diagramExtract').click();
-  await expect(page.locator('.diagram-candidate')).toHaveCount(7);
+  // 7 new people plus the client, who is listed as already added.
+  await expect(page.locator('.diagram-candidate')).toHaveCount(8);
+  await expect(page.locator('.diagram-candidate button:disabled')).toHaveCount(1);
   await page.locator('#diagramAddAllCandidates').click();
   await expect(page.locator('#genoMemberList .diagram-row')).toHaveCount(8);
   await expect(page.locator('.geno-member')).toHaveCount(8);
   await expect(page.locator('.geno-member[data-relation="모"] .geno-deceased-mark')).toHaveCount(1);
-  await expect(page.locator('.geno-member[data-relation="자녀"]').first().locator('.geno-age')).toHaveText('12');
+  // Children are drawn oldest first from the left, whatever order they were added in.
+  const childAges = await page.locator('.geno-member[data-relation="자녀"]').evaluateAll((nodes) => nodes.map((node) => ({ x: node.getBBox().x, age: node.querySelector('.geno-age')?.textContent })).sort((p, q) => p.x - q.x).map((item) => item.age));
+  expect(childAges).toEqual(['12', '9']);
   await expectNoOverlap(page.locator('.geno-member'));
 });
 

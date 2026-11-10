@@ -5,7 +5,7 @@
 - 기본 서버는 `127.0.0.1`에만 바인딩합니다.
 - 외부 provider, OpenRouter, OpenAI API 호출 경로를 제공하지 않습니다.
 - 상담 원문·맥락·초안·기관 양식 파일은 AES-256-GCM으로 필드 암호화합니다.
-- Windows EXE는 Electron `safeStorage`로 DB 키를 OS 보호 저장소에 보관합니다.
+- Windows 앱은 DB 암호화 키를 데이터 폴더(`%APPDATA%Dawith Welfare Officedata`)의 `.local-key` 파일에 둡니다. OS 보호 저장소는 쓰지 않으므로, 데이터 폴더 접근 권한과 PC 잠금으로 보호해야 합니다.
 - 내부망 모드는 인증 없이는 LAN 바인딩을 허용하지 않습니다.
 - 로그인 세션은 HttpOnly·SameSite 쿠키이며, 비밀번호는 scrypt 해시로 저장합니다.
 - 감사 이벤트에는 원문을 저장하지 않습니다.
