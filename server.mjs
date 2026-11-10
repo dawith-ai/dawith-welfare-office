@@ -121,7 +121,7 @@ async function ollamaSummary(input, timeoutMs = defaultOllamaTimeoutMs, baseUrl 
 
 const ollamaFallbackMessages = {
   ollama_unavailable: 'Ollama가 실행 중이 아니어서 규칙으로 정리했습니다. Ollama를 켠 뒤 다시 시도하거나 로컬 AI 설정에서 설치 상태를 확인하세요.',
-  ollama_http_404: '선택한 로컬 모델이 이 PC에 설치되어 있지 않아 규칙으로 정리했습니다. 로컬 AI 설정에서 모델을 준비하세요.',
+  ollama_http_404: '선택한 Ollama 로컬 모델이 이 PC에 설치되어 있지 않아 규칙으로 정리했습니다. 로컬 AI 설정에서 모델을 준비하세요.',
   ollama_timeout: '로컬 모델 응답이 너무 오래 걸려 규칙으로 정리했습니다. 더 작은 모델을 쓰거나 원문을 나눠 보세요.',
   ollama_invalid_result: '로컬 모델 응답을 읽지 못해 규칙으로 정리했습니다. 다시 시도하거나 다른 모델을 선택하세요.',
 };
