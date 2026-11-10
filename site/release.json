@@ -1,14 +1,14 @@
 {
-  "version": "1.0.0",
-  "releaseDate": "2026-11-10T06:53:18.693Z",
+  "version": "1.0.1",
+  "releaseDate": "2026-11-10T07:07:53.876Z",
   "setup": {
-    "file": "Dawith-Welfare-Office-1.0.0-x64-Setup.exe",
-    "url": "https://github.com/dawith-ai/dawith-welfare-office/releases/download/v1.0.0/Dawith-Welfare-Office-1.0.0-x64-Setup.exe",
-    "size": 26962827
+    "file": "Dawith-Welfare-Office-1.0.1-x64-Setup.exe",
+    "url": "https://github.com/dawith-ai/dawith-welfare-office/releases/download/v1.0.1/Dawith-Welfare-Office-1.0.1-x64-Setup.exe",
+    "size": 26961247
   },
   "portable": {
-    "file": "Dawith-Welfare-Office-1.0.0-x64-Portable.exe",
-    "url": "https://github.com/dawith-ai/dawith-welfare-office/releases/download/v1.0.0/Dawith-Welfare-Office-1.0.0-x64-Portable.exe",
-    "size": 26934551
+    "file": "Dawith-Welfare-Office-1.0.1-x64-Portable.exe",
+    "url": "https://github.com/dawith-ai/dawith-welfare-office/releases/download/v1.0.1/Dawith-Welfare-Office-1.0.1-x64-Portable.exe",
+    "size": 26930379
   }
 }
