@@ -3,6 +3,7 @@ import http from 'node:http';
 import { spawn } from 'node:child_process';
 
 const REQUEST_TIMEOUT_MS = 20_000;
+const COMPLETE_TIMEOUT_MS = 120_000;
 const OAUTH_TIMEOUT_MS = 10 * 60 * 1000;
 const MAX_TEXT = 120_000;
 const CHATGPT_ISSUER = 'https://auth.openai.com';
@@ -173,20 +174,21 @@ function extractText(payload) {
   return '';
 }
 
-async function chatCompletion(provider, config, prompt) {
+async function chatCompletion(provider, config, prompt, timeoutMs = REQUEST_TIMEOUT_MS) {
+  const signal = AbortSignal.timeout(timeoutMs);
   if (provider === 'openrouter') {
-    const response = await fetchWithTimeout(OPENROUTER_CHAT_URL, { method: 'POST', headers: { Authorization: `Bearer ${config.apiKey}`, 'Content-Type': 'application/json', 'HTTP-Referer': 'https://welfare-hub.site', 'X-Title': 'Dawith Welfare Office' }, body: JSON.stringify({ model: config.model || OPENROUTER_FALLBACK_MODEL, messages: [{ role: 'user', content: prompt }], stream: false }) });
+    const response = await fetchWithTimeout(OPENROUTER_CHAT_URL, { signal, method: 'POST', headers: { Authorization: `Bearer ${config.apiKey}`, 'Content-Type': 'application/json', 'HTTP-Referer': 'https://welfare-hub.site', 'X-Title': 'Dawith Welfare Office' }, body: JSON.stringify({ model: config.model || OPENROUTER_FALLBACK_MODEL, messages: [{ role: 'user', content: prompt }], stream: false }) });
     if (!response.ok) throw new Error('openrouter_request_failed');
     return extractText(await response.json());
   }
   if (provider === 'gemini') {
     const model = config.model || GEMINI_DEFAULT_MODEL;
-    const response = await fetchWithTimeout(`${GEMINI_MODELS_URL.replace('/models', `/models/${encodeURIComponent(model)}:generateContent`)}?key=${encodeURIComponent(config.apiKey)}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ role: 'user', parts: [{ text: prompt }] }] }) });
+    const response = await fetchWithTimeout(`${GEMINI_MODELS_URL.replace('/models', `/models/${encodeURIComponent(model)}:generateContent`)}?key=${encodeURIComponent(config.apiKey)}`, { signal, method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ role: 'user', parts: [{ text: prompt }] }] }) });
     if (!response.ok) throw new Error('gemini_request_failed');
     return extractText(await response.json());
   }
   const refreshed = await refreshChatGpt(config);
-  const response = await fetchWithTimeout('https://api.openai.com/v1/responses', { method: 'POST', headers: { Authorization: `Bearer ${refreshed.session.accessToken}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ model: 'gpt-5', input: prompt, store: false }) });
+  const response = await fetchWithTimeout('https://api.openai.com/v1/responses', { signal, method: 'POST', headers: { Authorization: `Bearer ${refreshed.session.accessToken}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ model: 'gpt-5', input: prompt, store: false }) });
   if (!response.ok) throw new Error('chatgpt_request_failed');
   return extractText(await response.json());
 }
@@ -217,6 +219,19 @@ export function createAiConnectionManager({ store } = {}) {
     async disconnect(provider) {
       if (!safeProvider(provider)) throw new Error('ai_provider_invalid');
       const saved = read(); delete saved[provider]; write(saved); return { provider, connected: false };
+    },
+    async complete({ provider, prompt, timeoutMs = COMPLETE_TIMEOUT_MS }) {
+      if (!safeProvider(provider)) throw new Error('ai_provider_invalid');
+      const text = String(prompt || '').trim();
+      if (!text) throw new Error('assist_text_required');
+      if (text.length > MAX_TEXT) throw new Error('assist_text_too_large');
+      const saved = read();
+      let config = saved[provider];
+      if (!config || (provider === 'chatgpt' ? !config.session?.refreshToken : !config.apiKey)) throw new Error('ai_provider_not_connected');
+      if (provider === 'chatgpt') { config = await refreshChatGpt(config); if (config !== saved[provider]) write({ ...saved, chatgpt: config }); }
+      const result = await chatCompletion(provider, config, text, timeoutMs);
+      if (!result) throw new Error('ai_provider_empty_result');
+      return { result: result.slice(0, 160_000), provider, transfer: { external: true, destination: provider, userInitiated: true } };
     },
     async assist({ provider, task, text, contextText = '' }) {
       if (!safeProvider(provider)) throw new Error('ai_provider_invalid');
