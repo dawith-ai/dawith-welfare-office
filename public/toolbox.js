@@ -461,7 +461,7 @@ function transformText(value, mode, options = {}) {
     if (options.resident !== false) result = result.replace(/\b(\d{6})[-\s]?\d{7}\b/g, '$1-*******');
     if (options.phone !== false) result = result.replace(/\b01[016789][-\s]?\d{3,4}[-\s]?\d{4}\b/g, (match) => `${match.slice(0, 3)}-****-${match.replace(/\D/g, '').slice(-4)}`);
     if (options.email !== false) result = result.replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi, '[이메일 가림]');
-    if (options.account !== false) result = result.replace(/\b\d{3,6}[-\s]?\d{2,6}[-\s]?\d{2,6}\b/g, (match) => `${match.replace(/\D/g, '').slice(0, 4)}-****-****`);
+    if (options.account !== false) result = result.replace(/\b\d{3,6}[-\s]?\d{2,6}[-\s]?\d{2,6}\b/g, (match) => `${match.split(/[-\s]/)[0].slice(0, 4)}-****-****`);
     return result;
   }
   if (mode === 'replace') {

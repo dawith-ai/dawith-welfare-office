@@ -49,13 +49,9 @@ test('왼쪽 분류를 누르면 머리말과 도구 목록이 함께 바뀐다'
   await expect(page.locator('.category-button.active')).toHaveAttribute('data-category', 'all');
 });
 
-test('내려받기 페이지는 GitHub에 닿지 못해도 릴리스 목록으로 안내한다', async ({ page }) => {
+test('웹 앱 머리말은 소개 사이트의 내려받기로 연결한다', async ({ page }) => {
   await page.goto('/');
-  await page.locator('#downloadLink').click();
-  await expect(page).toHaveURL(/download\.html$/);
-  await expect(page.locator('#primaryDownload')).toHaveAttribute('href', /github\.com\/dawith-ai\/dawith-welfare-office\/releases/);
-  await expect(page.locator('.dl-card')).toHaveCount(4);
-  await expect(page.locator('#help details')).toHaveCount(7);
+  await expect(page.locator('#downloadLink')).toHaveAttribute('href', 'https://welfare-office.vercel.app/#download');
 });
 
 test('문서 형식 변환은 파일을 브라우저 안에서 변환해 다운로드한다', async ({ page }) => {
@@ -104,6 +100,9 @@ test('텍스트 도구가 개인정보를 로컬에서 가린다', async ({ page
   await page.locator('#textInput').fill('대상자 연락처 010-1234-5678, 이메일 test@example.com');
   await expect(page.locator('#textOutput')).toContainText('010-****-5678');
   await expect(page.locator('#textOutput')).toContainText('[이메일 가림]');
+  await page.locator('#textInput').fill('계좌 110-123-456789 확인');
+  await expect(page.locator('#textOutput')).toContainText('계좌 110-****-**** 확인');
+  await page.locator('#textInput').fill('대상자 연락처 010-1234-5678, 이메일 test@example.com');
   await page.locator('[data-text-mode="replace"]').click();
   await page.locator('#replaceFind').fill('대상자');
   await page.locator('#replaceWith').fill('이용자');

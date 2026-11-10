@@ -19,7 +19,7 @@ test.afterAll(async () => {
 
 test('기관 인증 모드에서도 로컬 도구 화면은 열리고 보호 API는 인증을 요구한다', async ({ page, request }) => {
   await page.goto(runtime.url);
-  await expect(page.locator('#homeTitle')).toContainText('복지 현장의 일을');
+  await expect(page.locator('#homeTitle')).toContainText('서류 일은 줄이고');
   const response = await request.get(`${runtime.url}/api/capabilities`);
   expect(response.status()).toBe(401);
 });
