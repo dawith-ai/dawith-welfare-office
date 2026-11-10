@@ -344,32 +344,146 @@ test('상담·회의 기록은 로컬 규칙으로 초안을 만들고 로컬 �
   expect(await page.evaluate(() => JSON.parse(localStorage.getItem('dawith-record-drafts-v1')).length)).toBe(1);
 });
 
-test('가계도는 SVG 항목을 직접 추가·수정·연결하고 JSON으로 내보낼 수 있다', async ({ page }) => {
+async function addGenoMember(page, { name, relation, gender, age, deceased }) {
+  await page.locator('#genoName').fill(name);
+  await page.locator('#genoRelation').selectOption(relation);
+  if (gender) await page.locator('#genoGender').selectOption(gender);
+  if (age) await page.locator('#genoAge').fill(String(age));
+  if (deceased) await page.locator('#genoDeceased').check();
+  await page.locator('#genoMemberSubmit').click();
+}
+
+function overlaps(a, b, margin = 0) {
+  return a.x < b.x + b.width + margin && b.x < a.x + a.width + margin && a.y < b.y + b.height + margin && b.y < a.y + a.height + margin;
+}
+
+async function expectNoOverlap(locator) {
+  const boxes = await locator.evaluateAll((elements) => elements.map((element) => { const box = element.getBoundingClientRect(); return { x: box.x, y: box.y, width: box.width, height: box.height }; }));
+  for (let i = 0; i < boxes.length; i += 1) for (let j = i + 1; j < boxes.length; j += 1) expect(overlaps(boxes[i], boxes[j]), `도형 ${i}와 ${j}가 겹칩니다`).toBe(false);
+  return boxes;
+}
+
+test('가계도는 구성원을 목록으로 추가하면 표준 기호로 그리고 JSON으로 내보낸다', async ({ page }) => {
   await page.goto('/');
   await page.locator('.tool-card[data-tool="genogram"]').click();
-  await expect(page.locator('.diagram-node')).toHaveCount(1);
-  await page.locator('#diagramAddNode').click();
-  await expect(page.locator('.diagram-node')).toHaveCount(2);
-  await page.locator('.diagram-node').nth(1).click();
-  await page.locator('#diagramNodeLabel').fill('친모');
-  await page.locator('#diagramLinkFrom').selectOption({ label: '내담자' });
-  await page.locator('#diagramLinkTo').selectOption({ label: '친모' });
-  await page.locator('#diagramAddLink').click();
-  await expect(page.locator('#diagramLinks line')).toHaveCount(1);
+  await expect(page.locator('#diagramPreview')).toContainText('아직 그릴 내용이 없습니다');
+  await expect(page.locator('#genoRelation')).toHaveValue('본인');
+  await addGenoMember(page, { name: '김민지', relation: '본인', gender: 'female', age: 42 });
+  await addGenoMember(page, { name: '이순자', relation: '모', age: 68, deceased: true });
+  await expect(page.locator('#genoMemberList .diagram-row')).toHaveCount(2);
+  const self = page.locator('.geno-member[data-relation="본인"]');
+  await expect(self.locator('circle')).toHaveCount(2);
+  const mother = page.locator('.geno-member[data-relation="모"]');
+  await expect(mother.locator('circle')).toHaveCount(1);
+  await expect(mother.locator('.geno-age')).toHaveText('68');
+  await expect(mother.locator('.geno-deceased-mark')).toHaveCount(1);
+  await expect(mother).toContainText('이순자');
+  await expect(page.locator('.geno-descent')).toHaveCount(1);
+  await page.locator('#genoMemberList [data-row-edit]').nth(1).click();
+  await expect(page.locator('#genoName')).toHaveValue('이순자');
+  await page.locator('#genoName').fill('이영희');
+  await page.locator('#genoMemberSubmit').click();
+  await expect(mother).toContainText('이영희');
+  await page.locator('#diagramUndo').click();
+  await expect(mother).toContainText('이순자');
   const download = page.waitForEvent('download');
   await page.locator('#diagramExportJson').click();
   expect((await download).suggestedFilename()).toMatch(/genogram-.*\.json/);
+  const svgDownload = page.waitForEvent('download');
+  await page.locator('#diagramExportSvg').click();
+  expect((await svgDownload).suggestedFilename()).toMatch(/genogram-.*\.svg/);
+  const pngDownload = page.waitForEvent('download');
+  await page.locator('#diagramExportPng').click();
+  expect((await pngDownload).suggestedFilename()).toMatch(/genogram-.*\.png/);
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('dawith-genogram-projects-v2'))[0].members.length)).toBe(2);
 });
 
-test('생태도는 원문에서 로컬 후보를 찾아 자원 항목으로 추가한다', async ({ page }) => {
+test('가계도는 배우자를 자동 연결하고 이혼을 // 기호로 표시한다', async ({ page }) => {
+  await page.goto('/?tool=genogram');
+  await addGenoMember(page, { name: '김민지', relation: '본인', gender: 'female', age: 42 });
+  await addGenoMember(page, { name: '박준호', relation: '배우자', gender: 'male', age: 45 });
+  await addGenoMember(page, { name: '박서연', relation: '자녀', gender: 'female', age: 14 });
+  await expect(page.locator('#diagramNotice')).toContainText('추가했습니다');
+  await expect(page.locator('.geno-couple')).toHaveCount(1);
+  await expect(page.locator('.geno-couple[data-type="married"]')).toHaveCount(1);
+  await page.locator('#genoCoupleList select[data-couple-type]').selectOption('divorced');
+  const couple = page.locator('.geno-couple[data-type="divorced"]');
+  await expect(couple).toHaveCount(1);
+  await expect(couple.locator('.geno-divorce-mark')).toHaveCount(2);
+  await expect(couple).toContainText('이혼');
+  await expect(page.locator('.geno-member[data-relation="배우자"] rect')).toHaveCount(1);
+  await expect(page.locator('.geno-descent')).toHaveCount(1);
+  await expect(page.locator('.geno-household')).toHaveCount(1);
+});
+
+test('생태도는 기관을 추가하면 갈등은 지그재그 선과 화살표로 그린다', async ({ page }) => {
+  await page.goto('/?tool=ecomap');
+  await page.locator('#ecoMembers').fill('본인(42), 딸(12)');
+  await expect(page.locator('.eco-household')).toContainText('딸(12)');
+  await page.locator('#ecoName').fill('서울중학교');
+  await page.locator('#ecoCategory').fill('아동·교육');
+  await page.locator('#ecoStrength').selectOption('conflict');
+  await page.locator('#ecoDirection').selectOption('both');
+  await page.locator('#ecoResourceSubmit').click();
+  await page.locator('#ecoName').fill('행정복지센터');
+  await page.locator('#ecoStrength').selectOption('strong');
+  await page.locator('#ecoDirection').selectOption('receive');
+  await page.locator('#ecoResourceSubmit').click();
+  await expect(page.locator('#ecoResourceList .diagram-row')).toHaveCount(2);
+  const conflict = page.locator('.eco-link[data-strength="conflict"]');
+  await expect(conflict).toHaveCount(1);
+  expect((await conflict.locator('.eco-line').getAttribute('d')).split('L').length).toBeGreaterThan(8);
+  await expect(conflict.locator('.eco-line')).toHaveAttribute('stroke', '#b84d3d');
+  await expect(conflict.locator('.eco-arrow')).toHaveCount(2);
+  await expect(page.locator('.eco-link[data-strength="strong"] .eco-arrow')).toHaveCount(1);
+  await expect(page.locator('.diagram-legend')).toContainText('갈등·스트레스');
+  await page.locator('#ecoResourceList [data-row-delete]').first().click();
+  await expect(page.locator('.eco-resource')).toHaveCount(1);
+});
+
+test('생태도 원문 후보는 목록 행으로 추가되고 도형이 겹치지 않는다', async ({ page }) => {
   await page.goto('/');
   await page.locator('.tool-card[data-tool="ecomap"]').click();
+  await page.locator('.diagram-source summary').click();
   await page.locator('#diagramSourceText').fill('내담자는 주민센터와 학교의 지원을 받고 있다.');
   await page.locator('#diagramExtract').click();
   await expect(page.locator('.diagram-candidate')).toHaveCount(2);
-  await page.locator('.diagram-candidate').first().click();
-  await expect(page.locator('.diagram-node')).toHaveCount(2);
-  await expect(page.locator('#diagramLinks line')).toHaveCount(1);
+  await page.locator('#diagramSourceText').fill('주민센터에서 매달 지원을 받는다. 학교 담임과는 갈등이 있다. 복지관 프로그램에 다니고, 보건소와 병원에 가끔 간다. 교회 친구와 이웃이 있다.');
+  await page.locator('#diagramExtract').click();
+  const count = await page.locator('.diagram-candidate').count();
+  expect(count).toBeGreaterThanOrEqual(7);
+  await page.locator('.diagram-candidate [data-candidate-add]').first().click();
+  await expect(page.locator('#ecoResourceList .diagram-row')).toHaveCount(1);
+  await page.locator('#diagramAddAllCandidates').click();
+  await expect(page.locator('#ecoResourceList .diagram-row')).toHaveCount(count);
+  await expect(page.locator('.eco-link[data-strength="conflict"]')).toHaveCount(1);
+  await expectNoOverlap(page.locator('.eco-resource-circle, .eco-household circle'));
+});
+
+test('가계도 원문 후보도 목록에 추가되고 기호와 이름표가 겹치지 않는다', async ({ page }) => {
+  await page.goto('/?tool=genogram');
+  await addGenoMember(page, { name: '내담자', relation: '본인', gender: 'female', age: 40 });
+  await page.locator('.diagram-source summary').click();
+  await page.locator('#diagramSourceText').fill('내담자는 남편과 이혼 후 딸(12세), 아들(9세)과 함께 살고 있다. 어머니는 작년에 돌아가셨고 아버지와 남동생은 지방에 산다. 외할머니가 가끔 돌봐준다.');
+  await page.locator('#diagramExtract').click();
+  await expect(page.locator('.diagram-candidate')).toHaveCount(7);
+  await page.locator('#diagramAddAllCandidates').click();
+  await expect(page.locator('#genoMemberList .diagram-row')).toHaveCount(8);
+  await expect(page.locator('.geno-member')).toHaveCount(8);
+  await expect(page.locator('.geno-member[data-relation="모"] .geno-deceased-mark')).toHaveCount(1);
+  await expect(page.locator('.geno-member[data-relation="자녀"]').first().locator('.geno-age')).toHaveText('12');
+  await expectNoOverlap(page.locator('.geno-member'));
+});
+
+test('작은 화면에서도 가계도·생태도 작업대가 가로로 넘치지 않는다', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  for (const tool of ['genogram', 'ecomap']) {
+    await page.goto(`/?tool=${tool}`);
+    if (tool === 'genogram') await addGenoMember(page, { name: '김민지', relation: '본인', gender: 'female', age: 42 });
+    else { await page.locator('#ecoName').fill('행정복지센터'); await page.locator('#ecoResourceSubmit').click(); }
+    const dimensions = await page.evaluate(() => ({ scrollWidth: document.documentElement.scrollWidth, width: window.innerWidth }));
+    expect(dimensions.scrollWidth).toBeLessThanOrEqual(dimensions.width + 1);
+  }
 });
 
 test('작은 화면에서도 도구 작업대가 가로로 넘치지 않는다', async ({ page }) => {
