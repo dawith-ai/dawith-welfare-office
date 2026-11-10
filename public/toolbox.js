@@ -33,6 +33,7 @@ const categoryInfo = {
   ai: { label: 'AI CONTROL', title: 'AI 보조·연결', copy: '로컬 LLM이나 구독형 AI를 직접 골라 연결하고, 연결 상태를 확인합니다.' },
 };
 
+const INSTITUTION_PROFILE_KEY = 'dawith-institution-profile-v1';
 const state = { category: 'all', search: '', activeTool: null, pdfFiles: [], imageFile: null, imageUrl: '', imageInfo: null, textMode: 'mask' };
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
@@ -321,6 +322,7 @@ function bindHwpInspector() {
     const available = Object.values(status?.providers || {}).filter((item) => item.state === 'ready');
     if (!available.length) return notice('연결된 외부 AI가 없습니다. AI 보조·연결 센터에서 먼저 연결하세요.', true);
     const provider = available[0].provider; const label = providerLabel(provider);
+    if (!(await ensureExternalAiConsent())) return;
     if (!window.confirm(`${label} 구독으로 HWP 원문을 외부 전송해 요약합니다. 기관 승인과 개인정보 보호 기준을 확인했습니까?`)) return;
     const button = $('#hwpSubscriptionAi'); button.disabled = true; button.textContent = '구독 AI 처리 중…';
     try { aiPreviousPreview = preview.textContent; preview.textContent = await runSubscriptionAi({ provider, task: 'hwp-summary', text: extracted }); $('#hwpAiRevert').classList.remove('hidden'); notice(`${label} 구독 AI 요약 초안입니다. 외부 전송 결과이므로 원문과 대조하세요.`); }
@@ -561,6 +563,7 @@ function bindText() {
     if (!available.length) return showNotice('#textPrivacy', '연결된 외부 AI가 없습니다. AI 보조·연결 센터에서 먼저 연결하세요.', true);
     const provider = available[0].provider;
     const providerName = providerLabel(provider);
+    if (!(await ensureExternalAiConsent())) return;
     if (!window.confirm(`${providerName} 연결로 원문을 외부 전송합니다. 기관 승인과 개인정보 보호 기준을 확인했습니까?`)) return;
     const button = $('#textSubscriptionAssist');
     button.disabled = true;
@@ -706,6 +709,7 @@ function bindAiSetup() {
       await fetch('./api/ai/disconnect', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ provider }) });
       return refreshSubscriptionCards();
     }
+    if (!(await ensureExternalAiConsent())) return;
     let apiKey = '';
     if (provider === 'gemini') {
       apiKey = window.prompt('Google AI Studio에서 만든 Gemini API 키를 붙여 넣으세요. 키는 암호화해 이 기기에만 저장합니다.') || '';
@@ -728,6 +732,7 @@ function bindAiSetup() {
   $('#subscriptionAssist').addEventListener('click', async () => {
     const text = $('#subscriptionText').value.trim();
     if (!text) return showSubscriptionNotice('개인정보가 없는 짧은 문장으로 먼저 테스트하세요.', true);
+    if (!(await ensureExternalAiConsent())) return;
     if (!window.confirm('입력한 텍스트를 선택한 구독 AI 회사로 전송합니다. 계속할까요?')) return;
     const button = $('#subscriptionAssist');
     button.disabled = true;
@@ -786,6 +791,8 @@ async function refreshSubscriptionCards() {
 }
 
 async function runSubscriptionAi(input) {
+  // Callers ask first; this is the last guard before text leaves the PC.
+  if (!(await ensureExternalAiConsent())) throw new Error('external_ai_consent_required');
   const response = await fetch('./api/ai/subscription/assist', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ...input, confirmExternal: true }) });
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(payload.error || `subscription_assist_http_${response.status}`);
@@ -801,6 +808,7 @@ function showSubscriptionNotice(message, error = false) {
 
 function subscriptionErrorMessage(error) {
   const message = String(error?.message || error || '');
+  if (message.includes('consent_required')) return '외부 AI 전송에 동의하지 않아 보내지 않았습니다.';
   if (message.includes('not_installed')) return '선택한 구독 프로그램이 설치되어 있지 않습니다.';
   if (message.includes('not_connected')) return '먼저 AI 보조·연결 센터에서 해당 provider를 연결하세요.';
   if (message.includes('chatgpt')) return 'ChatGPT 연결이 만료되었거나 요금제 사용 권한이 없습니다. 연결을 다시 확인하세요.';
@@ -812,7 +820,7 @@ function subscriptionErrorMessage(error) {
 }
 
 function bindTemplateStudio() {
-  const templateSelect = $('#templateSelect'); const templateBody = $('#templateBody'); const profileKey = 'dawith-institution-profile-v1';
+  const templateSelect = $('#templateSelect'); const templateBody = $('#templateBody'); const profileKey = INSTITUTION_PROFILE_KEY;
   let aiPreviousPreview = '';
   const fields = { organization: $('#profileOrganization'), manager: $('#profileManager'), date: $('#templateDate'), project: $('#templateProject'), author: $('#templateAuthor'), attendees: $('#templateAttendees'), purpose: $('#templatePurpose'), content: $('#templateContent'), decisions: $('#templateDecisions'), actions: $('#templateActions') };
   const today = compactDate(new Date()).replace(/(\d{4})(\d{2})(\d{2})/, '$1-$2-$3');
@@ -854,6 +862,7 @@ function bindTemplateStudio() {
     if (!available.length) return showNotice('#templateNotice', '연결된 외부 AI가 없습니다. AI 보조·연결 센터에서 먼저 연결하세요.', true);
     const provider = available[0].provider;
     const providerName = providerLabel(provider);
+    if (!(await ensureExternalAiConsent())) return;
     if (!window.confirm(`${providerName} 연결로 문서 초안을 외부 전송합니다. 기관 승인과 개인정보 보호 기준을 확인했습니까?`)) return;
     const button = $('#templateSubscriptionAssist');
     button.disabled = true;
@@ -1071,3 +1080,209 @@ window.addEventListener('beforeinstallprompt', (event) => { event.preventDefault
 $('#installButton')?.addEventListener('click', async () => { if (!deferredInstallPrompt) return; deferredInstallPrompt.prompt(); await deferredInstallPrompt.userChoice; deferredInstallPrompt = null; $('#installButton').classList.add('hidden'); });
 // The desktop app serves files locally; an offline cache would only pile up.
 if ('serviceWorker' in navigator && ['http:', 'https:'].includes(window.location.protocol) && sessionStorage.getItem('dawith-desktop') !== '1') navigator.serviceWorker.register('./sw.js').catch(() => { /* offline cache is optional */ });
+
+// ---------------------------------------------------------------------------
+// First-run setup and consent. The consent record (policy version + when each
+// item was agreed) is kept on this PC: in the app settings database when the
+// local server is reachable, and mirrored in localStorage so the browser-only
+// build still works. The newer of the two copies wins.
+const CONSENT_POLICY_VERSION = '2026-11-10';
+const CONSENT_STORAGE_KEY = 'dawith-consent-v1';
+const SETUP_STEPS = 5;
+const consentRuntime = { record: null, serverAvailable: false, ready: null, setupStep: 1, externalResolve: null };
+
+function normalizeConsentRecord(value) {
+  if (!value || typeof value !== 'object' || !/^\d{4}-\d{2}-\d{2}$/.test(String(value.policyVersion || '')) || Number.isNaN(Date.parse(value.updatedAt))) return null;
+  const item = (entry) => (entry?.agreed === true ? { agreed: true, at: entry.at || value.updatedAt } : { agreed: false, at: null });
+  return { policyVersion: String(value.policyVersion), privacy: item(value.privacy), terms: item(value.terms), externalAi: item(value.externalAi), updatedAt: new Date(value.updatedAt).toISOString() };
+}
+function consentAccepted(record = consentRuntime.record) { return Boolean(record && record.policyVersion === CONSENT_POLICY_VERSION && record.privacy.agreed && record.terms.agreed); }
+function externalAiAllowed(record = consentRuntime.record) { return consentAccepted(record) && record.externalAi.agreed; }
+function readLocalConsent() { try { return normalizeConsentRecord(JSON.parse(localStorage.getItem(CONSENT_STORAGE_KEY) || 'null')); } catch { return null; } }
+function writeLocalConsent(record) { try { localStorage.setItem(CONSENT_STORAGE_KEY, JSON.stringify(record)); } catch { /* storage may be unavailable */ } }
+async function writeServerConsent(record) {
+  if (!consentRuntime.serverAvailable) return false;
+  try {
+    const response = await fetch('./api/settings', { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ consent: record }) });
+    return response.ok;
+  } catch { return false; }
+}
+
+async function loadConsent() {
+  const local = readLocalConsent();
+  let server = null;
+  try {
+    const response = await fetch('./api/settings', { cache: 'no-store' });
+    if (response.ok) {
+      consentRuntime.serverAvailable = true;
+      server = normalizeConsentRecord((await response.json()).settings?.consent);
+    }
+  } catch { consentRuntime.serverAvailable = false; }
+  const record = [server, local].filter(Boolean).sort((a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt))[0] || null;
+  consentRuntime.record = record;
+  const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+  if (record && !same(record, local)) writeLocalConsent(record);
+  if (record && !same(record, server)) await writeServerConsent(record);
+  return record;
+}
+
+// changes: { privacy?, terms?, externalAi?, renew? }. Items not mentioned keep
+// their previous choice; renew stamps every agreed item with the current time.
+async function saveConsent(changes) {
+  const now = new Date().toISOString();
+  const previous = consentRuntime.record?.policyVersion === CONSENT_POLICY_VERSION ? consentRuntime.record : null;
+  const item = (key) => {
+    const agreed = key in changes ? Boolean(changes[key]) : Boolean(previous?.[key]?.agreed);
+    if (!agreed) return { agreed: false, at: null };
+    const keep = previous?.[key]?.agreed && !changes.renew;
+    return { agreed: true, at: keep ? previous[key].at : now };
+  };
+  const record = { policyVersion: CONSENT_POLICY_VERSION, privacy: item('privacy'), terms: item('terms'), externalAi: item('externalAi'), updatedAt: now };
+  consentRuntime.record = record;
+  writeLocalConsent(record);
+  await writeServerConsent(record);
+  return record;
+}
+
+function readInstitutionProfile() { try { return JSON.parse(localStorage.getItem(INSTITUTION_PROFILE_KEY) || '{}') || {}; } catch { return {}; } }
+function writeInstitutionProfile(profile) {
+  try { localStorage.setItem(INSTITUTION_PROFILE_KEY, JSON.stringify({ organization: String(profile.organization || '').trim(), manager: String(profile.manager || '').trim() })); return true; } catch { return false; }
+}
+
+function renderSetupStep() {
+  const step = consentRuntime.setupStep;
+  $$('#setupDialog [data-setup-step]').forEach((section) => { section.hidden = Number(section.dataset.setupStep) !== step; });
+  $$('#setupDialog .setup-progress li').forEach((dot, index) => dot.classList.toggle('done', index < step));
+  $('#setupStepLabel').textContent = `${step}/${SETUP_STEPS}`;
+  $('#setupBack').hidden = step === 1;
+  $('#setupNext').textContent = step === SETUP_STEPS ? '시작하기' : '다음';
+  $('#setupError').hidden = true;
+}
+
+function openSetup() {
+  const dialog = $('#setupDialog');
+  const previous = consentRuntime.record;
+  $('#setupPolicyChanged').hidden = !(previous && previous.policyVersion !== CONSENT_POLICY_VERSION && previous.privacy.agreed);
+  $('#consentPrivacy').checked = false;
+  $('#consentTerms').checked = false;
+  $('#consentExternalAi').checked = false;
+  const profile = readInstitutionProfile();
+  $('#setupOrganization').value = profile.organization || '';
+  $('#setupManager').value = profile.manager || '';
+  consentRuntime.setupStep = 1;
+  renderSetupStep();
+  if (!dialog.open) dialog.showModal();
+}
+
+async function advanceSetup() {
+  const step = consentRuntime.setupStep;
+  const required = { 2: ['#consentPrivacy', '개인정보처리방침에 동의해야 다음으로 넘어갈 수 있습니다.'], 3: ['#consentTerms', '이용 조건에 동의해야 다음으로 넘어갈 수 있습니다.'] }[step];
+  if (required && !$(required[0]).checked) {
+    $('#setupError').textContent = required[1];
+    $('#setupError').hidden = false;
+    $(required[0]).focus();
+    return;
+  }
+  if (step < SETUP_STEPS) { consentRuntime.setupStep += 1; renderSetupStep(); return; }
+  const button = $('#setupNext');
+  button.disabled = true;
+  await saveConsent({ privacy: true, terms: true, externalAi: $('#consentExternalAi').checked, renew: true });
+  const organization = $('#setupOrganization').value.trim();
+  const manager = $('#setupManager').value.trim();
+  if (organization || manager) writeInstitutionProfile({ organization, manager });
+  button.disabled = false;
+  $('#setupDialog').close();
+}
+
+const formatConsentTime = (iso) => { try { return new Intl.DateTimeFormat('ko-KR', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(iso)); } catch { return iso; } };
+
+function renderSettings() {
+  const record = consentRuntime.record;
+  const accepted = consentAccepted(record);
+  const status = (key) => (accepted && record[key].agreed ? `동의함 · ${formatConsentTime(record[key].at)}` : '동의하지 않음');
+  $('#settingsPrivacyStatus').textContent = status('privacy');
+  $('#settingsTermsStatus').textContent = status('terms');
+  $('#settingsWithdraw').disabled = !accepted;
+  $('#settingsExternalAi').checked = externalAiAllowed(record);
+  $('#settingsExternalAi').disabled = !accepted;
+  $('#settingsExternalAiStatus').textContent = externalAiAllowed(record) ? `${formatConsentTime(record.externalAi.at)}에 동의했습니다. 끄면 외부 AI 버튼을 누를 때 다시 묻습니다.` : '꺼져 있습니다. 외부 AI 버튼을 누르면 보내기 전에 먼저 묻습니다. 로컬 기능은 그대로 쓸 수 있습니다.';
+  const profile = readInstitutionProfile();
+  $('#settingsOrganization').value = profile.organization || '';
+  $('#settingsManager').value = profile.manager || '';
+  $('#settingsStorage').textContent = `동의 기록(${CONSENT_POLICY_VERSION}판)은 ${consentRuntime.serverAvailable ? '이 PC의 앱 설정' : '이 브라우저 저장소'}에 저장됩니다.`;
+}
+
+function showSettingsNotice(message, error = false) {
+  const target = $('#settingsNotice');
+  target.hidden = false;
+  target.className = `notice${error ? ' error-notice' : ''}`;
+  target.textContent = message;
+}
+
+function openSettings() {
+  $('#settingsNotice').hidden = true;
+  renderSettings();
+  if ($('#privacyDialog').open) $('#privacyDialog').close();
+  if (!$('#settingsDialog').open) $('#settingsDialog').showModal();
+}
+
+// Every path that sends text to a cloud AI goes through this first. When the
+// optional consent is off it asks once; cancelling sends nothing.
+async function ensureExternalAiConsent() {
+  await consentRuntime.ready;
+  if (externalAiAllowed()) return true;
+  if (!consentAccepted()) { openSetup(); return false; }
+  const dialog = $('#externalConsentDialog');
+  if (consentRuntime.externalResolve) consentRuntime.externalResolve(false);
+  const agreed = await new Promise((resolve) => {
+    consentRuntime.externalResolve = resolve;
+    if (!dialog.open) dialog.showModal();
+  });
+  consentRuntime.externalResolve = null;
+  if (dialog.open) dialog.close();
+  if (!agreed) return false;
+  await saveConsent({ externalAi: true });
+  return true;
+}
+
+function settleExternalConsent(agreed) { if (consentRuntime.externalResolve) consentRuntime.externalResolve(agreed); }
+
+$('#setupNext').addEventListener('click', () => { void advanceSetup(); });
+$('#setupBack').addEventListener('click', () => { consentRuntime.setupStep = Math.max(1, consentRuntime.setupStep - 1); renderSetupStep(); });
+$('#setupDialog').addEventListener('cancel', (event) => { if (!consentAccepted()) event.preventDefault(); });
+['#consentPrivacy', '#consentTerms'].forEach((selector) => $(selector).addEventListener('change', () => { $('#setupError').hidden = true; }));
+$('#settingsButton').addEventListener('click', openSettings);
+$('#privacyOpenSettings').addEventListener('click', openSettings);
+$('#closeSettings').addEventListener('click', () => $('#settingsDialog').close());
+$('#settingsExternalAi').addEventListener('change', async (event) => {
+  const agreed = event.target.checked;
+  await saveConsent({ externalAi: agreed });
+  renderSettings();
+  showSettingsNotice(agreed ? '외부 AI 전송 동의를 켰습니다. 보낼 때마다 한 번 더 확인합니다.' : '외부 AI 전송 동의를 철회했습니다. 외부 AI 버튼을 누르면 다시 묻습니다.');
+});
+$('#settingsWithdraw').addEventListener('click', async () => {
+  if (!window.confirm('필수 동의를 철회하면 다시 동의할 때까지 도구를 쓸 수 없습니다. 이 PC에 저장된 기록은 지워지지 않습니다. 철회할까요?')) return;
+  await saveConsent({ privacy: false, terms: false, externalAi: false });
+  $('#settingsDialog').close();
+  openSetup();
+});
+$('#settingsProfileSave').addEventListener('click', () => {
+  const saved = writeInstitutionProfile({ organization: $('#settingsOrganization').value, manager: $('#settingsManager').value });
+  showSettingsNotice(saved ? '기관 정보를 이 PC에 저장했습니다. 기관 양식 작업공간을 다시 열면 반영됩니다.' : '이 브라우저에서는 저장할 수 없습니다.', !saved);
+});
+$('#externalConsentAccept').addEventListener('click', () => settleExternalConsent(true));
+$('#externalConsentCancel').addEventListener('click', () => settleExternalConsent(false));
+$('#externalConsentDialog').addEventListener('cancel', () => settleExternalConsent(false));
+
+// Public hook so other modules (e.g. a cloud option in 상담·회의 기록) can gate
+// their own external calls: `if (!(await window.dawithConsent.ensureExternalAi())) return;`
+window.dawithConsent = Object.freeze({
+  policyVersion: CONSENT_POLICY_VERSION,
+  ensureExternalAi: ensureExternalAiConsent,
+  isExternalAiAllowed: () => externalAiAllowed(),
+  status: () => (consentRuntime.record ? JSON.parse(JSON.stringify(consentRuntime.record)) : null),
+  openSettings,
+  ready: () => consentRuntime.ready,
+});
+
+consentRuntime.ready = loadConsent().catch(() => null).then(() => { if (!consentAccepted()) openSetup(); });
