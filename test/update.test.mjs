@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
-import { isNewerVersion } from '../desktop/updater.mjs';
+import { isNewerVersion } from '../desktop/version.mjs';
 import { startServer } from '../server.mjs';
 
 test('isNewerVersion compares release versions numerically', () => {
@@ -35,4 +35,18 @@ test('update API proxies the desktop updater and is unsupported without one', as
     withUpdater.server.close();
     plain.server.close();
   }
+});
+
+test('lite updater reads the feed and rejects an installer with the wrong checksum', async () => {
+  const { createLiteUpdater, parseFeed } = await import('../desktop/lite-updater.mjs');
+  const feedText = "version: 0.9.8\nfiles:\n  - url: Setup.exe\n    sha512: bm90LXRoZS1yZWFsLWhhc2g=\n    size: 5\npath: Setup.exe\nsha512: bm90LXRoZS1yZWFsLWhhc2g=\nreleaseDate: '2026-11-10T00:00:00.000Z'\n";
+  assert.deepEqual(parseFeed(feedText), { version: '0.9.8', path: 'Setup.exe', sha512: 'bm90LXRoZS1yZWFsLWhhc2g=', size: 5 });
+  const fetchImpl = async (url) => (url.endsWith('latest.yml') ? new Response(feedText) : new Response('bytes', { headers: { 'content-length': '5' } }));
+  const updater = createLiteUpdater({ version: '0.9.7', portable: false, fetchImpl, feedUrl: 'https://example.test/download/', launch: () => assert.fail('must not launch') });
+  assert.equal((await updater.check()).status, 'available');
+  updater.download();
+  for (let i = 0; i < 50 && updater.status().status === 'downloading'; i += 1) await new Promise((resolve) => setTimeout(resolve, 20));
+  assert.equal(updater.status().status, 'error');
+  assert.equal(updater.status().error, 'update_checksum_mismatch');
+  assert.equal(updater.install().status, 'error');
 });

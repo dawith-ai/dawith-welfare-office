@@ -1,7 +1,7 @@
 import { app, BrowserWindow, shell } from 'electron';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { startServer } from '../server.mjs';
+import { startDesktopServer } from '../server.mjs';
 import { createUpdater } from './updater.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -56,7 +56,7 @@ if (!hasSingleInstanceLock) {
 app.whenReady().then(async () => {
   if (!hasSingleInstanceLock) return;
   try {
-    localRuntime = await startServer({ port: 0, host: '127.0.0.1', dataDir: path.join(app.getPath('userData'), 'data'), updater: createUpdater({ app }) });
+    localRuntime = await startDesktopServer({ host: '127.0.0.1', dataDir: path.join(app.getPath('userData'), 'data'), updater: createUpdater({ app }) });
     await createWindow(`${localRuntime.url}/?desktop=1`);
   } catch (error) {
     console.error('Dawith Welfare Office failed to start:', error);

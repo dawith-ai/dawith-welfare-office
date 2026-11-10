@@ -158,7 +158,7 @@ async function transcribe(payload, store) {
   return transcribeAudio({ fileName: name, data: bytes, binary: config.binary, model: config.model });
 }
 
-export function createServer({ dataDir = defaultDataDir, ollamaTimeoutMs = defaultOllamaTimeoutMs, host = defaultHost, authRequired = defaultAuthRequired, encryptionKey, updater = null } = {}) {
+export function createServer({ dataDir = defaultDataDir, ollamaTimeoutMs = defaultOllamaTimeoutMs, host = defaultHost, authRequired = defaultAuthRequired, encryptionKey, updater = null, onHeartbeat = null } = {}) {
   if (!isLoopbackHost(host) && host !== '0.0.0.0' && !authRequired) throw new Error('network_bind_requires_auth');
   if (host === '0.0.0.0' && !authRequired) throw new Error('network_bind_requires_auth');
   const store = openStore(dataDir, { encryptionKey });
@@ -291,6 +291,7 @@ export function createServer({ dataDir = defaultDataDir, ollamaTimeoutMs = defau
       if (url.pathname === '/api/update/status' && request.method === 'GET') return json(response, 200, updater ? updater.status() : { supported: false });
       if (url.pathname === '/api/update/check' && request.method === 'POST') return json(response, 200, updater ? await updater.check() : { supported: false });
       if (url.pathname === '/api/update/download' && request.method === 'POST') return json(response, 200, updater ? updater.download() : { supported: false });
+      if (url.pathname === '/api/desktop/heartbeat' && request.method === 'POST') { onHeartbeat?.(); return json(response, 200, { ok: true }); }
       if (url.pathname === '/api/update/install' && request.method === 'POST') return json(response, 200, updater ? updater.install() : { supported: false });
       if (url.pathname === '/api/ollama/pull' && request.method === 'POST') {
         const input = safeJson(await body(request, 32 * 1024));
@@ -546,8 +547,8 @@ function recordToHtml(record) {
   return `<!doctype html><meta charset="utf-8"><title>${escape(draft.typeLabel || 'Dawith 복지 기록')}</title><style>body{font-family:Arial,sans-serif;max-width:820px;margin:40px auto;line-height:1.7;color:#26382f}pre{white-space:pre-wrap;background:#f4f7f4;padding:16px;border-radius:8px}h1{color:#1d6a50}</style><h1>${escape(draft.typeLabel || '복지 기록')}</h1><p>작성일: ${escape(record.createdAt)} · 처리 방식: ${escape(record.provider)}</p><h2>초안</h2><h3>기록</h3><pre>${escape(draft.counselingLog)}</pre><h3>사정·논의</h3><pre>${escape(draft.assessment)}</pre><h3>서비스계획·후속 실행</h3><pre>${escape(draft.servicePlan)}</pre><h3>후속 확인</h3><pre>${escape(draft.followUp)}</pre><h2>원문</h2><pre>${escape(record.rawText)}</pre>`;
 }
 
-export function startServer({ port = 0, host = defaultHost, dataDir = defaultDataDir, ollamaTimeoutMs = defaultOllamaTimeoutMs, authRequired = defaultAuthRequired, encryptionKey, updater } = {}) {
-  const { server } = createServer({ dataDir, host, ollamaTimeoutMs, authRequired, encryptionKey, updater });
+export function startServer({ port = 0, host = defaultHost, dataDir = defaultDataDir, ollamaTimeoutMs = defaultOllamaTimeoutMs, authRequired = defaultAuthRequired, encryptionKey, updater, onHeartbeat } = {}) {
+  const { server } = createServer({ dataDir, host, ollamaTimeoutMs, authRequired, encryptionKey, updater, onHeartbeat });
   return new Promise((resolve, reject) => {
     server.once('error', reject);
     server.listen(port, host, () => {
@@ -555,6 +556,19 @@ export function startServer({ port = 0, host = defaultHost, dataDir = defaultDat
       resolve({ server, port: server.address().port, host, url: `http://${displayHost}:${server.address().port}` });
     });
   });
+}
+
+// Desktop runtimes keep one fixed port: localStorage (saved forms, relationship
+// maps, recent tools) is scoped to the origin, so a new port on every launch
+// would make that data disappear. Falls back to any free port if it is taken.
+export const desktopPort = 43871;
+export async function startDesktopServer(options = {}) {
+  try {
+    return await startServer({ ...options, port: desktopPort });
+  } catch (error) {
+    if (error?.code !== 'EADDRINUSE') throw error;
+    return startServer({ ...options, port: 0 });
+  }
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === path.resolve(fileURLToPath(import.meta.url))) {

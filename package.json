@@ -1,6 +1,6 @@
 {
   "name": "dawith-welfare-office",
-  "version": "0.9.6",
+  "version": "0.9.7",
   "private": true,
   "type": "module",
   "description": "Dawith lightweight local welfare work tools for files, images, text, dates, and amounts",
@@ -15,13 +15,14 @@
     "test:e2e": "playwright test",
     "rea:audit": "node scripts/rea-audit.mjs",
     "desktop": "electron desktop/main.mjs",
-    "dist:win": "npm run dist:win:setup && npm run dist:win:portable",
+    "dist:win": "node scripts/build-lite.mjs",
     "dist:win:setup": "electron-builder --win nsis --x64 --config.compression=maximum --publish never",
     "dist:win:portable": "electron-builder --win portable --x64 --config.compression=maximum --publish never",
     "dist:win:lite": "electron-builder --win portable --x64 --config.compression=maximum --config.directories.output=dist-lite --publish never",
     "dist:dir": "electron-builder --dir",
     "dist:mac": "electron-builder --mac dmg --arm64 --publish never",
-    "site:deploy": "node scripts/deploy-site.mjs"
+    "site:deploy": "node scripts/deploy-site.mjs",
+    "dist:win:electron": "npm run dist:win:setup && npm run dist:win:portable"
   },
   "main": "desktop/main.mjs",
   "dependencies": {
@@ -45,6 +46,7 @@
     "files": [
       "desktop/main.mjs",
       "desktop/updater.mjs",
+      "desktop/version.mjs",
       "server.mjs",
       "src/**/*.mjs",
       "public/index.html",
@@ -52,12 +54,14 @@
       "public/styles-tools.css",
       "public/styles-guide.css",
       "public/toolbox.js",
+      "public/heartbeat.js",
       "public/manifest.webmanifest",
       "public/sw.js",
       "public/favicon.svg",
       "public/dawith-ci.svg",
       "public/vendor/pdf-lib.min.js",
       "public/vendor/rhwp/rhwp.js",
+      "public/vendor/rhwp/rhwp_bg.wasm",
       "public/vendor/rhwp/LICENSE",
       "public/vendor/rhwp/THIRD_PARTY_LICENSES.md",
       "public/vendor/rhwp/NOTICE.md",

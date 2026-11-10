@@ -1041,6 +1041,7 @@ async function setupUpdates() {
   try {
     const status = await updateRequest('status');
     if (!status.supported) return;
+    $('#downloadLink')?.remove();
     $('#updateButton').classList.remove('hidden');
     renderUpdate(status);
     renderUpdate(await updateRequest('check'));
@@ -1068,4 +1069,5 @@ if (initialTool && toolCatalog.some((tool) => tool.id === initialTool)) openTool
 let deferredInstallPrompt;
 window.addEventListener('beforeinstallprompt', (event) => { event.preventDefault(); deferredInstallPrompt = event; $('#installButton')?.classList.remove('hidden'); });
 $('#installButton')?.addEventListener('click', async () => { if (!deferredInstallPrompt) return; deferredInstallPrompt.prompt(); await deferredInstallPrompt.userChoice; deferredInstallPrompt = null; $('#installButton').classList.add('hidden'); });
-if ('serviceWorker' in navigator && ['http:', 'https:'].includes(window.location.protocol)) navigator.serviceWorker.register('./sw.js').catch(() => { /* offline cache is optional */ });
+// The desktop app serves files locally; an offline cache would only pile up.
+if ('serviceWorker' in navigator && ['http:', 'https:'].includes(window.location.protocol) && sessionStorage.getItem('dawith-desktop') !== '1') navigator.serviceWorker.register('./sw.js').catch(() => { /* offline cache is optional */ });

@@ -1,7 +1,7 @@
 // Publishes the product site together with the current Windows builds.
 // The installers are too large for git, so they are copied into
 // site/download/ only for the duration of a CLI deploy:
-//   npm run dist:win:setup && npm run dist:win:lite && npm run site:deploy
+//   npm run dist:win && npm run site:deploy
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -12,16 +12,16 @@ const vercelFileLimit = 100 * 1024 * 1024;
 const downloadDir = path.join(root, 'site', 'download');
 
 const sources = {
-  setup: path.join(root, 'dist', `Dawith-Welfare-Office-${version}-x64-Setup.exe`),
-  portable: path.join(root, 'dist-lite', `Dawith-Welfare-Office-${version}-x64-Portable.exe`),
-  feed: path.join(root, 'dist', 'latest.yml'),
+  setup: path.join(root, 'dist-win', `Dawith-Welfare-Office-${version}-x64-Setup.exe`),
+  portable: path.join(root, 'dist-win', `Dawith-Welfare-Office-${version}-x64-Portable.exe`),
+  feed: path.join(root, 'dist-win', 'latest.yml'),
 };
 for (const [key, file] of Object.entries(sources)) {
   if (!fs.existsSync(file)) throw new Error(`Missing ${key} build: ${file}`);
   if (fs.statSync(file).size > vercelFileLimit) throw new Error(`${path.basename(file)} is over Vercel's 100MB file limit`);
 }
 const feed = fs.readFileSync(sources.feed, 'utf8');
-if (!feed.includes(`version: ${version}`)) throw new Error(`dist/latest.yml is not for ${version}; rebuild the installer`);
+if (!feed.includes(`version: ${version}`)) throw new Error(`dist-win/latest.yml is not for ${version}; run npm run dist:win`);
 
 fs.rmSync(downloadDir, { recursive: true, force: true });
 fs.mkdirSync(downloadDir, { recursive: true });
