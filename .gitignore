@@ -16,3 +16,4 @@ dist-lite/
 artifacts/rea/
 .DS_Store
 .vercel/
+site/download/

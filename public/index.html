@@ -21,6 +21,7 @@
             <span class="local-status"><i></i> 로컬 우선 · 이 PC에서 처리</span>
           <button class="plain-button" id="privacyButton" type="button">데이터 경계</button>
           <a class="plain-button guide-link" href="./guide.html">제품 안내</a>
+          <button class="plain-button update-button hidden" id="updateButton" type="button">업데이트 확인</button>
           <a class="plain-button guide-link" id="downloadLink" href="https://welfare-office.vercel.app/#download" target="_blank" rel="noreferrer">PC용 내려받기</a>
           <button class="plain-button install-button hidden" id="installButton" type="button">앱으로 설치</button>
         </div>
@@ -105,6 +106,16 @@
         </main>
       </div>
     </div>
+
+    <dialog id="updateDialog" class="privacy-dialog update-dialog" aria-labelledby="updateTitle">
+      <button class="dialog-close" id="closeUpdate" type="button" aria-label="닫기">×</button>
+      <p class="overline">UPDATE</p>
+      <h2 id="updateTitle">업데이트</h2>
+      <p id="updateMessage" class="update-message">새 버전을 확인하는 중입니다…</p>
+      <div id="updateProgress" class="update-progress hidden" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span></span></div>
+      <div class="update-actions"><button id="updateAction" class="primary-button hidden" type="button"></button></div>
+      <p id="updateVersion" class="dialog-footnote"></p>
+    </dialog>
 
     <dialog id="privacyDialog" class="privacy-dialog">
       <button class="dialog-close" id="closePrivacy" type="button" aria-label="닫기">×</button>

@@ -1,17 +1,9 @@
-// Shared behaviour for every page of the product site: latest-release links,
+// Shared behaviour for every page of the product site: download details,
 // the screenshot tabs, the sticky header colour and the help finder.
-const releaseApi = 'https://api.github.com/repos/dawith-ai/dawith-welfare-office/releases/latest';
-const assetPatterns = { setup: /-Setup\.exe$/i, portable: /-Portable\.exe$/i };
+const manifestUrl = './download/latest.json';
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
 const formatSize = (bytes) => `${Math.round(bytes / 1024 / 1024)}MB`;
-const siteVersion = '0.9.6';
-const compareVersions = (a, b) => {
-  const pa = a.split('.').map(Number);
-  const pb = b.split('.').map(Number);
-  for (let i = 0; i < 3; i += 1) if ((pa[i] || 0) !== (pb[i] || 0)) return (pa[i] || 0) - (pb[i] || 0);
-  return 0;
-};
 const escapeHtml = (value) => String(value).replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
 
 function detectOs() {
@@ -38,30 +30,24 @@ function showOsNotice() {
   notice.hidden = false;
 }
 
+// The deploy script writes latest.json next to the installers, so version,
+// file name and size always match what /download/setup actually serves.
 async function loadRelease() {
   try {
-    const response = await fetch(releaseApi, { headers: { accept: 'application/vnd.github+json' } });
+    const response = await fetch(manifestUrl, { cache: 'no-cache' });
     if (!response.ok) return;
-    const release = await response.json();
-    const version = release.tag_name?.replace(/^v/, '');
-    // The page text describes siteVersion; never swap in an older release.
-    if (!version || compareVersions(version, siteVersion) < 0) return;
-    for (const [key, pattern] of Object.entries(assetPatterns)) {
-      const asset = release.assets?.find((item) => pattern.test(item.name));
+    const manifest = await response.json();
+    for (const key of ['setup', 'portable']) {
+      const asset = manifest[key];
       if (!asset) continue;
-      $$(`[data-asset="${key}"]`).forEach((link) => { link.href = asset.browser_download_url; });
-      $$(`[data-file="${key}"]`).forEach((cell) => { cell.textContent = `${asset.name} (${formatSize(asset.size)})`; });
-      if (key === 'setup') {
-        const hero = $('#heroDownload');
-        if (hero) hero.href = asset.browser_download_url;
-        if ($('#heroSize')) $('#heroSize').textContent = formatSize(asset.size);
-        if ($('[data-label="setup"]') && version) $('[data-label="setup"]').textContent = `Windows용 ${version} 내려받기`;
-      }
+      $$(`[data-file="${key}"]`).forEach((cell) => { cell.textContent = `${asset.file} (${formatSize(asset.size)})`; });
     }
-    if (version && $('#heroVersion')) $('#heroVersion').textContent = version;
-    if (version && $('#releaseTag')) $('#releaseTag').textContent = `새 버전 ${version}`;
+    if (manifest.setup && $('#heroSize')) $('#heroSize').textContent = formatSize(manifest.setup.size);
+    if ($('[data-label="setup"]')) $('[data-label="setup"]').textContent = `Windows용 ${manifest.version} 내려받기`;
+    if ($('#heroVersion')) $('#heroVersion').textContent = manifest.version;
+    if ($('#releaseTag')) $('#releaseTag').textContent = `새 버전 ${manifest.version}`;
   } catch {
-    // Static links already point at the releases page.
+    // The static links already point at /download/setup and /download/portable.
   }
 }
 

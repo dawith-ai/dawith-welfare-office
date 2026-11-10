@@ -985,6 +985,76 @@ function showNotice(target, message, error = false) { const element = typeof tar
 
 document.addEventListener('click', (event) => { const toolButton = event.target.closest('[data-tool]'); if (toolButton) return openTool(toolButton.dataset.tool); const action = event.target.closest('[data-action]')?.dataset.action; if (action === 'home') showHome(); });
 if (navigator.userAgent.includes('Electron')) $('#downloadLink')?.remove();
+
+// Desktop-only update flow. The local server proxies the Electron updater;
+// in the browser build /api/update/status reports supported: false.
+let updateState = null;
+let updatePoll = null;
+async function updateRequest(action) {
+  const response = await fetch(`/api/update/${action}`, { method: action === 'status' ? 'GET' : 'POST' });
+  if (!response.ok) throw new Error(`update_${response.status}`);
+  return response.json();
+}
+function renderUpdate(next) {
+  updateState = next;
+  const button = $('#updateButton');
+  button.classList.toggle('has-update', ['available', 'downloading', 'downloaded'].includes(next.status));
+  button.textContent = next.status === 'available' ? `새 버전 ${next.latestVersion}` : next.status === 'downloaded' ? '업데이트 설치 준비됨' : '업데이트 확인';
+  const message = $('#updateMessage');
+  const action = $('#updateAction');
+  const progress = $('#updateProgress');
+  progress.classList.toggle('hidden', next.status !== 'downloading');
+  progress.setAttribute('aria-valuenow', String(next.progress || 0));
+  progress.firstElementChild.style.width = `${next.progress || 0}%`;
+  action.classList.add('hidden');
+  $('#updateVersion').textContent = `지금 쓰는 버전 ${next.currentVersion}${next.mode === 'portable' ? ' · 포터블' : ''}`;
+  const show = (label, handler) => { action.textContent = label; action.onclick = handler; action.classList.remove('hidden'); };
+  if (next.status === 'checking' || next.status === 'idle') message.textContent = '새 버전을 확인하는 중입니다…';
+  else if (next.status === 'latest') message.textContent = '최신 버전을 쓰고 있습니다.';
+  else if (next.status === 'available' && next.mode === 'portable') {
+    message.textContent = `새 버전 ${next.latestVersion}이 나왔습니다. 포터블은 새 파일을 받아 바꿔 쓰면 됩니다. 저장한 기록은 그대로 남습니다.`;
+    show('새 버전 내려받기', () => window.open(next.downloadPage || 'https://welfare-office.vercel.app/#download', '_blank'));
+  } else if (next.status === 'available') {
+    message.textContent = `새 버전 ${next.latestVersion}이 나왔습니다. 내려받은 뒤 앱을 다시 시작하면 설치됩니다. 저장한 기록은 그대로 남습니다.`;
+    show('지금 업데이트', async () => { renderUpdate(await updateRequest('download')); watchUpdate(); });
+  } else if (next.status === 'downloading') message.textContent = `새 버전을 내려받는 중입니다… ${next.progress || 0}%`;
+  else if (next.status === 'downloaded') {
+    message.textContent = '내려받기를 마쳤습니다. 작업 중인 내용을 저장한 뒤 다시 시작하세요.';
+    show('다시 시작해서 설치', async () => renderUpdate(await updateRequest('install')));
+  } else if (next.status === 'installing') message.textContent = '설치를 시작합니다. 잠시 뒤 새 버전이 열립니다.';
+  else if (next.status === 'error') {
+    message.textContent = '업데이트를 확인하지 못했습니다. 인터넷 연결을 확인하거나 내려받기 페이지에서 새 버전을 받아 설치하세요.';
+    show('내려받기 페이지 열기', () => window.open(next.downloadPage || 'https://welfare-office.vercel.app/#download', '_blank'));
+  }
+}
+function watchUpdate() {
+  clearInterval(updatePoll);
+  updatePoll = setInterval(async () => {
+    try {
+      const next = await updateRequest('status');
+      renderUpdate(next);
+      if (next.status !== 'downloading') clearInterval(updatePoll);
+    } catch { clearInterval(updatePoll); }
+  }, 1000);
+}
+async function setupUpdates() {
+  try {
+    const status = await updateRequest('status');
+    if (!status.supported) return;
+    $('#updateButton').classList.remove('hidden');
+    renderUpdate(status);
+    renderUpdate(await updateRequest('check'));
+  } catch { /* updates are optional; the app works offline */ }
+}
+$('#updateButton').addEventListener('click', async () => {
+  $('#updateDialog').showModal();
+  if (!updateState || ['latest', 'error', 'idle'].includes(updateState.status)) {
+    renderUpdate({ ...(updateState || {}), status: 'checking' });
+    try { renderUpdate(await updateRequest('check')); } catch { renderUpdate({ ...(updateState || {}), status: 'error' }); }
+  }
+});
+$('#closeUpdate').addEventListener('click', () => $('#updateDialog').close());
+setupUpdates();
 $('#homeButton').addEventListener('click', () => { state.category = 'all'; state.search = ''; $('#toolSearch').value = ''; showHome(); });
 $('#privacyButton').addEventListener('click', () => $('#privacyDialog').showModal());
 $('#closePrivacy').addEventListener('click', () => $('#privacyDialog').close());
