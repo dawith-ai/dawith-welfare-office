@@ -7,10 +7,8 @@ import crypto from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { copy, pkg, root, stageApp } from './lib/stage-app.mjs';
 
-const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
 const { version } = pkg;
 const out = path.join(root, 'dist-win');
 const stage = path.join(out, 'stage');
@@ -22,61 +20,9 @@ const names = {
 const [major, minor] = process.versions.node.split('.').map(Number);
 if (major < 22 || (major === 22 && minor < 12)) throw new Error(`Node ${process.version} is too old to bundle; node:sqlite needs 22.12+`);
 
-const copy = (from, to) => {
-  fs.mkdirSync(path.dirname(to), { recursive: true });
-  fs.cpSync(from, to, { recursive: true });
-};
-
 fs.rmSync(out, { recursive: true, force: true });
 fs.mkdirSync(stage, { recursive: true });
-const appDir = path.join(stage, 'app');
-
-// App files: the same list the Electron build packages, minus Electron-only
-// modules, plus the lightweight runtime entry.
-const electronOnly = new Set(['desktop/main.mjs', 'desktop/updater.mjs']);
-for (const pattern of pkg.build.files) {
-  if (pattern.startsWith('!') || electronOnly.has(pattern) || pattern === 'package.json') continue;
-  if (pattern === 'src/**/*.mjs') {
-    for (const file of fs.readdirSync(path.join(root, 'src')).filter((name) => name.endsWith('.mjs'))) copy(path.join(root, 'src', file), path.join(appDir, 'src', file));
-    continue;
-  }
-  copy(path.join(root, pattern), path.join(appDir, pattern));
-}
-for (const file of ['desktop/lite.mjs', 'desktop/lite-updater.mjs']) copy(path.join(root, file), path.join(appDir, file));
-fs.writeFileSync(path.join(appDir, 'package.json'), `${JSON.stringify({ name: pkg.name, version, private: true, license: pkg.license }, null, 2)}\n`);
-
-// Runtime dependencies only (electron-updater belongs to the Electron build).
-const runtimeDeps = Object.keys(pkg.dependencies).filter((name) => name !== 'electron-updater');
-// Walk dependencies the way Node resolves them: nearest node_modules first,
-// then each parent up to the project root.
-function resolvePackage(name, fromDir) {
-  for (let dir = fromDir; ; dir = path.dirname(dir)) {
-    const candidate = path.join(dir, 'node_modules', name);
-    if (fs.existsSync(path.join(candidate, 'package.json'))) return candidate;
-    if (dir === root || dir === path.dirname(dir)) throw new Error(`Cannot resolve ${name} from ${fromDir}`);
-  }
-}
-const packages = new Set();
-const pending = runtimeDeps.map((name) => resolvePackage(name, root));
-while (pending.length) {
-  const dir = pending.pop();
-  if (packages.has(dir)) continue;
-  packages.add(dir);
-  const manifest = JSON.parse(fs.readFileSync(path.join(dir, 'package.json'), 'utf8'));
-  for (const dep of Object.keys(manifest.dependencies || {})) pending.push(resolvePackage(dep, dir));
-}
-for (const dir of packages) {
-  const relative = path.relative(root, dir);
-  fs.cpSync(dir, path.join(appDir, relative), { recursive: true, filter: (source) => !path.relative(dir, source).startsWith('node_modules') });
-}
-// Only the ESM build of docx is imported; drop the other formats, browser
-// bundles and type definitions.
-const prune = (dir, keep) => {
-  if (!fs.existsSync(dir)) return;
-  for (const name of fs.readdirSync(dir)) if (!keep(name)) fs.rmSync(path.join(dir, name), { recursive: true, force: true });
-};
-prune(path.join(appDir, 'node_modules', 'docx', 'dist'), (name) => name.endsWith('.mjs'));
-for (const dir of ['jszip/dist', 'pako/dist']) fs.rmSync(path.join(appDir, 'node_modules', dir), { recursive: true, force: true });
+stageApp(stage, { nodeVersion: process.version, nodeLicense: 'runtime/LICENSE.node.txt' });
 
 // Node runtime under its own process name so the installer can stop it
 // without touching other Node processes.
@@ -86,26 +32,6 @@ copy(process.execPath, path.join(stage, 'runtime', 'dawith-runtime.exe'));
 const nodeLicense = path.join(root, 'build', 'lite', 'LICENSE.node.txt');
 if (!fs.readFileSync(nodeLicense, 'utf8').includes('Node.js is licensed')) throw new Error('build/lite/LICENSE.node.txt is missing the Node.js license');
 copy(nodeLicense, path.join(stage, 'runtime', 'LICENSE.node.txt'));
-
-// One notices file with the license text of everything bundled.
-const licenseText = (dir) => {
-  const file = fs.readdirSync(dir).find((name) => /^(licen[cs]e|copying)(\.(md|txt))?$/i.test(name));
-  return file ? fs.readFileSync(path.join(dir, file), 'utf8').trim() : null;
-};
-const noticeFor = (dir, role) => {
-  const manifest = JSON.parse(fs.readFileSync(path.join(dir, 'package.json'), 'utf8'));
-  const text = licenseText(dir) || `${manifest.license} license (declared in package.json; no license file is published with this version).`;
-  return `${manifest.name} ${manifest.version} — ${manifest.license}${role ? ` — ${role}` : ''}\n\n${text}`;
-};
-const notices = [
-  `Dawith Welfare Office ${version} — third-party notices`,
-  `Node.js ${process.version} — MIT and bundled licenses — local runtime\n\nSee runtime/LICENSE.node.txt for the full text.`,
-  `rhwp — MIT — HWP/HWPX engine\n\n${fs.readFileSync(path.join(root, 'public', 'vendor', 'rhwp', 'LICENSE'), 'utf8').trim()}\n\nComponents bundled in rhwp are listed in app/public/vendor/rhwp/THIRD_PARTY_LICENSES.md.`,
-  noticeFor(path.join(root, 'node_modules', 'pdf-lib'), 'PDF merge/split (app/public/vendor/pdf-lib.min.js)'),
-  ...['@pdf-lib/standard-fonts', '@pdf-lib/upng', 'tslib'].map((name) => path.join(root, 'node_modules', name)).filter((dir) => fs.existsSync(dir)).map((dir) => noticeFor(dir, 'bundled in pdf-lib.min.js')),
-  ...[...packages].sort().map((dir) => noticeFor(dir)),
-];
-fs.writeFileSync(path.join(stage, 'THIRD_PARTY_NOTICES.txt'), `${notices.join(`\n\n${'='.repeat(72)}\n\n`)}\n`);
 
 const csc = path.join(process.env.WINDIR || 'C:\\Windows', 'Microsoft.NET', 'Framework64', 'v4.0.30319', 'csc.exe');
 execFileSync(csc, ['/nologo', '/optimize+', '/target:winexe', '/r:System.Windows.Forms.dll', `/out:${path.join(stage, 'Dawith Welfare Office.exe')}`, path.join(root, 'build', 'lite', 'Launcher.cs')], { stdio: 'inherit' });

@@ -17,6 +17,7 @@
     "rea:audit": "node scripts/rea-audit.mjs",
     "desktop": "electron desktop/main.mjs",
     "dist:win": "node scripts/build-lite.mjs",
+    "dist:linux": "node scripts/build-linux.mjs",
     "dist:win:setup": "electron-builder --win nsis --x64 --config.compression=maximum --publish never",
     "dist:win:portable": "electron-builder --win portable --x64 --config.compression=maximum --publish never",
     "dist:win:lite": "electron-builder --win portable --x64 --config.compression=maximum --config.directories.output=dist-lite --publish never",

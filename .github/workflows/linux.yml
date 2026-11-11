@@ -1,0 +1,92 @@
+name: Linux package test
+
+# Builds the .deb and .tar.gz on Ubuntu, installs them like a user would and
+# checks that the app starts, serves its UI and opens a browser app window.
+# A screenshot of the running app is kept as an artifact.
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'desktop/**'
+      - 'scripts/build-linux.mjs'
+      - 'scripts/lib/**'
+      - 'server.mjs'
+      - '.github/workflows/linux.yml'
+
+jobs:
+  linux:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.8.0
+          cache: npm
+      - name: Install dependencies
+        run: npm ci --ignore-scripts
+      - name: Build Linux packages
+        run: npm run dist:linux
+      - name: Desktop, fonts and screenshot tools
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq xvfb fonts-noto-cjk imagemagick x11-utils >/dev/null
+          google-chrome --version
+      - name: Install the .deb
+        run: |
+          sudo apt-get install -y ./dist-linux/*.deb
+          test -x /opt/dawith-welfare-office/runtime/dawith-runtime
+          test -f /usr/share/applications/dawith-welfare-office.desktop
+          command -v dawith-welfare-office
+          /opt/dawith-welfare-office/runtime/dawith-runtime -e "require('node:sqlite'); console.log(process.version)"
+      - name: Start from the menu command and check the app
+        run: |
+          Xvfb :99 -screen 0 1440x960x24 &
+          export DISPLAY=:99
+          sleep 2
+          dawith-welfare-office > launcher.log 2>&1 &
+          runtime="$HOME/.config/Dawith Welfare Office/runtime.json"
+          for i in $(seq 1 30); do [ -f "$runtime" ] && break; sleep 1; done
+          cat "$runtime"
+          url=$(node -p "require(process.argv[1]).url" "$runtime")
+          curl -fsS "$url/api/health"
+          curl -fsS "$url/" | grep -q '복지'
+          curl -fsS "$url/api/update/status" | tee update.json | grep -q '"mode":"portable"'
+          for i in $(seq 1 20); do pgrep -f -- "--app=$url" >/dev/null && break; sleep 1; done
+          pgrep -af -- "--app=$url"
+          sleep 6
+          import -window root linux-app.png
+          cat "$HOME/.config/Dawith Welfare Office/runtime.log"
+      - name: Second launch reuses the running app
+        run: |
+          export DISPLAY=:99
+          timeout 20 dawith-welfare-office
+          test "$(pgrep -fc 'app/desktop/lite.mjs')" = "1"
+      - name: Remove the .deb
+        run: |
+          pkill -f 'app/desktop/lite.mjs' || true
+          sudo apt-get remove -y dawith-welfare-office
+          test ! -e /opt/dawith-welfare-office
+      - name: tar.gz runs in place and adds a menu entry
+        run: |
+          export DISPLAY=:99 XDG_CONFIG_HOME="$RUNNER_TEMP/config"
+          mkdir -p "$RUNNER_TEMP/tar" && tar -xzf dist-linux/*.tar.gz -C "$RUNNER_TEMP/tar"
+          app=$(ls -d "$RUNNER_TEMP"/tar/dawith-welfare-office-*)
+          "$app/install.sh"
+          grep -q "Exec=\"$app/dawith-welfare-office\"" "$HOME/.local/share/applications/dawith-welfare-office.desktop"
+          "$app/dawith-welfare-office" > tar.log 2>&1 &
+          runtime="$XDG_CONFIG_HOME/Dawith Welfare Office/runtime.json"
+          for i in $(seq 1 30); do [ -f "$runtime" ] && break; sleep 1; done
+          curl -fsS "$(node -p "require(process.argv[1]).url" "$runtime")/api/health"
+          pkill -f 'app/desktop/lite.mjs' || true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: linux-smoke
+          path: |
+            linux-app.png
+            launcher.log
+            tar.log
+            update.json

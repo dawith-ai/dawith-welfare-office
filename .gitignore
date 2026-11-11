@@ -18,3 +18,4 @@ artifacts/rea/
 .DS_Store
 .vercel/
 site/download/
+dist-linux/
