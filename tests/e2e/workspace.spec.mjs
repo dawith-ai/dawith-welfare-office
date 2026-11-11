@@ -753,3 +753,46 @@ test('회의록도 같은 보기 전환과 복사 버튼을 쓴다', async ({ pa
   await expect(page.locator('[data-sum-view="combined"]')).toBeVisible();
   expect(await page.locator('#sumSectionsView .sum-copy').count()).toBeGreaterThan(2);
 });
+
+async function mockUpdates(page, sequence) {
+  const calls = [];
+  let polls = 0;
+  await page.route('**/api/update/**', async (route) => {
+    const action = route.request().url().split('/api/update/')[1];
+    calls.push(action);
+    const base = { supported: true, runtime: 'lite', mode: 'installer', currentVersion: '1.0.4', latestVersion: '1.0.5', notes: ['한 번에 보기에 빠진 문장 포함', '로컬 AI 대기 시간 5분'], received: 0, total: 26_900_000, progress: 0 };
+    let body = { ...base, status: 'idle' };
+    if (action === 'check') body = { ...base, status: sequence.check };
+    if (action === 'download') body = { ...base, status: 'downloading' };
+    if (action === 'status' && calls.includes('download')) body = polls++ < 2 ? { ...base, status: 'downloading', progress: 34, received: 9_542_000 } : { ...base, status: 'downloaded', progress: 100, received: 26_900_000 };
+    if (action === 'install') body = { ...base, status: 'installing', progress: 100 };
+    await route.fulfill({ json: body });
+  });
+  return calls;
+}
+
+test('새 버전이 있으면 업데이트 버튼에 빨간 점이 뜨고, 달라진 점을 본 뒤 진행률을 보며 자동 설치한다', async ({ page }) => {
+  const calls = await mockUpdates(page, { check: 'available' });
+  await page.goto('/');
+  await expect(page.locator('#updateButton')).toHaveClass(/has-update/);
+  await page.locator('#updateButton').click();
+  await expect(page.locator('#updateTitle')).toHaveText('새 버전 v1.0.5');
+  await expect(page.locator('#updateNotes li')).toHaveText(['한 번에 보기에 빠진 문장 포함', '로컬 AI 대기 시간 5분']);
+  await expect(page.locator('#updateLater')).toBeVisible();
+  await page.locator('#updateAction').click();
+  await expect(page.locator('#updateTitle')).toHaveText('v1.0.5로 업데이트하는 중');
+  await expect(page.locator('#updatePercent')).toHaveText('34%');
+  await expect(page.locator('#updateBytes')).toHaveText('9.1MB / 25.7MB');
+  await expect(page.locator('#updateTitle')).toHaveText('v1.0.5 설치하는 중');
+  expect(calls).toContain('install');
+});
+
+test('최신 버전이면 업데이트를 눌렀을 때 최신 버전이라고 알려 준다', async ({ page }) => {
+  await mockUpdates(page, { check: 'latest' });
+  await page.goto('/');
+  await expect(page.locator('#updateButton')).toBeVisible();
+  await expect(page.locator('#updateButton')).not.toHaveClass(/has-update/);
+  await page.locator('#updateButton').click();
+  await expect(page.locator('#updateTitle')).toHaveText('최신 버전입니다');
+  await expect(page.locator('#updateMessage')).toContainText('v1.0.4이 가장 최신 버전');
+});

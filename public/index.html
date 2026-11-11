@@ -22,7 +22,7 @@
           <button class="plain-button" id="privacyButton" type="button">데이터 경계</button>
           <button class="plain-button" id="settingsButton" type="button">설정</button>
           <a class="plain-button guide-link" href="./guide.html">제품 안내</a>
-          <button class="plain-button update-button hidden" id="updateButton" type="button">업데이트 확인</button>
+          <button class="plain-button update-button hidden" id="updateButton" type="button">업데이트</button>
           <a class="plain-button guide-link" id="downloadLink" href="https://welfare-office.vercel.app/#download" target="_blank" rel="noreferrer">PC용 내려받기</a>
           <button class="plain-button install-button hidden" id="installButton" type="button">앱으로 설치</button>
         </div>
@@ -118,9 +118,11 @@
     <dialog id="updateDialog" class="privacy-dialog update-dialog" aria-labelledby="updateTitle">
       <button class="dialog-close" id="closeUpdate" type="button" aria-label="닫기">×</button>
       <h2 id="updateTitle">업데이트</h2>
-      <p id="updateMessage" class="update-message">새 버전을 확인하는 중입니다…</p>
+      <p id="updateMessage" class="update-message">새 버전이 있는지 확인하고 있습니다…</p>
+      <div id="updateNotes" class="update-notes" hidden></div>
       <div id="updateProgress" class="update-progress hidden" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span></span></div>
-      <div class="update-actions"><button id="updateAction" class="primary-button hidden" type="button"></button></div>
+      <div id="updateProgressRow" class="update-progress-row" hidden><b id="updatePercent">0%</b><span id="updateBytes"></span></div>
+      <div class="update-actions"><button id="updateLater" class="secondary-button hidden" type="button">나중에</button><button id="updateAction" class="primary-button hidden" type="button"></button></div>
       <p id="updateVersion" class="dialog-footnote"></p>
     </dialog>
 

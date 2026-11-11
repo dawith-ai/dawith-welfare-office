@@ -45,7 +45,7 @@ async function loadRelease() {
     }
     if (manifest.setup && $('#heroSize')) $('#heroSize').textContent = formatSize(manifest.setup.size);
     if ($('[data-label="setup"]')) $('[data-label="setup"]').textContent = `Windows용 ${manifest.version} 내려받기`;
-    if ($('[data-label="mac"]') && manifest.mac) $('[data-label="mac"]').textContent = `Mac용 ${manifest.version} 내려받기`;
+    if ($('[data-label="mac"]') && manifest.mac) $('[data-label="mac"]').textContent = `Mac용 ${manifest.mac.version || manifest.version} 내려받기`;
     if ($('#heroVersion')) $('#heroVersion').textContent = manifest.version;
     if ($('#releaseTag')) $('#releaseTag').textContent = `새 버전 ${manifest.version}`;
   } catch {

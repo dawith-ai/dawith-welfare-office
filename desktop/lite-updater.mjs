@@ -3,7 +3,7 @@ import crypto from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { downloadPageUrl, isNewerVersion, updateFeedUrl } from './version.mjs';
+import { downloadPageUrl, isNewerVersion, releaseNotesUrl, updateFeedUrl } from './version.mjs';
 
 // Reads the same latest.yml electron-builder writes: version, installer path,
 // base64 sha512 and size.
@@ -12,11 +12,21 @@ export function parseFeed(text) {
   return { version: field('version'), path: field('path'), sha512: field('sha512'), size: Number(/^\s+size:\s*(\d+)/m.exec(text)?.[1] || 0) };
 }
 
+// The bullet points of a GitHub release body, as plain text, for the update dialog.
+export function parseReleaseNotes(body) {
+  return String(body || '').split(/\r?\n/)
+    .map((line) => /^\s*[-*]\s+(.+)$/.exec(line)?.[1])
+    .filter(Boolean)
+    .map((line) => line.replace(/\*\*|`/g, '').replace(/\[([^\]]+)\]\([^)]*\)/g, '$1').trim())
+    .filter((line) => line && !/generated with/i.test(line))
+    .slice(0, 8);
+}
+
 // Same contract as the Electron updater (status/check/download/install) so the
 // UI does not care which runtime it runs in. The installer is downloaded,
 // checked against the feed's sha512, then run silently with --force-run so the
 // new version opens by itself.
-export function createLiteUpdater({ version, portable, log = () => {}, quit, feedUrl = updateFeedUrl, fetchImpl = fetch, launch = spawn }) {
+export function createLiteUpdater({ version, portable, log = () => {}, quit, feedUrl = updateFeedUrl, notesUrl = releaseNotesUrl, fetchImpl = fetch, launch = spawn }) {
   const state = {
     supported: true,
     runtime: 'lite',
@@ -25,6 +35,10 @@ export function createLiteUpdater({ version, portable, log = () => {}, quit, fee
     latestVersion: null,
     status: 'idle',
     progress: 0,
+    received: 0,
+    total: 0,
+    notes: [],
+    lastCheckedAt: null,
     error: null,
     downloadPage: downloadPageUrl,
   };
@@ -47,6 +61,15 @@ export function createLiteUpdater({ version, portable, log = () => {}, quit, fee
       feed = parseFeed(await response.text());
       state.latestVersion = feed.version || null;
       state.status = feed.version && isNewerVersion(feed.version, version) ? 'available' : 'latest';
+      state.total = feed.size || 0;
+      state.lastCheckedAt = new Date().toISOString();
+      if (state.status === 'available') {
+        // Notes are a nice-to-have; a missing or rate-limited API never blocks the update.
+        try {
+          const release = await fetchImpl(notesUrl(feed.version), { headers: { accept: 'application/vnd.github+json' } });
+          state.notes = release.ok ? parseReleaseNotes((await release.json()).body) : [];
+        } catch { state.notes = []; }
+      }
     } catch (error) {
       fail(error);
     }
@@ -67,6 +90,8 @@ export function createLiteUpdater({ version, portable, log = () => {}, quit, fee
       hash.update(chunk);
       received += chunk.length;
       if (!out.write(chunk)) await new Promise((resolve) => out.once('drain', resolve));
+      state.received = received;
+      state.total = total;
       if (total) state.progress = Math.min(99, Math.round((received / total) * 100));
     }
     await new Promise((resolve, reject) => out.end((error) => (error ? reject(error) : resolve())));
@@ -81,6 +106,7 @@ export function createLiteUpdater({ version, portable, log = () => {}, quit, fee
     if (portable || state.status !== 'available' || !feed?.path) return snapshot();
     state.status = 'downloading';
     state.progress = 0;
+    state.received = 0;
     fetchInstaller().then((file) => {
       installerPath = file;
       state.status = 'downloaded';

@@ -40,10 +40,19 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .plain-button { padding: 5px 0; border: 0; border-bottom: 1px solid var(--line-dark); background: none; color: var(--muted); font-size: 13px; }
 .plain-button:hover { color: var(--ink); border-color: var(--ink); }
 .install-button { color: var(--green); border-color: var(--green); }
-.update-button.has-update { padding: 5px 10px; border: 0; border-radius: 999px; background: var(--red); color: #fff; font-weight: 700; }
+.update-button { position: relative; }
+.update-button.has-update::after { content: ""; position: absolute; top: 1px; right: -9px; width: 8px; height: 8px; border-radius: 50%; background: #d93025; box-shadow: 0 0 0 2px var(--paper); }
+.update-dialog { width: min(460px, calc(100% - 30px)); }
+.update-notes { margin-top: 16px; padding: 14px 16px; border: 1px solid var(--line); border-radius: 8px; background: #fbfbf9; font-size: 13px; }
+.update-notes b { display: block; margin-bottom: 6px; font-size: 13px; }
+.update-notes ul { display: grid; gap: 4px; margin: 0; padding-left: 18px; color: var(--muted); line-height: 1.6; }
+.update-progress-row { display: flex; justify-content: space-between; gap: 10px; margin-top: 8px; font-size: 13px; }
+.update-progress-row b { color: var(--green); }
+.update-progress-row span { color: var(--muted); }
+.update-actions { display: flex; justify-content: flex-end; gap: 8px; }
 .update-message { margin: 0; font-size: 15px; line-height: 1.7; }
 .update-progress { height: 8px; margin-top: 18px; overflow: hidden; border-radius: 999px; background: var(--line); }
-.update-progress span { display: block; width: 0; height: 100%; background: var(--green); transition: width .3s; }
+.update-progress span { display: block; width: 0; height: 100%; background: var(--green); transition: width .5s ease-out; }
 .update-actions { margin-top: 20px; }
 .guide-link { text-decoration: none; }
 

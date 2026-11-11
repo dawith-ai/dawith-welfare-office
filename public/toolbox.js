@@ -1476,35 +1476,70 @@ async function updateRequest(action) {
   if (!response.ok) throw new Error(`update_${response.status}`);
   return response.json();
 }
+// 로/으로 after a version number: 0·3·6 (영·삼·육) end in a final consonant.
+const toVersion = (version) => `v${version}${/[036]$/.test(String(version)) ? '으로' : '로'}`;
+const formatMb = (bytes) => `${(Number(bytes || 0) / 1048576).toFixed(1)}MB`;
+let updateInstallRequested = false;
 function renderUpdate(next) {
   updateState = next;
+  const pending = ['available', 'downloading', 'downloaded', 'installing'].includes(next.status);
   const button = $('#updateButton');
-  button.classList.toggle('has-update', ['available', 'downloading', 'downloaded'].includes(next.status));
-  button.textContent = next.status === 'available' ? `새 버전 ${next.latestVersion}` : next.status === 'downloaded' ? '업데이트 설치 준비됨' : '업데이트 확인';
+  button.classList.toggle('has-update', pending);
+  button.textContent = '업데이트';
+  button.setAttribute('aria-label', pending ? `업데이트 · 새 버전 ${next.latestVersion} 있음` : '업데이트 확인');
+  button.title = pending ? `새 버전 ${next.latestVersion}이 있습니다` : '';
+  const title = $('#updateTitle');
   const message = $('#updateMessage');
+  const notes = $('#updateNotes');
   const action = $('#updateAction');
+  const later = $('#updateLater');
   const progress = $('#updateProgress');
-  progress.classList.toggle('hidden', next.status !== 'downloading');
-  progress.setAttribute('aria-valuenow', String(next.progress || 0));
-  progress.firstElementChild.style.width = `${next.progress || 0}%`;
+  const busy = next.status === 'downloading' || next.status === 'installing';
+  progress.classList.toggle('hidden', !busy);
+  $('#updateProgressRow').hidden = !busy;
+  const percent = next.status === 'installing' ? 100 : (next.progress || 0);
+  progress.setAttribute('aria-valuenow', String(percent));
+  progress.firstElementChild.style.width = `${percent}%`;
+  $('#updatePercent').textContent = `${percent}%`;
+  $('#updateBytes').textContent = next.total ? `${formatMb(next.received)} / ${formatMb(next.total)}` : '';
+  notes.hidden = true;
   action.classList.add('hidden');
-  $('#updateVersion').textContent = `지금 쓰는 버전 ${next.currentVersion}${next.mode === 'portable' ? ' · 포터블' : ''}`;
+  later.classList.add('hidden');
+  $('#updateVersion').textContent = `지금 쓰는 버전 v${next.currentVersion || ''}${next.mode === 'portable' ? ' · 포터블' : ''}`;
   const show = (label, handler) => { action.textContent = label; action.onclick = handler; action.classList.remove('hidden'); };
-  if (next.status === 'checking' || next.status === 'idle') message.textContent = '새 버전을 확인하는 중입니다…';
-  else if (next.status === 'latest') message.textContent = '최신 버전을 쓰고 있습니다.';
+  const showNotes = () => {
+    if (!next.notes?.length) return;
+    notes.innerHTML = `<b>이번 버전에서 달라진 점</b><ul>${next.notes.map((line) => `<li>${escapeHtml(line)}</li>`).join('')}</ul>`;
+    notes.hidden = false;
+  };
+  if (next.status === 'checking' || next.status === 'idle') { title.textContent = '업데이트 확인'; message.textContent = '새 버전이 있는지 확인하고 있습니다…'; }
+  else if (next.status === 'latest') { title.textContent = '최신 버전입니다'; message.textContent = `지금 쓰는 v${next.currentVersion}이 가장 최신 버전입니다. 새 버전이 나오면 업데이트 버튼에 빨간 점으로 알려 드립니다.`; }
   else if (next.status === 'available' && next.mode === 'portable') {
-    message.textContent = `새 버전 ${next.latestVersion}이 나왔습니다. 포터블은 새 파일을 받아 바꿔 쓰면 됩니다. 저장한 기록은 그대로 남습니다.`;
+    title.textContent = `새 버전 v${next.latestVersion}`;
+    message.textContent = '포터블은 새 파일을 받아 바꿔 쓰면 됩니다. 저장한 기록은 그대로 남습니다.';
+    showNotes();
     show('새 버전 내려받기', () => window.open(next.downloadPage || 'https://welfare-office.vercel.app/#download', '_blank'));
   } else if (next.status === 'available') {
-    message.textContent = `새 버전 ${next.latestVersion}이 나왔습니다. 내려받은 뒤 앱을 다시 시작하면 설치됩니다. 저장한 기록은 그대로 남습니다.`;
-    show('지금 업데이트', async () => { renderUpdate(await updateRequest('download')); watchUpdate(); });
-  } else if (next.status === 'downloading') message.textContent = `새 버전을 내려받는 중입니다… ${next.progress || 0}%`;
-  else if (next.status === 'downloaded') {
-    message.textContent = '내려받기를 마쳤습니다. 작업 중인 내용을 저장한 뒤 다시 시작하세요.';
-    show('다시 시작해서 설치', async () => renderUpdate(await updateRequest('install')));
-  } else if (next.status === 'installing') message.textContent = '설치를 시작합니다. 잠시 뒤 새 버전이 열립니다.';
-  else if (next.status === 'error') {
-    message.textContent = '업데이트를 확인하지 못했습니다. 인터넷 연결을 확인하거나 내려받기 페이지에서 새 버전을 받아 설치하세요.';
+    title.textContent = `새 버전 v${next.latestVersion}`;
+    message.textContent = '업데이트하면 앱이 잠시 닫혔다가 새 버전으로 다시 열립니다. 저장한 기록은 그대로 남습니다. 작성 중인 내용은 먼저 저장해 주세요.';
+    showNotes();
+    show('지금 업데이트', async () => { updateInstallRequested = true; renderUpdate(await updateRequest('download')); watchUpdate(); });
+    later.classList.remove('hidden');
+  } else if (next.status === 'downloading') {
+    title.textContent = `${toVersion(next.latestVersion)} 업데이트하는 중`;
+    message.textContent = '설치 파일을 내려받고 있습니다. 잠시만 기다려 주세요.';
+  } else if (next.status === 'downloaded') {
+    title.textContent = `${toVersion(next.latestVersion)} 업데이트하는 중`;
+    message.textContent = '내려받기를 마쳤습니다. 곧 설치를 시작합니다.';
+    // The user already chose to update; continue straight into the install.
+    if (updateInstallRequested) { updateInstallRequested = false; updateRequest('install').then(renderUpdate).catch(() => renderUpdate({ ...next, status: 'error' })); }
+    else show('설치하고 다시 시작', async () => renderUpdate(await updateRequest('install')));
+  } else if (next.status === 'installing') {
+    title.textContent = `v${next.latestVersion} 설치하는 중`;
+    message.textContent = '곧 새 버전으로 다시 열립니다. 창을 닫지 말고 기다려 주세요.';
+  } else if (next.status === 'error') {
+    title.textContent = '업데이트를 확인하지 못했습니다';
+    message.textContent = '인터넷 연결을 확인한 뒤 다시 시도하거나, 내려받기 페이지에서 새 버전을 받아 설치하세요.';
     show('내려받기 페이지 열기', () => window.open(next.downloadPage || 'https://welfare-office.vercel.app/#download', '_blank'));
   }
 }
@@ -1514,9 +1549,13 @@ function watchUpdate() {
     try {
       const next = await updateRequest('status');
       renderUpdate(next);
-      if (next.status !== 'downloading') clearInterval(updatePoll);
+      if (!['downloading', 'downloaded'].includes(next.status)) clearInterval(updatePoll);
     } catch { clearInterval(updatePoll); }
-  }, 1000);
+  }, 700);
+}
+async function checkForUpdate() {
+  if (updateState && ['downloading', 'downloaded', 'installing'].includes(updateState.status)) return;
+  try { renderUpdate(await updateRequest('check')); } catch { /* offline: try again later */ }
 }
 async function setupUpdates() {
   try {
@@ -1525,7 +1564,9 @@ async function setupUpdates() {
     $('#downloadLink')?.remove();
     $('#updateButton').classList.remove('hidden');
     renderUpdate(status);
-    renderUpdate(await updateRequest('check'));
+    await checkForUpdate();
+    // While the app stays open, look again every 4 hours.
+    setInterval(checkForUpdate, 4 * 60 * 60 * 1000);
   } catch { /* updates are optional; the app works offline */ }
 }
 $('#updateButton').addEventListener('click', async () => {
@@ -1533,9 +1574,10 @@ $('#updateButton').addEventListener('click', async () => {
   if (!updateState || ['latest', 'error', 'idle'].includes(updateState.status)) {
     renderUpdate({ ...(updateState || {}), status: 'checking' });
     try { renderUpdate(await updateRequest('check')); } catch { renderUpdate({ ...(updateState || {}), status: 'error' }); }
-  }
+  } else renderUpdate(updateState);
 });
 $('#closeUpdate').addEventListener('click', () => $('#updateDialog').close());
+$('#updateLater').addEventListener('click', () => $('#updateDialog').close());
 setupUpdates();
 $('#homeButton').addEventListener('click', () => { state.category = 'all'; state.search = ''; $('#toolSearch').value = ''; showHome(); });
 $('#privacyButton').addEventListener('click', () => $('#privacyDialog').showModal());

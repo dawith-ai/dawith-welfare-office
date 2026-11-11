@@ -47,7 +47,15 @@ if (exists) {
 
 const releaseUrl = (name) => `https://github.com/${repo}/releases/download/${tag}/${name}`;
 const manifest = { version, releaseDate: new Date().toISOString() };
-for (const [key, name] of Object.entries(files)) manifest[key] = { file: name, url: releaseUrl(name), size: fs.statSync(paths[key]).size };
+for (const [key, name] of Object.entries(files)) manifest[key] = { file: name, url: releaseUrl(name), size: fs.statSync(paths[key]).size, version };
+// The Mac build is made on a Mac and not every release has one. Keep linking
+// the last published Mac installer instead of dropping it from the site.
+if (!manifest.mac) {
+  try {
+    const previous = JSON.parse(fs.readFileSync(path.join(root, 'site', 'release.json'), 'utf8'));
+    if (previous.mac?.url) manifest.mac = { version: previous.mac.version || previous.version, ...previous.mac };
+  } catch { /* first release: no Mac entry yet */ }
+}
 fs.writeFileSync(path.join(root, 'site', 'release.json'), `${JSON.stringify(manifest, null, 2)}\n`);
 
 // /download/setup and /download/portable always serve the current version.
