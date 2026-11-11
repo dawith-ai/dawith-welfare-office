@@ -189,7 +189,7 @@ function renderAgeWorkspace(tool) {
 }
 
 function renderMoneyWorkspace(tool) {
-  return `${toolHeader(tool, '금액을 한글로 바꾸기', '지출결의서와 공문서에 들어갈 금액 표기를 확인합니다.')}<div class="tool-layout calculator-layout"><section class="calculator-card"><h2>금액 입력</h2><p>숫자만 입력해도 천 단위 구분과 한글 표기를 함께 보여줍니다.</p><div class="control-group"><label for="moneyInput">금액</label><input id="moneyInput" class="wide-input" inputmode="numeric" placeholder="예: 1250000" /></div><div id="moneyResult" class="calculator-result"><span class="result-label">결과가 여기에 표시됩니다.</span></div><div class="tool-actions"><button id="moneyCopy" class="secondary-button" type="button" disabled>결과 복사</button></div></section><section class="calculator-reference"><h3>표기 예시</h3><div class="reference-row"><b>1,250,000원</b><span>금 일백이십오만원정</span></div><div class="reference-row"><b>30,000원</b><span>금 삼만원정</span></div><div class="reference-row"><b>0원</b><span>금 영원정</span></div><p class="muted-text" style="margin-top:16px">최종 결재 문서의 기관 양식과 숫자를 한 번 더 대조하세요.</p></section></div>`;
+  return `${toolHeader(tool, '금액을 한글로 바꾸기', '지출결의서와 공문서에 들어갈 금액 표기를 확인합니다.')}<div class="tool-layout calculator-layout"><section class="calculator-card"><h2>금액 입력</h2><p>숫자만 입력해도 천 단위 구분과 한글 표기를 함께 보여줍니다.</p><div class="control-group"><label for="moneyInput">금액</label><input id="moneyInput" class="wide-input" inputmode="numeric" placeholder="예: 1,250,000" /></div><div id="moneyResult" class="calculator-result"><span class="result-label">결과가 여기에 표시됩니다.</span></div><div class="tool-actions"><button id="moneyCopy" class="secondary-button" type="button" disabled>결과 복사</button></div></section><section class="calculator-reference"><h3>표기 예시</h3><div class="reference-row"><b>1,250,000원</b><span>금 일백이십오만원정</span></div><div class="reference-row"><b>30,000원</b><span>금 삼만원정</span></div><div class="reference-row"><b>0원</b><span>금 영원정</span></div><p class="muted-text" style="margin-top:16px">최종 결재 문서의 기관 양식과 숫자를 한 번 더 대조하세요.</p></section></div>`;
 }
 
 function renderDateWorkspace(tool) {
@@ -630,7 +630,21 @@ const smallUnits = ['', '십', '백', '천'];
 const largeUnits = ['', '만', '억', '조', '경'];
 function fourDigitToKorean(value) { let text = ''; String(value).padStart(4, '0').split('').map(Number).forEach((digit, index) => { if (!digit) return; const position = 3 - index; text += (digit === 1 && position > 0 ? '' : koreanDigits[digit]) + smallUnits[position]; }); return text; }
 function numberToKorean(value) { if (value === 0) return '영'; let number = Math.floor(value); let index = 0; let result = ''; while (number > 0) { const part = number % 10000; if (part) result = `${fourDigitToKorean(part)}${largeUnits[index]}${result}`; number = Math.floor(number / 10000); index += 1; } return result; }
-function bindMoney() { const input = $('#moneyInput'); const update = () => { const number = Number(input.value.replace(/[^\d]/g, '')); const result = $('#moneyResult'); if (!input.value || !Number.isFinite(number)) { result.innerHTML = '<span class="result-label">결과가 여기에 표시됩니다.</span>'; $('#moneyCopy').disabled = true; return; } const text = `금 ${numberToKorean(number)}원정`; result.innerHTML = `<span class="result-label">한글 표기</span><strong style="font-size:26px">${text}</strong><small>${number.toLocaleString('ko-KR')}원</small>`; $('#moneyCopy').disabled = false; $('#moneyCopy').dataset.copy = text; }; input.addEventListener('input', update); $('#moneyCopy').addEventListener('click', async () => { await navigator.clipboard?.writeText($('#moneyCopy').dataset.copy || ''); showNotice('#moneyResult', '결과를 복사했습니다.'); }); }
+// Shows thousands separators in the amount field while typing and keeps the
+// caret after the same digit, so long amounts are easy to check.
+function formatMoneyInput(input) {
+  const caret = input.selectionStart ?? input.value.length;
+  const digitsBeforeCaret = input.value.slice(0, caret).replace(/\D/g, '').replace(/^0+(?=\d)/, '').length;
+  const digits = input.value.replace(/\D/g, '').replace(/^0+(?=\d)/, '');
+  const formatted = digits.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  if (formatted === input.value) return;
+  input.value = formatted;
+  let position = 0;
+  for (let seen = 0; position < formatted.length && seen < digitsBeforeCaret; position += 1) if (/\d/.test(formatted[position])) seen += 1;
+  if (document.activeElement === input) input.setSelectionRange(position, position);
+}
+
+function bindMoney() { const input = $('#moneyInput'); const update = () => { formatMoneyInput(input); const number = Number(input.value.replace(/[^\d]/g, '')); const result = $('#moneyResult'); if (!input.value || !Number.isFinite(number)) { result.innerHTML = '<span class="result-label">결과가 여기에 표시됩니다.</span>'; $('#moneyCopy').disabled = true; return; } const text = `금 ${numberToKorean(number)}원정`; result.innerHTML = `<span class="result-label">한글 표기</span><strong style="font-size:26px">${text}</strong><small>${number.toLocaleString('ko-KR')}원</small>`; $('#moneyCopy').disabled = false; $('#moneyCopy').dataset.copy = text; }; input.addEventListener('input', update); $('#moneyCopy').addEventListener('click', async () => { await navigator.clipboard?.writeText($('#moneyCopy').dataset.copy || ''); showNotice('#moneyResult', '결과를 복사했습니다.'); }); }
 function bindDate() { const start = $('#dateStart'); const end = $('#dateEnd'); const update = () => { if (!start.value || !end.value) return; const first = parseLocalDate(start.value); const last = parseLocalDate(end.value); const days = Math.round((last - first) / 86400000); const result = $('#dateResult'); result.innerHTML = days < 0 ? '<span class="result-label">종료일을 확인해 주세요.</span>' : `<span class="result-label">두 날짜 사이</span><strong>${days + 1}일</strong><small>날짜 차이 ${days}일 · 시작일과 종료일을 모두 포함한 기간</small>`; }; start.addEventListener('change', update); end.addEventListener('change', update); }
 
 function bindAiSetup() {

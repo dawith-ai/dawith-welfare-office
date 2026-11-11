@@ -120,6 +120,7 @@ test('생년월일 타이핑과 금액 변환이 즉시 계산된다', async ({ 
   await page.locator('[data-action="home"]').click();
   await page.locator('.tool-card[data-tool="money-converter"]').click();
   await page.locator('#moneyInput').fill('1250000');
+  await expect(page.locator('#moneyInput')).toHaveValue('1,250,000');
   await expect(page.locator('#moneyResult')).toContainText('금 백이십오만원정');
 });
 

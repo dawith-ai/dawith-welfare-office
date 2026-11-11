@@ -38,10 +38,12 @@
           <h1>복지관 서류 일,<br />한 프로그램에서.</h1>
           <p class="lede">붙임 서류 PDF 합치기, 한글 양식 확인, 상담 기록 정리, 개인정보 가리기, 가계도까지. 사회복지사가 매일 하는 서류 작업을 인터넷 없이 내 PC에서 끝냅니다. 누구나 무료로 쓸 수 있습니다.</p>
           <div class="hero-actions">
-            <a id="heroDownload" class="btn btn-accent" data-asset="setup" href="https://github.com/dawith-ai/dawith-welfare-office/releases/latest"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5M5 19h14" /></svg>Windows용 내려받기</a>
-            <a class="btn btn-ghost" href="https://github.com/dawith-ai/dawith-welfare-office" target="_blank" rel="noreferrer">GitHub</a>
+            <a id="heroDownload" class="btn btn-accent" data-asset="setup" data-os="windows" href="https://github.com/dawith-ai/dawith-welfare-office/releases/latest"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5M5 19h14" /></svg>Windows용 내려받기</a>
+            <a class="btn btn-ghost" data-asset="mac" data-os="mac" href="https://github.com/dawith-ai/dawith-welfare-office/releases/latest"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5M5 19h14" /></svg>Mac용 내려받기</a>
+            <span class="btn btn-ghost btn-soon" aria-disabled="true" title="Linux용은 준비 중입니다"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5M5 19h14" /></svg>Linux용 준비 중</span>
+            <a class="btn btn-ghost" href="https://github.com/dawith-ai/dawith-welfare-office" target="_blank" rel="noreferrer"><svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8Z" /></svg>GitHub</a>
           </div>
-          <p class="hero-meta">오픈 베타 · <span id="heroVersion">1.0.5</span> · Windows 10·11 (64비트) · Apple Silicon Mac · 설치 파일 <span id="heroSize">약 26MB</span> · <a href="./install.html">설치 도움말</a></p>
+          <p class="hero-meta">오픈 베타 · <span id="heroVersion">1.0.5</span> · Windows 10·11 (64비트) · Apple Silicon Mac · 설치 파일 <span id="heroSize">약 26MB</span> · <a href="./install.html">설치 도움말</a> · 소스 코드 <a href="https://github.com/dawith-ai/dawith-welfare-office" target="_blank" rel="noreferrer">github.com/dawith-ai/dawith-welfare-office</a></p>
           <p id="osNotice" class="os-notice" hidden></p>
 
           <div class="showcase">
@@ -69,7 +71,7 @@
             <h2>붙임 서류는<br />한 파일로.</h2>
             <p>신청서, 소득 증빙, 등본처럼 따로 받은 PDF를 순서대로 묶어 제출용 한 파일로 저장합니다. 기관에서 받은 한글(HWP·HWPX) 양식도 한컴 한글 없이 열어 내용을 확인할 수 있어요.</p>
           </div>
-          <figure class="shot"><img src="./assets/pdf.jpg" alt="PDF 합치기 화면. 서비스신청서, 소득증빙, 주민등록등본 PDF가 순서대로 올라가 있다." loading="lazy" width="1280" height="780" /></figure>
+          <figure class="shot"><img src="./media/pdf-merge.gif" alt="PDF 합치기 화면. 신청서, 소득증빙, 동의서 PDF를 올리면 합칠 순서대로 목록에 쌓인다." loading="lazy" width="1200" height="760" /></figure>
           <div class="points">
             <div><h3>순서대로 묶기</h3><p>파일을 끌어 놓고 순서를 확인한 뒤 한 번에 합칩니다. 파일 이름 앞에 01, 02를 붙이면 순서 맞추기가 쉽습니다.</p></div>
             <div><h3>필요한 쪽만 빼기</h3><p>PDF 나누기에서 쪽 번호만 적으면 그 쪽만 새 파일로 저장합니다. 원본은 바뀌지 않습니다.</p></div>
@@ -83,7 +85,7 @@
             <h2>상담 메모가<br />우리 기관 양식으로.</h2>
             <p>메모를 붙여 넣고 기록 양식을 고르면 그 항목대로 나눠 줍니다. 관찰사항·상담내용·상담원 소견처럼 기관에서 쓰는 틀을 직접 만들 수 있고, {{상담원 소견}} 같은 표식을 넣은 Word·한글(HWPX) 양식을 올리면 그 칸에 바로 채워 줍니다. 회의록도 같은 방식입니다.</p>
           </div>
-          <figure class="shot"><img src="./assets/record.jpg" alt="상담 기록·회의록 정리 화면. 관찰·상담·소견형 양식을 골라 메모가 관찰사항, 상담내용, 상담원 소견, 향후 계획으로 나뉘어 있다." loading="lazy" width="1280" height="780" /></figure>
+          <figure class="shot"><img src="./media/records.gif" alt="상담 메모를 붙여 넣고 관찰·상담·소견형으로 정리하면 관찰사항, 상담내용, 상담원 소견, 향후 계획으로 나뉘고, 한 번에 보기로 바꿀 수 있다." loading="lazy" width="1200" height="760" /></figure>
           <div class="points">
             <div><h3>양식은 고르거나 만들고</h3><p>기본 상담기록, 관찰·상담·소견형, 사례회의록, 일반 회의록이 준비되어 있고, 항목을 더하고 바꿔 내 양식으로 저장합니다.</p></div>
             <div><h3>기관 양식 파일에 채웁니다</h3><p>Word·한글(HWPX) 양식의 {{표식}} 칸에 정리한 내용과 기관명·작성자·날짜를 넣어 바로 내려받습니다.</p></div>
@@ -92,12 +94,20 @@
           </div>
         </section>
 
+        <section class="section" id="form-fill">
+          <div class="split">
+            <h2>기관 양식 파일에<br />그대로 채웁니다.</h2>
+            <p>쓰던 Word·한글(HWPX) 양식에 {{관찰사항}}처럼 표식만 적어 올리면, 어떤 칸에 무엇이 들어갈지 먼저 보여 줍니다. 맞는 항목이 없는 칸만 직접 적고 내려받으세요. 양식 파일은 이 PC 밖으로 나가지 않습니다.</p>
+          </div>
+          <figure class="shot"><img src="./media/form-fill.gif" alt="기관 상담일지 양식(.docx)을 올리면 표식 7개를 찾아 기관명, 날짜, 담당자, 관찰사항, 상담원 소견, 향후 계획에 연결하고 대상자 칸만 직접 적게 한다." loading="lazy" width="1200" height="760" /></figure>
+        </section>
+
         <section class="section" id="mask">
           <div class="split">
             <h2>공유하기 전에<br />한 번 가립니다.</h2>
             <p>사례 내용을 메신저나 메일로 보내기 전에 붙여 넣기만 하면 전화번호·이메일·주민등록번호·계좌번호가 바로 가려집니다. 이름처럼 규칙으로 찾기 어려운 정보는 ‘찾아 바꾸기’로 한 번에 바꿉니다.</p>
           </div>
-          <figure class="shot"><img src="./assets/text.jpg" alt="텍스트 정리 화면. 전화번호, 이메일, 주민등록번호, 계좌번호가 결과에서 별표로 가려져 있다." loading="lazy" width="1280" height="780" /></figure>
+          <figure class="shot"><img src="./media/privacy.gif" alt="텍스트를 입력하는 동안 전화번호, 이메일, 계좌번호가 결과에서 바로 가려진다." loading="lazy" width="1200" height="760" /></figure>
         </section>
 
         <section class="section" id="forms">
@@ -106,6 +116,17 @@
             <p>기관명과 담당자를 저장해 두면 회의록, 사업계획서, 결과보고서 틀이 자동으로 채워집니다. 사업명·목적·내용만 적으면 미리보기에 초안이 완성되고, 우리 기관 양식을 직접 만들어 계속 쓸 수도 있어요.</p>
           </div>
           <figure class="shot"><img src="./assets/template.jpg" alt="기관 양식 작업공간 화면. 입력한 사업명과 결정사항이 회의록 미리보기에 채워져 있다." loading="lazy" width="1280" height="780" /></figure>
+        </section>
+
+        <section class="section" id="maps">
+          <div class="split">
+            <h2>가계도·생태도는<br />문장으로 시작합니다.</h2>
+            <p>상담 기록의 가족 이야기를 붙여 넣으면 사람과 관계 후보를 찾아 표준 기호로 그려 줍니다. 생태도는 기관과 관계의 세기·방향만 고르면 겹치지 않게 둘레에 배치됩니다. PNG·SVG로 저장하거나 바로 인쇄하세요.</p>
+          </div>
+          <div class="shot-pair">
+            <figure class="shot"><img src="./media/genogram.gif" alt="가족 이야기를 붙여 넣고 후보 찾기를 누르면 아버지, 어머니(사망), 남편(이혼), 딸, 아들이 표준 가계도 기호로 그려진다." loading="lazy" width="1200" height="760" /></figure>
+            <figure class="shot"><img src="./media/ecomap.gif" alt="생태도에 행정복지센터(강함), 서울중학교(갈등), 지역아동센터, 교회 친구를 추가하면 가구 둘레에 선 굵기와 화살표로 관계가 그려진다." loading="lazy" width="1200" height="760" /></figure>
+          </div>
         </section>
 
         <section class="section" id="tools">
@@ -213,7 +234,8 @@
             </div>
             <div class="dl-notes">
               <p><b>지금은 오픈 베타 기간입니다.</b> 써 보시고 불편한 점이나 바라는 기능을 <a href="#contact">문의</a>로 알려 주시면 빠르게 고치겠습니다.</p>
-              <p>Mac용은 Apple Silicon(arm64)만 제공합니다. Linux와 Intel Mac은 아직 지원하지 않습니다.</p>
+              <p>Mac용은 Apple Silicon(arm64)만 제공합니다. <b>Linux용은 준비 중</b>이고 Intel Mac은 지원하지 않습니다.</p>
+              <p>소스 코드는 <a href="https://github.com/dawith-ai/dawith-welfare-office" target="_blank" rel="noreferrer">GitHub</a>에 공개되어 있습니다. 직접 살펴보거나 빌드할 수 있습니다.</p>
               <p>써 보시고 불편한 점이나 바라는 점이 있으면 <a href="https://github.com/dawith-ai/dawith-welfare-office/issues" target="_blank" rel="noreferrer">문제 알리기</a>로 알려 주세요.</p>
             </div>
           </div>

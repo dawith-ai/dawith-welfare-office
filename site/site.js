@@ -24,7 +24,15 @@ function showOsNotice() {
     linux: 'Linux용은 아직 준비 중입니다. 지금은 Windows PC에서 설치해 주세요.',
     mobile: '휴대폰에서는 설치할 수 없습니다. 기관 PC(Windows)에서 이 페이지를 열어 주세요.',
   };
-  const message = messages[detectOs()];
+  const os = detectOs();
+  // Highlight the visitor's own OS among the hero download buttons.
+  if (os === 'mac') {
+    $('.hero-actions [data-os]').forEach((button) => {
+      button.classList.toggle('btn-accent', button.dataset.os === 'mac');
+      button.classList.toggle('btn-ghost', button.dataset.os !== 'mac');
+    });
+  }
+  const message = messages[os];
   if (!message) return;
   notice.textContent = message;
   notice.hidden = false;

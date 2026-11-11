@@ -1,71 +1,124 @@
-# Dawith Welfare Office 0.9.6
+<p align="center">
+  <img src="public/dawith-ci.svg" alt="" width="72" height="72" />
+</p>
 
-사회복지 현장에서 반복되는 파일·이미지·텍스트·계산 업무를 가볍게 처리하는 로컬 도구 모음입니다. 클라우드 AI(LLM) 연결 기능은 없으며, 선택한 파일과 입력 내용은 브라우저 또는 설치된 앱 안에서만 처리합니다. AI 기능은 이 PC의 로컬 AI(Ollama)만 사용합니다.
+<h1 align="center">Dawith 복지 업무 도구함</h1>
 
-기관 양식 작업공간에서는 기관 기본정보와 사용자가 만든 문서 양식을 이 기기에 저장하고, 회의록·사업계획서·결과보고서·상담일지 초안을 로컬에서 작성할 수 있습니다. 웹앱은 PWA로 설치해 오프라인 작업공간처럼 사용할 수 있습니다.
+<p align="center">
+  사회복지사가 매일 하는 서류 일을 인터넷 없이 내 PC에서 끝내는 무료 데스크톱 앱
+</p>
 
-`로컬 AI 설정` 메뉴에서는 현재 PC의 RAM·CPU를 확인해 Ollama 모델을 추천하고, 공식 설치 링크와 모델 준비 흐름을 제공합니다. 모델이 준비되면 텍스트 정리와 기관 양식 초안 화면에서 `로컬 AI` 버튼을 사용할 수 있습니다. AI 호출은 `127.0.0.1`의 Ollama로만 보내며, 모델이 없거나 응답하지 않으면 기존 규칙 기반 기능을 계속 사용할 수 있습니다.
+<p align="center">
+  <a href="https://github.com/dawith-ai/dawith-welfare-office/releases/latest"><img src="https://img.shields.io/github/v/release/dawith-ai/dawith-welfare-office?label=%EC%B5%9C%EC%8B%A0%20%EB%B2%84%EC%A0%84&color=2f6b4f" alt="최신 버전" /></a>
+  <img src="https://img.shields.io/badge/%EC%83%81%ED%83%9C-%EC%98%A4%ED%94%88%20%EB%B2%A0%ED%83%80-f2a65a" alt="오픈 베타" />
+  <img src="https://img.shields.io/badge/%EC%84%A4%EC%B9%98%20%ED%8C%8C%EC%9D%BC-%EC%95%BD%2026MB-555" alt="설치 파일 약 26MB" />
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-555" alt="Apache-2.0" /></a>
+</p>
 
-0.9.9까지 있던 클라우드·구독 AI 연결(Claude Code, Codex, Gemini CLI, ChatGPT, OpenRouter, Gemini API 키)은 기록이 PC 밖으로 나가지 않도록 모두 제거했습니다. 이전 버전이 저장한 연결 정보(토큰·키)는 새 버전을 처음 실행할 때 앱 데이터베이스에서 지웁니다.
+<p align="center">
+  <a href="https://github.com/dawith-ai/dawith-welfare-office/releases/latest"><b>Windows</b></a> ·
+  <a href="https://github.com/dawith-ai/dawith-welfare-office/releases/latest"><b>Mac (Apple Silicon)</b></a> ·
+  Linux (준비 중) ·
+  <a href="https://dawith-ai.github.io/dawith-welfare-office/">제품 안내 사이트</a>
+</p>
 
-한글 양식 도구는 [rhwp](https://github.com/edwardkim/rhwp) v0.8.7 MIT 엔진을 필요할 때만 불러와 HWP·HWPX의 문단·표 텍스트와 페이지 수를 로컬에서 읽습니다. 설치본은 가볍게 유지하기 위해 약 12MB의 WASM 엔진을 처음 사용할 때만 공식 저장소에서 내려받아 이 PC에 캐시합니다. 파일 내용은 전송하지 않습니다. `{{기관명}}` 같은 표식을 치환해 HWPX로 다시 저장할 수도 있습니다. 엔진 고지와 서드파티 라이선스는 `public/vendor/rhwp/`에 포함되어 있습니다.
+<p align="center">
+  <img src="site/assets/home.jpg" alt="Dawith 복지 업무 도구함 첫 화면" width="900" />
+</p>
 
-## 포함 도구
+---
 
-- PDF 합치기: 여러 PDF의 순서를 확인하고 하나로 저장
-- PDF 나누기: 페이지 번호로 필요한 페이지만 추출
-- 한글 양식 확인·채우기: HWP·HWPX 텍스트·페이지·표 추출, 표식 치환 후 HWPX 저장
-- 한글 양식 AI 검토: 추출한 텍스트를 로컬 모델(Ollama)로 요약하고 되돌리기
-- 이미지 크기 조절: 픽셀 크기와 비율을 유지한 채 저장
-- 이미지 용량 줄이기: JPG·PNG·WEBP 품질 조절
-- 사진 정보 지우기: 재인코딩으로 GPS·촬영정보 등 메타데이터 제거
-- 이미지 회전·자르기: 90도 회전과 동일 여백 자르기
-- 텍스트 정리: 개인정보 가리기, 공백·목록·서식 정리
-- 만나이 계산기: 기준일 기준 만 나이와 연령대 확인
-- 금액 한글 변환: 지출결의서용 한글 금액 표기
-- 날짜·기간 계산: 상담 후속일과 사업 기간 확인
-- 인원 체크: 명단 상태를 로컬 저장하고 현황을 CSV로 저장
-- 당직 일정: 직원 순환 당직표를 만들고 CSV로 저장
-- 기관 양식 작업공간: 기관 정보·사용자 양식 저장, 행정문서 초안 생성
-- 로컬 AI 보조: Ollama 설치·모델 준비 안내, 텍스트·기관 양식의 사실 보존형 초안 보조
-- 로컬 AI 설정: PC 사양 확인, Ollama 설치 안내, 추천 모델 준비와 연결 상태 확인
-- 제품 안내: 설치형 EXE·브라우저 차이, 로컬 전용 데이터 경계, 시작 순서 안내
+## 기능
+
+### 상담 기록·회의록 정리
+
+메모를 붙여 넣고 양식(기본 상담기록, 관찰·상담·소견형, 사례회의록, 일반 회의록)을 고르면 항목별로 나눠 줍니다. 결과는 항목별로 보거나 한 번에 보고, 상자마다 복사 버튼으로 바로 붙여 넣을 수 있습니다. 기본은 AI 없이 규칙으로 나누고, 원하면 이 PC 안의 로컬 AI(Ollama)로 다듬습니다.
+
+<img src="site/media/records.gif" alt="상담 기록 정리 화면" width="900" />
+
+### 기관 양식 파일에 채우기
+
+쓰던 Word(.docx)·한글(.hwpx) 양식에 `{{관찰사항}}` 같은 표식을 적어 올리면, 어떤 칸에 무엇이 들어갈지 먼저 보여 주고 그대로 채워 내려받습니다. 양식 파일은 PC 밖으로 나가지 않습니다.
+
+<img src="site/media/form-fill.gif" alt="기관 상담일지 양식에 표식을 연결하는 화면" width="900" />
+
+### 가계도
+
+가족 이야기를 붙여 넣으면 사람과 관계 후보를 찾아 표준 기호(사망·이혼·동거·함께 사는 가족)로 그립니다. 그림에서 사람을 눌러 바로 고치고 PNG·SVG로 저장합니다.
+
+<img src="site/media/genogram.gif" alt="문장에서 가계도를 그리는 화면" width="900" />
+
+### 생태도
+
+기관·자원과 관계의 세기(강함·보통·약함·갈등), 에너지 방향만 고르면 겹치지 않게 둘레에 배치합니다.
+
+<img src="site/media/ecomap.gif" alt="생태도에 기관을 추가하는 화면" width="900" />
+
+### 개인정보 가리기
+
+공유하기 전에 붙여 넣기만 하면 전화번호·이메일·주민등록번호·계좌번호를 바로 가립니다. 이름처럼 규칙으로 찾기 어려운 정보는 찾아 바꾸기로 처리합니다.
+
+<img src="site/media/privacy.gif" alt="입력하는 동안 개인정보가 가려지는 화면" width="900" />
+
+### PDF 합치기·나누기
+
+붙임 서류를 순서대로 올려 하나의 PDF로 묶거나, 필요한 쪽만 나눕니다. 모두 이 PC 메모리에서 처리합니다.
+
+<img src="site/media/pdf-merge.gif" alt="PDF 합치기 화면" width="900" />
+
+### 앱 안에서 업데이트
+
+새 버전이 나오면 업데이트 버튼에 빨간 점이 뜹니다. 달라진 점을 확인하고 누르면 내려받은 뒤 자동으로 설치합니다. 최신 버전이면 그렇다고 알려 줍니다.
+
+<img src="site/media/update.gif" alt="업데이트 알림과 진행률 화면" width="900" />
+
+### 그 밖에
+
+- 한글(HWP·HWPX) 문단·표 텍스트 확인, HWPX 표식 치환 저장 ([rhwp](https://github.com/edwardkim/rhwp), MIT)
+- 기관 문서 양식: 기관명·담당자를 한 번만 적으면 회의록·사업계획서·결과보고서 머리말 자동 채움
+- 파일 형식 변환 (TXT·MD·HTML·CSV)
+- 이미지 크기 조절·용량 줄이기·회전·자르기, 사진 위치·촬영정보 지우기
+- 만나이·날짜 기간 계산, 금액 한글 표기 (지출결의서)
+- 식사·프로그램 인원 체크, 당직 일정표, 명단 CSV 저장
+- 로컬 AI 설정: PC 사양(메모리·CPU)을 보고 알맞은 Ollama 모델을 추천
+
+## 설치
+
+| 운영체제 | 파일 | 비고 |
+| --- | --- | --- |
+| Windows 10·11 (64비트) | `Dawith-Welfare-Office-<버전>-x64-Setup.exe` | 대부분은 이것. 바탕화면·시작 메뉴에 등록 |
+| Windows (설치 없이) | `Dawith-Welfare-Office-<버전>-x64-Portable.exe` | 설치 권한이 없는 PC, USB |
+| Mac (Apple Silicon) | `Dawith.Welfare.Office-<버전>-arm64.dmg` | M1~M4. Intel Mac은 지원하지 않음 |
+| Linux | 준비 중 | |
+
+[Releases](https://github.com/dawith-ai/dawith-welfare-office/releases/latest)에서 내려받습니다. 코드 서명이 아직 없어 Windows가 경고를 띄울 수 있습니다. 막히면 [설치 도움말](https://dawith-ai.github.io/dawith-welfare-office/install.html)을 보세요.
 
 ## 데이터 경계
 
-파일은 Dawith 서버에 업로드하지 않습니다. PDF와 이미지는 브라우저 메모리에서 읽고, 결과는 다운로드합니다. 텍스트·날짜·금액도 네트워크 요청 없이 처리합니다. 로컬 AI를 선택한 경우에만 입력이 `127.0.0.1`의 Ollama로 전달됩니다. 클라우드 AI로 보내는 경로는 없습니다. 앱이 인터넷에 연결하는 경우는 GitHub 업데이트 확인·내려받기와, Ollama가 모델을 내려받을 때뿐이며 어느 경우에도 작성한 내용은 담기지 않습니다. 자세한 사용 흐름은 [`제품 안내`](./public/guide.html)에서 확인합니다.
+- 파일과 기록은 Dawith 서버에 올라가지 않습니다. 저장 데이터는 `%APPDATA%\Dawith Welfare Office\data`에 암호화해 둡니다.
+- 로컬 AI를 고른 경우에만 입력이 `127.0.0.1`의 Ollama로 전달됩니다. 클라우드 AI로 보내는 경로는 없습니다.
+- 앱이 인터넷에 연결하는 경우는 GitHub 업데이트 확인·내려받기, 한글 엔진(WASM) 첫 다운로드, Ollama 모델 다운로드뿐이며 작성한 내용은 담기지 않습니다.
+- 자세한 내용은 [개인정보처리방침](https://dawith-ai.github.io/dawith-welfare-office/privacy.html)과 [데이터 처리 안내](https://dawith-ai.github.io/dawith-welfare-office/data-processing.html)에 있습니다.
 
-## 실행
+## 개발
 
 ```bash
 npm install
-npm run check
-npm start
+npm start            # http://127.0.0.1:4387
+npm run check        # 문법 검사
+npm test             # 단위 테스트
+npm run test:e2e     # Playwright 브라우저 테스트
+npm run dist:win     # Windows 경량 설치본 (dist-win/)
+npm run release      # GitHub 릴리스 + site/release.json
+node scripts/capture-feature-gifs.mjs   # 이 문서와 사이트의 기능 GIF 다시 찍기
 ```
 
-브라우저에서 `http://127.0.0.1:4387`을 엽니다.
+Windows 설치본은 Electron 대신 Node 런타임과 Edge 앱 창을 써서 약 26MB입니다(`desktop/lite.mjs`). 제품 안내 사이트는 `site/`에 있고 main에 푸시하면 GitHub Pages로 배포됩니다.
 
-## 테스트
+## 문의·문제 알리기
 
-```bash
-npm test
-npm run test:e2e
-```
+불편한 점이나 바라는 기능은 [Issues](https://github.com/dawith-ai/dawith-welfare-office/issues)나 [제품 안내 사이트의 문의](https://dawith-ai.github.io/dawith-welfare-office/#contact)로 알려 주세요.
 
-현재 브라우저 E2E는 검색·분류와 작업 화면 메뉴 전환, 텍스트 개인정보 가리기·치환·로컬 AI 진입, 만나이·금액 계산, PDF 병합·분할, HWPX 로컬 추출·치환 저장, 이미지 미리보기·메타데이터 제거, 인원 체크·당직표, 모바일 가로 넘침을 검증합니다.
+## 라이선스
 
-## Windows EXE
-
-```bash
-npm run dist:win
-```
-
-- `dist/Dawith-Welfare-Office-0.9.6-x64-Setup.exe`
-
-설치본에는 Electron 런타임과 기본 행정 도구만 포함하며, HWP WASM 엔진·Ollama 모델은 필요할 때만 내려받습니다. 따라서 HWP를 사용하지 않는 기관은 추가 다운로드 없이 바로 시작할 수 있습니다. 현재 Windows 설치본은 100MiB 업로드 제한 아래로 경량화되어 있습니다.
-
-`public/index-legacy.html`은 이전 상담·문서 작업대 보관본입니다. 새 제품의 기본 진입점은 `public/index.html`입니다.
-
-## 범위 원칙
-
-복지기관에서 개인정보가 섞일 수 있는 업무는 먼저 로컬 결정적 도구로 처리합니다. 회의록·상담 내용처럼 맥락 생성이 필요한 기능은 이 기본 도구 모음과 분리된 선택 모듈로 검토하며, 기본 화면에서 외부 LLM을 호출하지 않습니다.
+[Apache-2.0](LICENSE). 함께 쓰는 오픈소스와 라이선스는 [제품 안내 사이트의 오픈소스 고지](https://dawith-ai.github.io/dawith-welfare-office/#oss)와 설치본의 `THIRD_PARTY_NOTICES.txt`에 정리되어 있습니다.
