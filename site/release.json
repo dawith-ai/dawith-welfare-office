@@ -1,6 +1,6 @@
 {
   "version": "1.0.5",
-  "releaseDate": "2026-11-11T03:03:14.772Z",
+  "releaseDate": "2026-11-11T07:24:57.000Z",
   "setup": {
     "file": "Dawith-Welfare-Office-1.0.5-x64-Setup.exe",
     "url": "https://github.com/dawith-ai/dawith-welfare-office/releases/download/v1.0.5/Dawith-Welfare-Office-1.0.5-x64-Setup.exe",
@@ -12,9 +12,9 @@
     "size": 26937022
   },
   "mac": {
-    "file": "Dawith.Welfare.Office-1.0.4-arm64.dmg",
-    "url": "https://github.com/dawith-ai/dawith-welfare-office/releases/download/v1.0.4/Dawith.Welfare.Office-1.0.4-arm64.dmg",
-    "size": 114480882,
-    "version": "1.0.4"
+    "file": "Dawith.Welfare.Office-1.0.5-arm64.dmg",
+    "url": "https://github.com/dawith-ai/dawith-welfare-office/releases/download/v1.0.5/Dawith.Welfare.Office-1.0.5-arm64.dmg",
+    "size": 114481874,
+    "version": "1.0.5"
   }
 }
