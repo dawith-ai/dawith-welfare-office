@@ -21,15 +21,15 @@ function showOsNotice() {
   if (!notice) return;
   const messages = {
     mac: 'Mac을 쓰고 계시네요. Apple Silicon(arm64)용 설치 파일을 내려받을 수 있습니다.',
-    linux: 'Linux용은 아직 준비 중입니다. 지금은 Windows PC에서 설치해 주세요.',
+    linux: 'Linux를 쓰고 계시네요. Ubuntu·Debian용 .deb를 받을 수 있고, 다른 배포판은 .tar.gz를 쓰세요.',
     mobile: '휴대폰에서는 설치할 수 없습니다. 기관 PC(Windows)에서 이 페이지를 열어 주세요.',
   };
   const os = detectOs();
   // Highlight the visitor's own OS among the hero download buttons.
-  if (os === 'mac') {
-    $('.hero-actions [data-os]').forEach((button) => {
-      button.classList.toggle('btn-accent', button.dataset.os === 'mac');
-      button.classList.toggle('btn-ghost', button.dataset.os !== 'mac');
+  if (os === 'mac' || os === 'linux') {
+    $$('.hero-actions [data-os]').forEach((button) => {
+      button.classList.toggle('btn-accent', button.dataset.os === os);
+      button.classList.toggle('btn-ghost', button.dataset.os !== os);
     });
   }
   const message = messages[os];
@@ -45,7 +45,7 @@ async function loadRelease() {
     const response = await fetch(manifestUrl, { cache: 'no-cache' });
     if (!response.ok) return;
     const manifest = await response.json();
-    for (const key of ['setup', 'portable', 'mac']) {
+    for (const key of ['setup', 'portable', 'mac', 'linux', 'linuxTar']) {
       const asset = manifest[key];
       if (!asset) continue;
       $$(`[data-asset="${key}"]`).forEach((link) => { link.href = asset.url; });
@@ -53,6 +53,7 @@ async function loadRelease() {
     }
     if (manifest.setup && $('#heroSize')) $('#heroSize').textContent = formatSize(manifest.setup.size);
     if ($('[data-label="setup"]')) $('[data-label="setup"]').textContent = `Windows용 ${manifest.version} 내려받기`;
+    if ($('[data-label="linux"]') && manifest.linux) $('[data-label="linux"]').textContent = `Linux용 ${manifest.linux.version || manifest.version} 내려받기`;
     if ($('[data-label="mac"]') && manifest.mac) $('[data-label="mac"]').textContent = `Mac용 ${manifest.mac.version || manifest.version} 내려받기`;
     if ($('#heroVersion')) $('#heroVersion').textContent = manifest.version;
     if ($('#releaseTag')) $('#releaseTag').textContent = `새 버전 ${manifest.version}`;
