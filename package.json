@@ -99,6 +99,9 @@
         }
       ]
     },
+    "mac": {
+      "artifactName": "Dawith.Welfare.Office-${version}-${arch}.${ext}"
+    },
     "nsis": {
       "artifactName": "Dawith-Welfare-Office-${version}-${arch}-Setup.${ext}",
       "oneClick": false,
