@@ -1,6 +1,6 @@
 {
   "name": "dawith-welfare-office",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "private": true,
   "type": "module",
   "description": "Dawith lightweight local welfare work tools for files, images, text, dates, and amounts",

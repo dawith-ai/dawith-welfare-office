@@ -386,9 +386,7 @@ code, kbd { padding: 1px 6px; border: 1px solid var(--line); border-radius: 5px;
   .more-tools { grid-template-columns: 1fr; }
 }
 
-/* Hero OS buttons, Linux placeholder and paired feature demos. */
-.btn-soon { opacity: .55; cursor: default; }
-.btn-soon:hover { border-color: rgba(255, 255, 255, .45); background: none; }
+/* Hero OS buttons and paired feature demos. */
 .shot img[src$=".gif"] { display: block; width: 100%; height: auto; }
 .shot-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 48px; }
 .shot-pair .shot { margin: 0; }
@@ -397,4 +395,30 @@ code, kbd { padding: 1px 6px; border: 1px solid var(--line); border-radius: 5px;
   .hero-actions .btn-accent { flex-basis: 100%; }
   .shot img[src$=".gif"] { aspect-ratio: auto; object-fit: initial; }
   .shot-pair { grid-template-columns: 1fr; gap: 16px; margin-top: 28px; }
+}
+
+/* "Created by Dawith AI" signature, as on welfare-hub.site: bottom right of
+   the footer on wide screens, under the legal links on phones. */
+.footer { padding-bottom: 104px; }
+.footer .wrap { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 32px; }
+.footer .wrap > * { grid-column: 1; }
+.footer .wrap > .signature { grid-column: 2; grid-row: 1 / span 6; align-self: end; }
+.signature { display: inline-flex; align-items: center; gap: 12px; padding: 12px 18px 12px 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); color: var(--ink); text-decoration: none; transition: border-color .15s, box-shadow .15s; }
+.signature:hover { border-color: #c9cdc6; box-shadow: 0 6px 18px rgba(20, 40, 30, .08); }
+.signature img { width: 44px; height: 44px; border-radius: 50%; object-fit: cover; }
+.signature span { display: grid; line-height: 1.25; }
+.signature small { color: var(--muted); font-size: 12px; }
+.signature b { font-size: 16px; }
+@media (max-width: 680px) {
+  .footer .wrap { grid-template-columns: minmax(0, 1fr); }
+  .footer .wrap > .signature { grid-column: 1; grid-row: auto; justify-self: start; margin-top: 24px; }
+}
+
+/* open-source page */
+.oss-page { padding-top: 56px; }
+.oss-page .section-title { margin-bottom: 8px; }
+.oss-page .oss { margin-top: 20px; }
+.oss dt a { color: var(--ink); }
+@media (max-width: 680px) {
+  .oss div { grid-template-columns: 1fr; gap: 4px; }
 }

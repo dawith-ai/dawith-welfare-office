@@ -27,6 +27,15 @@ if (fs.existsSync(path.join(root, 'dist', macLocalName))) {
   files.mac = `Dawith.Welfare.Office-${version}-arm64.dmg`;
   paths.mac = path.join(root, 'dist', macLocalName);
 }
+// Linux packages come from npm run dist:linux (dist-linux/) when built.
+const linuxDist = path.join(root, 'dist-linux');
+const linuxFiles = { linux: `Dawith-Welfare-Office-${version}-linux-amd64.deb`, linuxTar: `Dawith-Welfare-Office-${version}-linux-x64.tar.gz` };
+if (Object.values(linuxFiles).every((name) => fs.existsSync(path.join(linuxDist, name)))) {
+  for (const [key, name] of Object.entries(linuxFiles)) {
+    files[key] = name;
+    paths[key] = path.join(linuxDist, name);
+  }
+}
 const feed = path.join(dist, 'latest.yml');
 
 for (const file of [...Object.values(paths), feed]) {
@@ -48,13 +57,14 @@ if (exists) {
 const releaseUrl = (name) => `https://github.com/${repo}/releases/download/${tag}/${name}`;
 const manifest = { version, releaseDate: new Date().toISOString() };
 for (const [key, name] of Object.entries(files)) manifest[key] = { file: name, url: releaseUrl(name), size: fs.statSync(paths[key]).size, version };
-// The Mac build is made on a Mac and not every release has one. Keep linking
-// the last published Mac installer instead of dropping it from the site.
-if (!manifest.mac) {
+// The Mac build is made on a Mac and not every release has one (nor a Linux
+// build). Keep linking the last published installer instead of dropping it.
+for (const key of ['mac', 'linux', 'linuxTar']) {
+  if (manifest[key]) continue;
   try {
     const previous = JSON.parse(fs.readFileSync(path.join(root, 'site', 'release.json'), 'utf8'));
-    if (previous.mac?.url) manifest.mac = { version: previous.mac.version || previous.version, ...previous.mac };
-  } catch { /* first release: no Mac entry yet */ }
+    if (previous[key]?.url) manifest[key] = { version: previous[key].version || previous.version, ...previous[key] };
+  } catch { /* first release: no entry yet */ }
 }
 fs.writeFileSync(path.join(root, 'site', 'release.json'), `${JSON.stringify(manifest, null, 2)}\n`);
 
@@ -68,6 +78,7 @@ vercel.redirects = [
   { source: '/download/setup', destination: manifest.setup.url, permanent: false },
   { source: '/download/portable', destination: manifest.portable.url, permanent: false },
   ...(manifest.mac ? [{ source: '/download/mac', destination: manifest.mac.url, permanent: false }] : []),
+  ...(manifest.linux ? [{ source: '/download/linux', destination: manifest.linux.url, permanent: false }] : []),
   { source: '/download/:file', destination: `https://github.com/${repo}/releases/latest/download/:file`, permanent: false },
 ];
 fs.writeFileSync(vercelPath, `${JSON.stringify(vercel, null, 2)}\n`);

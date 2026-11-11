@@ -31,6 +31,7 @@ export function createLiteUpdater({ version, portable, log = () => {}, quit, fee
     supported: true,
     runtime: 'lite',
     mode: portable ? 'portable' : 'installer',
+    platform: process.platform,
     currentVersion: version,
     latestVersion: null,
     status: 'idle',

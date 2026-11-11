@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#f6f5f0" />
+    <meta name="description" content="Dawith 복지 업무 도구함에 담긴 오픈소스와 참고한 프로젝트, 라이선스" />
+    <title>오픈소스와 참고 자료 · Dawith 복지 업무 도구함</title>
+    <link rel="icon" href="./favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <a class="skip-link" href="#main">본문으로 건너뛰기</a>
+    <header class="nav" id="siteNav">
+      <div class="wrap">
+        <a class="brand" href="./"><img src="./dawith-ci.svg" alt="" />Dawith 복지 업무 도구함<span class="beta-tag">베타</span></a>
+        <nav aria-label="주요 메뉴">
+          <a class="opt" href="./updates.html">업데이트 소식</a>
+          <a class="opt" href="./story.html">만든 이야기</a>
+          <a href="./install.html">설치 도움말</a>
+          <a href="./connect.html">로컬 AI</a>
+          <a class="opt" href="./faq.html">자주 묻는 질문</a>
+          <a href="./#contact">문의</a>
+          <a class="nav-cta" href="./#download">내려받기</a>
+        </nav>
+      </div>
+    </header>
+
+    <main id="main">
+      <div class="wrap">
+        <section class="page-hero">
+          <h1>오픈소스와 참고 자료</h1>
+          <p>Dawith 복지 업무 도구함은 소스를 공개한 프로그램(<a href="https://github.com/dawith-ai/dawith-welfare-office" target="_blank" rel="noreferrer">Apache-2.0</a>)입니다. 어떤 오픈소스를 담았고, 무엇을 참고해 만들었는지 한곳에 모았습니다.</p>
+        </section>
+
+        <section class="section oss-page" id="bundled">
+          <h2 class="section-title">프로그램에 담긴 오픈소스</h2>
+          <p class="ref-desc">설치 파일 안에 들어 있는 것들입니다. 라이선스 전문은 설치 폴더의 <code>THIRD_PARTY_NOTICES.txt</code>에 있습니다.</p>
+          <dl class="oss">
+            <div><dt><a href="https://github.com/nodejs/node" target="_blank" rel="noreferrer">Node.js</a></dt><dd>Windows·Linux용에서 내 PC 안의 로컬 서버를 돌리는 실행 환경 · <b>MIT</b></dd></div>
+            <div><dt><a href="https://github.com/electron/electron" target="_blank" rel="noreferrer">Electron</a></dt><dd>Mac용 앱 창과 실행 환경 (Chromium 포함, 각 구성 요소 라이선스 따름) · <b>MIT</b></dd></div>
+            <div><dt><a href="https://github.com/edwardkim/rhwp" target="_blank" rel="noreferrer">rhwp</a></dt><dd>HWP·HWPX 문서를 읽고 {{표식}}을 바꾸는 한글 엔진 · <b>MIT</b></dd></div>
+            <div><dt><a href="https://github.com/Hopding/pdf-lib" target="_blank" rel="noreferrer">pdf-lib</a></dt><dd>PDF 합치기·나누기 (안에 pako, tslib, @pdf-lib/standard-fonts, @pdf-lib/upng 포함) · <b>MIT · Zlib · 0BSD</b></dd></div>
+            <div><dt><a href="https://github.com/dolanmiu/docx" target="_blank" rel="noreferrer">docx</a></dt><dd>Word(.docx) 저장과 기관 양식 채우기 (안에 fflate, nanoid 등 포함) · <b>MIT</b></dd></div>
+            <div><dt><a href="https://github.com/Stuk/jszip" target="_blank" rel="noreferrer">JSZip</a></dt><dd>HWPX·DOCX 파일 풀기·묶기 (MIT·GPLv3 이중 라이선스 중 MIT로 사용, 하위 패키지 MIT·ISC) · <b>MIT</b></dd></div>
+            <div><dt><a href="https://nsis.sourceforge.io/" target="_blank" rel="noreferrer">NSIS</a></dt><dd>Windows 설치 프로그램·포터블 실행 파일 · <b>zlib/libpng</b></dd></div>
+          </dl>
+        </section>
+
+        <section class="section oss-page" id="system">
+          <h2 class="section-title">PC에 있는 것을 빌려 씁니다</h2>
+          <p class="ref-desc">프로그램에 넣지 않고, 이미 설치된 것을 그대로 씁니다.</p>
+          <dl class="oss">
+            <div><dt><a href="https://www.microsoft.com/edge" target="_blank" rel="noreferrer">Microsoft Edge</a></dt><dd>Windows에서 앱 창을 여는 브라우저 · <b>Microsoft 라이선스</b></dd></div>
+            <div><dt><a href="https://www.chromium.org/" target="_blank" rel="noreferrer">Chrome · Chromium</a></dt><dd>Linux에서 앱 창을 여는 브라우저 (없으면 기본 브라우저) · <b>BSD 등</b></dd></div>
+            <div><dt><a href="https://github.com/ollama/ollama" target="_blank" rel="noreferrer">Ollama</a></dt><dd>로컬 AI를 고를 때 PC 안에서 모델을 실행 (사용자가 따로 설치) · <b>MIT</b></dd></div>
+            <div><dt><a href="https://ollama.com/library" target="_blank" rel="noreferrer">AI 모델</a></dt><dd>Qwen 등 Ollama로 받는 모델은 모델마다 라이선스가 다르니 모델 페이지를 확인하세요 · <b>모델별 상이</b></dd></div>
+          </dl>
+        </section>
+
+        <section class="section oss-page" id="site">
+          <h2 class="section-title">사이트와 개발에 쓴 도구</h2>
+          <p class="ref-desc">프로그램에는 들어가지 않습니다.</p>
+          <dl class="oss">
+            <div><dt><a href="https://github.com/orioncactus/pretendard" target="_blank" rel="noreferrer">Pretendard</a></dt><dd>이 사이트의 글꼴 · <b>SIL OFL 1.1</b></dd></div>
+            <div><dt><a href="https://github.com/microsoft/playwright" target="_blank" rel="noreferrer">Playwright</a></dt><dd>자동 테스트와 기능 소개 화면 녹화 · <b>Apache-2.0</b></dd></div>
+            <div><dt><a href="https://github.com/mattdesl/gifenc" target="_blank" rel="noreferrer">gifenc</a></dt><dd>기능 소개 GIF 만들기 · <b>MIT</b></dd></div>
+            <div><dt><a href="https://github.com/pbakaus/impeccable" target="_blank" rel="noreferrer">impeccable</a></dt><dd>사이트와 앱 화면의 디자인 점검 · <b>Apache-2.0</b></dd></div>
+          </dl>
+        </section>
+
+        <section class="section oss-page" id="references">
+          <h2 class="section-title">참고한 프로젝트와 자료</h2>
+          <p class="ref-desc">코드는 가져오지 않고 구성·흐름·설계를 참고했습니다.</p>
+          <ul class="refs">
+            <li><a href="https://ieumoffice.com" target="_blank" rel="noreferrer">이음오피스</a> 소개 사이트의 구성, 운영체제별 내려받기, 오픈소스 고지 방식을 참고했습니다.</li>
+            <li><a href="https://github.com/stablyai/orca" target="_blank" rel="noreferrer">Orca</a> (MIT) 기능별 GIF와 설명을 배치한 README 구성을 참고했습니다.</li>
+            <li><a href="https://github.com/manor-os/minutes" target="_blank" rel="noreferrer">minutes</a> (MIT) · LocalScribe · meetmind 회의록 정리 화면과 흐름을 참고했습니다.</li>
+            <li><a href="https://welfare-hub.site" target="_blank" rel="noreferrer">Dawith 복지 허브</a> 같은 제작자의 웹 도구 모음입니다. 현장 도구 구성, 문의 게시판, 시그니처를 이어받았습니다.</li>
+            <li>가계도 기호는 McGoldrick·Gerson의 가계도 표기 관례(남성 □, 여성 ○, 사망 ×, 이혼 //)를, 생태도는 Hartman(1978)의 생태도 구성(관계의 세기·방향)을 따랐습니다.</li>
+          </ul>
+        </section>
+
+        <section class="section oss-page" id="license">
+          <h2 class="section-title">이 프로그램의 라이선스</h2>
+          <p class="ref-desc">Dawith 복지 업무 도구함의 소스는 <a href="https://github.com/dawith-ai/dawith-welfare-office/blob/main/LICENSE" target="_blank" rel="noreferrer">Apache License 2.0</a>으로 공개합니다. 누구나 살펴보고 고쳐 쓸 수 있으며, 다시 배포할 때는 라이선스와 고지를 함께 넣어 주세요. 빠진 고지를 발견하면 <a href="https://github.com/dawith-ai/dawith-welfare-office/issues" target="_blank" rel="noreferrer">문제 알리기</a>로 알려 주세요.</p>
+        </section>
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="wrap">
+        <div class="maker"><img src="./dawith-ci.svg" alt="" /><div><p>만든이 <b>현직 사회복지사 · Dawith AI</b> · <a href="./story.html">만든 이야기</a></p><p>소스를 공개한 프로그램(Apache-2.0)으로, PDF는 <a href="https://github.com/Hopding/pdf-lib" target="_blank" rel="noreferrer">pdf-lib</a>(MIT), 한글 문서는 <a href="https://github.com/edwardkim/rhwp" target="_blank" rel="noreferrer">rhwp</a>(MIT)를 바탕으로 합니다. 이 사이트의 글꼴은 Pretendard(SIL OFL 1.1)입니다. · <a href="./opensource.html">오픈소스와 참고 자료</a></p></div></div>
+        <nav aria-label="바닥글 메뉴">
+          <a href="https://github.com/dawith-ai/dawith-welfare-office" target="_blank" rel="noreferrer">GitHub</a>
+          <a href="https://github.com/dawith-ai/dawith-welfare-office/issues" target="_blank" rel="noreferrer">문제 알리기</a>
+          <a href="https://welfare-hub.site/contact" target="_blank" rel="noreferrer">문의 게시판</a>
+          <a href="./install.html">설치 도움말</a>
+          <a href="./connect.html">로컬 AI 도움말</a>
+          <a href="./faq.html">자주 묻는 질문</a>
+          <a href="./updates.html">업데이트 소식</a>
+          <a href="./story.html">만든 이야기</a>
+          <a href="./opensource.html" aria-current="page">오픈소스</a>
+          <a href="https://welfare-hub.site" target="_blank" rel="noreferrer">Dawith 복지 허브</a>
+        </nav>
+        <p class="legal">누구나 무료로 쓰며, 있는 그대로 제공하고 따로 보증하지 않습니다. AI가 만든 결과는 검토용 초안이며 공식 기록은 담당자가 확정합니다. · 문의 <a href="mailto:dawith0ai@gmail.com">dawith0ai@gmail.com</a></p>
+        <nav class="legal-links" aria-label="법적 고지"><span>© 2024-2026 Dawith AI. All rights reserved.</span><a href="./privacy.html">개인정보처리방침</a><a href="./terms.html">이용약관</a><a href="./data-processing.html">데이터 처리 안내</a><a href="./overseas.html">해외 서버 안내</a><a href="./cookies.html">광고·쿠키 안내</a></nav>
+        <a class="signature" href="https://welfare-hub.site/" target="_blank" rel="noreferrer"><img src="./dawith-ci.png" alt="" width="44" height="44" /><span><small>Created by</small><b>Dawith AI</b></span></a>
+      </div>
+    </footer>
+    <script src="./site.js"></script>
+  </body>
+</html>

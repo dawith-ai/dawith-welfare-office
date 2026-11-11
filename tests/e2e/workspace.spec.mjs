@@ -53,7 +53,7 @@ test('왼쪽 분류를 누르면 머리말과 도구 목록이 함께 바뀐다'
 
 test('웹 앱 머리말은 소개 사이트의 내려받기로 연결한다', async ({ page }) => {
   await page.goto('/');
-  await expect(page.locator('#downloadLink')).toHaveAttribute('href', 'https://welfare-office.vercel.app/#download');
+  await expect(page.locator('#downloadLink')).toHaveAttribute('href', 'https://dawith-ai.github.io/dawith-welfare-office/#download');
 });
 
 test('문서 형식 변환은 파일을 브라우저 안에서 변환해 다운로드한다', async ({ page }) => {
@@ -796,4 +796,122 @@ test('최신 버전이면 업데이트를 눌렀을 때 최신 버전이라고 �
   await page.locator('#updateButton').click();
   await expect(page.locator('#updateTitle')).toHaveText('최신 버전입니다');
   await expect(page.locator('#updateMessage')).toContainText('v1.0.4이 가장 최신 버전');
+});
+
+test('AI 설정과 이미 예시가 있는 기록 정리를 뺀 모든 도구에 예시로 해보기 버튼이 있다', async ({ page }) => {
+  await page.goto('/');
+  const ids = await page.locator('.tool-card').evaluateAll((cards) => cards.map((card) => card.dataset.tool));
+  for (const id of ids.filter((tool) => !['ai-setup', 'case-record'].includes(tool))) {
+    await page.goto(`/?tool=${id}`);
+    await expect(page.locator('.sample-button, #textSample'), id).toHaveCount(1);
+  }
+});
+
+test('텍스트·금액·만나이·날짜 예시는 합성 데이터를 넣고 바로 결과를 보여준다', async ({ page }) => {
+  await page.goto('/?tool=text-tools');
+  await page.locator('#textSample').click();
+  await expect(page.locator('#textInput')).toHaveValue(/김민지/);
+  await expect(page.locator('#textOutput')).toContainText('010-****-5678');
+  await expect(page.locator('#textOutput')).toContainText('[이메일 가림]');
+  await expect(page.locator('#textOutput')).toContainText('990101-*******');
+  await expect(page.locator('#textPrivacy')).toContainText('합성 예시');
+  await page.locator('[data-text-mode="replace"]').click();
+  await expect(page.locator('#textOutput')).toContainText('대상자 님(가명)');
+  await page.goto('/?tool=money-converter');
+  await page.locator('#moneySample').click();
+  await expect(page.locator('#moneyInput')).toHaveValue('3,480,000');
+  await expect(page.locator('#moneyResult')).toContainText('금 삼백사십팔만원정');
+  await expect(page.locator('#moneyCopy')).toBeEnabled();
+  await page.goto('/?tool=age-calculator');
+  await page.locator('#ageSample').click();
+  await expect(page.locator('#birthDate')).toHaveValue('20140315');
+  await expect(page.locator('#ageResult strong')).toContainText(/만 \d+세/);
+  await page.goto('/?tool=date-calculator');
+  await page.locator('#dateSample').click();
+  await expect(page.locator('#dateResult')).toContainText('30일');
+});
+
+test('PDF 합치기·나누기 예시는 이 기기에서 만든 PDF로 실제 처리까지 해 볼 수 있다', async ({ page }) => {
+  await page.goto('/?tool=pdf-merge');
+  await page.locator('#pdfSample').click();
+  await expect(page.locator('#pdfSummary')).toHaveText('2개');
+  await expect(page.locator('#pdfFileList')).toContainText('02_개인정보동의서_예시.pdf');
+  await expect(page.locator('#pdfFileList')).toContainText('2페이지');
+  await expect(page.locator('#pdfNotice')).toContainText('합성 예시');
+  let downloadPromise = page.waitForEvent('download');
+  await page.locator('#pdfMergeButton').click();
+  let download = await downloadPromise;
+  expect(download.suggestedFilename()).toBe('예시_붙임서류.pdf');
+  expect((await PDFDocument.load(await readFile(await download.path()))).getPageCount()).toBe(3);
+  await page.goto('/?tool=pdf-split');
+  await page.locator('#splitSample').click();
+  await expect(page.locator('#splitFileList')).toContainText('5페이지');
+  await expect(page.locator('#splitRange')).toHaveValue('1-2, 4');
+  downloadPromise = page.waitForEvent('download');
+  await page.locator('#splitButton').click();
+  download = await downloadPromise;
+  expect((await PDFDocument.load(await readFile(await download.path()))).getPageCount()).toBe(3);
+  await expect(page.locator('#splitNotice')).toContainText('3페이지');
+});
+
+test('이미지 예시는 그려 만든 예시 사진을 업로드와 같은 경로로 처리한다', async ({ page }) => {
+  await page.goto('/?tool=image-resize');
+  await page.locator('#imageSample').click();
+  await expect(page.locator('#imagePreview img')).toBeVisible();
+  await expect(page.locator('#imageWidth')).toHaveValue('1200');
+  await expect(page.locator('#imageMeta')).toContainText('1200 × 800px');
+  await expect(page.locator('#imageNotice')).toContainText('합성 예시');
+  await page.locator('#imageWidth').fill('600');
+  await page.locator('#imageWidth').dispatchEvent('input');
+  await expect(page.locator('#imageHeight')).toHaveValue('400');
+  const downloadPromise = page.waitForEvent('download');
+  await page.locator('#imageDownload').click();
+  expect((await downloadPromise).suggestedFilename()).toBe('복지관_행사_예시_resized.jpg');
+  await page.goto('/?tool=image-privacy');
+  await page.locator('#imageSample').click();
+  await expect(page.locator('#imageDownload')).toBeEnabled();
+});
+
+test('가계도·생태도 예시는 합성 가족과 자원으로 그림을 그리고 되돌릴 수 있다', async ({ page }) => {
+  await page.goto('/?tool=genogram');
+  await page.locator('#diagramSample').click();
+  await expect(page.locator('#diagramSummary')).toHaveText('구성원 6명 · 부부 관계 2개');
+  await expect(page.locator('#diagramPreview svg')).toContainText('김민지');
+  await expect(page.locator('#genoCoupleList')).toContainText('박준호');
+  await expect(page.locator('#genoCoupleList select').first()).toHaveValue('divorced');
+  await page.locator('#diagramUndo').click();
+  await expect(page.locator('#diagramSummary')).toHaveText('구성원 0명 · 부부 관계 0개');
+  await page.goto('/?tool=ecomap');
+  await page.locator('#diagramSample').click();
+  await expect(page.locator('#diagramSummary')).toHaveText('기관·자원 6곳');
+  await expect(page.locator('#ecoHouseholdName')).toHaveValue('김민지 가구');
+  await expect(page.locator('#diagramPreview svg')).toContainText('행정복지센터');
+});
+
+test('문서 변환·한글 양식·기관 양식·인원 체크·당직 예시도 바로 결과를 만든다', async ({ page }) => {
+  await page.goto('/?tool=document-convert');
+  await page.locator('#convertSample').click();
+  await expect(page.locator('#convertFileSummary')).toContainText('사례회의_예시.md');
+  await expect(page.locator('#convertPreview')).toContainText('<h1>11월 통합사례회의 (예시)</h1>');
+  const downloadPromise = page.waitForEvent('download');
+  await page.locator('#convertButton').click();
+  expect((await downloadPromise).suggestedFilename()).toBe('사례회의_예시.html');
+  await page.goto('/?tool=hwp-inspector');
+  await page.locator('#hwpSample').click();
+  await expect(page.locator('#hwpEngineStatus')).toHaveText('엔진 준비됨');
+  await expect(page.locator('#hwpPreview')).toContainText('통합사례회의 양식 (예시)');
+  await expect(page.locator('#hwpQuery')).toHaveValue('{{기관명}}');
+  await expect(page.locator('#hwpNotice')).toContainText('합성 예시');
+  await page.goto('/?tool=template-studio');
+  await page.locator('#templateSample').click();
+  await expect(page.locator('#templatePreview')).toContainText('다위종합사회복지관');
+  await expect(page.locator('#templatePreview')).toContainText('안부 확인 방문을 주 2회로 늘림.');
+  await page.goto('/?tool=attendance');
+  await page.locator('#attendanceSample').click();
+  await expect(page.locator('#attendanceSummary')).toHaveText('5명');
+  await expect(page.locator('#attendanceCounts span').nth(1).locator('b')).toHaveText('2');
+  await page.goto('/?tool=duty-schedule');
+  await page.locator('#dutySample').click();
+  await expect(page.locator('#dutySummary')).toHaveText('7일 편성');
+  await expect(page.locator('.duty-assignee').nth(1)).toHaveValue('이사회복지사');
 });

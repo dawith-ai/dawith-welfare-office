@@ -23,6 +23,10 @@ export const legalPages = [
 const copyright = '© 2024-2026 Dawith AI. All rights reserved.';
 const legalLinks = (target = '') => legalPages.map((page) => `<a href="./${page.file}"${target}>${page.footer}</a>`).join('');
 
+// Dawith signature badge, the same one welfare-hub.site shows in its footer.
+// The hand-written site pages carry the identical markup.
+export const siteSignature = '<a class="signature" href="https://welfare-hub.site/" target="_blank" rel="noreferrer"><img src="./dawith-ci.png" alt="" width="44" height="44" /><span><small>Created by</small><b>Dawith AI</b></span></a>';
+
 export function siteLegalNav(current = '') {
   return `<nav class="legal-links" aria-label="법적 고지"><span>${copyright}</span>${legalPages.map((page) => `<a href="./${page.file}"${page.file === current ? ' aria-current="page"' : ''}>${page.footer}</a>`).join('')}</nav>`;
 }
@@ -106,7 +110,7 @@ ${body}
 
     <footer class="footer">
       <div class="wrap">
-        <div class="maker"><img src="./dawith-ci.svg" alt="" /><div><p>만든이 <b>현직 사회복지사 · Dawith AI</b> · <a href="./story.html">만든 이야기</a></p><p>PDF는 pdf-lib(MIT), 한글 문서는 rhwp(MIT)를 바탕으로 합니다. 이 사이트의 글꼴은 Pretendard(SIL OFL 1.1)입니다.</p></div></div>
+        <div class="maker"><img src="./dawith-ci.svg" alt="" /><div><p>만든이 <b>현직 사회복지사 · Dawith AI</b> · <a href="./story.html">만든 이야기</a></p><p>소스를 공개한 프로그램(Apache-2.0)으로, PDF는 <a href="https://github.com/Hopding/pdf-lib" target="_blank" rel="noreferrer">pdf-lib</a>(MIT), 한글 문서는 <a href="https://github.com/edwardkim/rhwp" target="_blank" rel="noreferrer">rhwp</a>(MIT)를 바탕으로 합니다. 이 사이트의 글꼴은 Pretendard(SIL OFL 1.1)입니다. · <a href="./opensource.html">오픈소스와 참고 자료</a></p></div></div>
         <nav aria-label="바닥글 메뉴">
           <a href="https://github.com/dawith-ai/dawith-welfare-office" target="_blank" rel="noreferrer">GitHub</a>
           <a href="https://github.com/dawith-ai/dawith-welfare-office/issues" target="_blank" rel="noreferrer">문제 알리기</a>
@@ -116,10 +120,12 @@ ${body}
           <a href="./faq.html">자주 묻는 질문</a>
           <a href="./updates.html">업데이트 소식</a>
           <a href="./story.html">만든 이야기</a>
+          <a href="./opensource.html">오픈소스</a>
           <a href="https://welfare-hub.site" target="_blank" rel="noreferrer">Dawith 복지 허브</a>
         </nav>
         <p class="legal">누구나 무료로 쓰며, 있는 그대로 제공하고 따로 보증하지 않습니다. AI가 만든 결과는 검토용 초안이며 공식 기록은 담당자가 확정합니다. · 문의 <a href="mailto:dawith0ai@gmail.com">dawith0ai@gmail.com</a></p>
         ${siteLegalNav(page.file)}
+        ${siteSignature}
       </div>
     </footer>
     <script src="./site.js"></script>

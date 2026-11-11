@@ -27,17 +27,22 @@
   "redirects": [
     {
       "source": "/download/setup",
-      "destination": "https://github.com/dawith-ai/dawith-welfare-office/releases/download/v1.0.5/Dawith-Welfare-Office-1.0.5-x64-Setup.exe",
+      "destination": "https://github.com/dawith-ai/dawith-welfare-office/releases/download/v1.0.6/Dawith-Welfare-Office-1.0.6-x64-Setup.exe",
       "permanent": false
     },
     {
       "source": "/download/portable",
-      "destination": "https://github.com/dawith-ai/dawith-welfare-office/releases/download/v1.0.5/Dawith-Welfare-Office-1.0.5-x64-Portable.exe",
+      "destination": "https://github.com/dawith-ai/dawith-welfare-office/releases/download/v1.0.6/Dawith-Welfare-Office-1.0.6-x64-Portable.exe",
       "permanent": false
     },
     {
       "source": "/download/mac",
       "destination": "https://github.com/dawith-ai/dawith-welfare-office/releases/download/v1.0.5/Dawith.Welfare.Office-1.0.5-arm64.dmg",
+      "permanent": false
+    },
+    {
+      "source": "/download/linux",
+      "destination": "https://github.com/dawith-ai/dawith-welfare-office/releases/download/v1.0.6/Dawith-Welfare-Office-1.0.6-linux-amd64.deb",
       "permanent": false
     },
     {

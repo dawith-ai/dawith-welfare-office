@@ -10,6 +10,6 @@ export function isNewerVersion(candidate, current) {
 // Installers and latest.yml are GitHub release assets; releases/latest/download
 // always resolves to the newest release, independent of where the site runs.
 export const updateFeedUrl = 'https://github.com/dawith-ai/dawith-welfare-office/releases/latest/download/';
-export const downloadPageUrl = 'https://welfare-office.vercel.app/#download';
+export const downloadPageUrl = 'https://dawith-ai.github.io/dawith-welfare-office/#download';
 // Release notes shown before updating come from the GitHub release body.
 export const releaseNotesUrl = (version) => `https://api.github.com/repos/dawith-ai/dawith-welfare-office/releases/tags/v${version}`;

@@ -1,20 +1,34 @@
 {
-  "version": "1.0.5",
-  "releaseDate": "2026-11-11T07:24:57.000Z",
+  "version": "1.0.6",
+  "releaseDate": "2026-11-11T08:58:36.468Z",
   "setup": {
-    "file": "Dawith-Welfare-Office-1.0.5-x64-Setup.exe",
-    "url": "https://github.com/dawith-ai/dawith-welfare-office/releases/download/v1.0.5/Dawith-Welfare-Office-1.0.5-x64-Setup.exe",
-    "size": 26962261
+    "file": "Dawith-Welfare-Office-1.0.6-x64-Setup.exe",
+    "url": "https://github.com/dawith-ai/dawith-welfare-office/releases/download/v1.0.6/Dawith-Welfare-Office-1.0.6-x64-Setup.exe",
+    "size": 26969351,
+    "version": "1.0.6"
   },
   "portable": {
-    "file": "Dawith-Welfare-Office-1.0.5-x64-Portable.exe",
-    "url": "https://github.com/dawith-ai/dawith-welfare-office/releases/download/v1.0.5/Dawith-Welfare-Office-1.0.5-x64-Portable.exe",
-    "size": 26937022
+    "file": "Dawith-Welfare-Office-1.0.6-x64-Portable.exe",
+    "url": "https://github.com/dawith-ai/dawith-welfare-office/releases/download/v1.0.6/Dawith-Welfare-Office-1.0.6-x64-Portable.exe",
+    "size": 26934090,
+    "version": "1.0.6"
+  },
+  "linux": {
+    "file": "Dawith-Welfare-Office-1.0.6-linux-amd64.deb",
+    "url": "https://github.com/dawith-ai/dawith-welfare-office/releases/download/v1.0.6/Dawith-Welfare-Office-1.0.6-linux-amd64.deb",
+    "size": 39316150,
+    "version": "1.0.6"
+  },
+  "linuxTar": {
+    "file": "Dawith-Welfare-Office-1.0.6-linux-x64.tar.gz",
+    "url": "https://github.com/dawith-ai/dawith-welfare-office/releases/download/v1.0.6/Dawith-Welfare-Office-1.0.6-linux-x64.tar.gz",
+    "size": 53901273,
+    "version": "1.0.6"
   },
   "mac": {
+    "version": "1.0.5",
     "file": "Dawith.Welfare.Office-1.0.5-arm64.dmg",
     "url": "https://github.com/dawith-ai/dawith-welfare-office/releases/download/v1.0.5/Dawith.Welfare.Office-1.0.5-arm64.dmg",
-    "size": 118863405,
-    "version": "1.0.5"
+    "size": 118863405
   }
 }

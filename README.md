@@ -18,7 +18,7 @@
 <p align="center">
   <a href="https://github.com/dawith-ai/dawith-welfare-office/releases/latest"><b>Windows</b></a> ·
   <a href="https://github.com/dawith-ai/dawith-welfare-office/releases/latest"><b>Mac (Apple Silicon)</b></a> ·
-  Linux (준비 중) ·
+  <a href="https://github.com/dawith-ai/dawith-welfare-office/releases/latest"><b>Linux (Ubuntu·Debian)</b></a> ·
   <a href="https://dawith-ai.github.io/dawith-welfare-office/">제품 안내 사이트</a>
 </p>
 
@@ -89,13 +89,14 @@
 | Windows 10·11 (64비트) | `Dawith-Welfare-Office-<버전>-x64-Setup.exe` | 대부분은 이것. 바탕화면·시작 메뉴에 등록 |
 | Windows (설치 없이) | `Dawith-Welfare-Office-<버전>-x64-Portable.exe` | 설치 권한이 없는 PC, USB |
 | Mac (Apple Silicon) | `Dawith.Welfare.Office-<버전>-arm64.dmg` | M1~M4. Intel Mac은 지원하지 않음 |
-| Linux | 준비 중 | |
+| Linux (Ubuntu 22.04+·Debian 12+) | `Dawith-Welfare-Office-<버전>-linux-amd64.deb` | 두 번 눌러 설치. Chrome·Chromium·Edge 앱 창으로 열림 |
+| Linux (그 밖의 배포판) | `Dawith-Welfare-Office-<버전>-linux-x64.tar.gz` | 풀고 `./install.sh`로 앱 메뉴에 추가 |
 
 [Releases](https://github.com/dawith-ai/dawith-welfare-office/releases/latest)에서 내려받습니다. 코드 서명이 아직 없어 Windows가 경고를 띄울 수 있습니다. 막히면 [설치 도움말](https://dawith-ai.github.io/dawith-welfare-office/install.html)을 보세요.
 
 ## 데이터 경계
 
-- 파일과 기록은 Dawith 서버에 올라가지 않습니다. 저장 데이터는 `%APPDATA%\Dawith Welfare Office\data`에 암호화해 둡니다.
+- 파일과 기록은 Dawith 서버에 올라가지 않습니다. 저장 데이터는 `%APPDATA%\Dawith Welfare Office\data`(Linux는 `~/.config/Dawith Welfare Office/data`)에 암호화해 둡니다.
 - 로컬 AI를 고른 경우에만 입력이 `127.0.0.1`의 Ollama로 전달됩니다. 클라우드 AI로 보내는 경로는 없습니다.
 - 앱이 인터넷에 연결하는 경우는 GitHub 업데이트 확인·내려받기, 한글 엔진(WASM) 첫 다운로드, Ollama 모델 다운로드뿐이며 작성한 내용은 담기지 않습니다.
 - 자세한 내용은 [개인정보처리방침](https://dawith-ai.github.io/dawith-welfare-office/privacy.html)과 [데이터 처리 안내](https://dawith-ai.github.io/dawith-welfare-office/data-processing.html)에 있습니다.
@@ -109,6 +110,7 @@ npm run check        # 문법 검사
 npm test             # 단위 테스트
 npm run test:e2e     # Playwright 브라우저 테스트
 npm run dist:win     # Windows 경량 설치본 (dist-win/)
+npm run dist:linux   # Linux .deb·.tar.gz (dist-linux/, 어느 OS에서나 빌드)
 npm run release      # GitHub 릴리스 + site/release.json
 node scripts/capture-feature-gifs.mjs   # 이 문서와 사이트의 기능 GIF 다시 찍기
 ```
@@ -121,4 +123,10 @@ Windows 설치본은 Electron 대신 Node 런타임과 Edge 앱 창을 써서 �
 
 ## 라이선스
 
-[Apache-2.0](LICENSE). 함께 쓰는 오픈소스와 라이선스는 [제품 안내 사이트의 오픈소스 고지](https://dawith-ai.github.io/dawith-welfare-office/#oss)와 설치본의 `THIRD_PARTY_NOTICES.txt`에 정리되어 있습니다.
+[Apache-2.0](LICENSE). 함께 쓰는 오픈소스와 라이선스는 [오픈소스와 참고 자료](https://dawith-ai.github.io/dawith-welfare-office/opensource.html)와 설치본의 `THIRD_PARTY_NOTICES.txt`에 정리되어 있습니다.
+
+---
+
+<p align="center">
+  <a href="https://welfare-hub.site/"><img src="site/media/created-by-dawith.png" alt="Created by Dawith AI" width="161" /></a>
+</p>
