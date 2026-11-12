@@ -25,7 +25,7 @@ const legalLinks = (target = '') => legalPages.map((page) => `<a href="./${page.
 
 // Dawith signature badge, the same one welfare-hub.site shows in its footer.
 // The hand-written site pages carry the identical markup.
-export const siteSignature = '<a class="signature" href="https://welfare-hub.site/" target="_blank" rel="noreferrer"><img src="./dawith-ci.png" alt="" width="44" height="44" /><span><small>Created by</small><b>Dawith AI</b></span></a>';
+export const siteSignature = '<a class="signature" href="https://dawith-link.vercel.app/Dawith_ai" target="_blank" rel="noreferrer"><img src="./dawith-ci.png" alt="" width="44" height="44" /><span><small>Created by</small><b>Dawith AI</b></span></a>';
 
 export function siteLegalNav(current = '') {
   return `<nav class="legal-links" aria-label="법적 고지"><span>${copyright}</span>${legalPages.map((page) => `<a href="./${page.file}"${page.file === current ? ' aria-current="page"' : ''}>${page.footer}</a>`).join('')}</nav>`;

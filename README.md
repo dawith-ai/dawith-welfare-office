@@ -128,5 +128,5 @@ Windows 설치본은 Electron 대신 Node 런타임과 Edge 앱 창을 써서 �
 ---
 
 <p align="center">
-  <a href="https://welfare-hub.site/"><img src="site/media/created-by-dawith.png" alt="Created by Dawith AI" width="161" /></a>
+  <a href="https://dawith-link.vercel.app/Dawith_ai"><img src="site/media/created-by-dawith.png" alt="Created by Dawith AI" width="161" /></a>
 </p>
